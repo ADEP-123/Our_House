@@ -1,8 +1,9 @@
-import { applyCompleted, applyPurchase, isPartial, remaining } from './item-logic';
+import { applyCompleted, applyPurchase, applyToggle, isPartial, remaining, removeItem } from './item-logic';
 import { ListItem } from './lists.models';
 
 const leche: ListItem = {
   id: 'i1',
+  parentId: null,
   text: 'Leche',
   note: null,
   amount: 2,
@@ -45,5 +46,37 @@ describe('reglas de compras', () => {
     const bought = applyCompleted(applyPurchase(leche, 1, 2, ana), true, ana);
     expect(bought.purchased).toBe(2);
     expect(applyCompleted(bought, false, ana)).toMatchObject({ purchased: null, spent: null, completedAt: null });
+  });
+});
+
+describe('reglas de subtareas', () => {
+  const task = (id: string, parentId: string | null = null, done = false): ListItem => ({
+    ...leche,
+    id,
+    parentId,
+    amount: null,
+    unit: null,
+    completedAt: done ? '2026-11-01T10:00:00.000Z' : null,
+  });
+
+  it('la tarea se completa al terminar la última subtarea y se reabre al desmarcar una', () => {
+    let items = [task('t'), task('a', 't'), task('b', 't', true)];
+    items = applyToggle(items, 'a', true, ana);
+    expect(items.find((i) => i.id === 't')!.completedAt).not.toBeNull();
+    items = applyToggle(items, 'b', false, ana);
+    expect(items.find((i) => i.id === 't')!.completedAt).toBeNull();
+  });
+
+  it('completar la tarea completa sus subtareas; desmarcarla no las toca', () => {
+    let items = applyToggle([task('t'), task('a', 't'), task('b', 't')], 't', true, ana);
+    expect(items.every((i) => i.completedAt)).toBe(true);
+    items = applyToggle(items, 't', false, ana);
+    expect(items.filter((i) => i.completedAt).map((i) => i.id)).toEqual(['a', 'b']);
+  });
+
+  it('borrar la tarea borra sus subtareas; borrar la última pendiente completa la tarea', () => {
+    expect(removeItem([task('t'), task('a', 't'), task('x')], 't', ana).map((i) => i.id)).toEqual(['x']);
+    const items = removeItem([task('t'), task('a', 't', true), task('b', 't')], 'b', ana);
+    expect(items.find((i) => i.id === 't')!.completedAt).not.toBeNull();
   });
 });

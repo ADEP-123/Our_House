@@ -11,6 +11,7 @@ const tick = () => new Promise((resolve) => setTimeout(resolve));
 
 const item = (id: string, extra: Partial<ListItem> = {}): ListItem => ({
   id,
+  parentId: null,
   text: id,
   note: null,
   amount: null,
