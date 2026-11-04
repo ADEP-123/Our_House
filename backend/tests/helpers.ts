@@ -52,7 +52,7 @@ export async function setupFamily(nicknames: string[], supervised: string[] = []
   for (const n of supervised) {
     await leader.agent.patch(`/api/families/${familyId}/members/${users[n]!.user.id}`).send({ role: 'supervised' }).expect(200);
   }
-  return { familyId, users };
+  return { familyId, users, mail };
 }
 
 export async function createList(user: User, familyId: string, body: Record<string, unknown> = {}) {
