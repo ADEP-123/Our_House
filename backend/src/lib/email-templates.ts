@@ -45,7 +45,50 @@ const ignoreNote = {
   en: "If this wasn't you, you can ignore this email.",
 };
 
+const settingsNote = (locale: Locale, url: string) =>
+  locale === 'en'
+    ? `You can turn these emails off in your profile, under Notifications: ${url}`
+    : `Puedes desactivar estos correos en tu perfil, en Notificaciones: ${url}`;
+
 export const emailTemplates = {
+  /** Lista nueva del grupo, o lista privada que pasó a ser del grupo */
+  newList(locale: Locale, p: { author: string; list: string; family: string; madePublic: boolean; url: string; settingsUrl: string }): EmailContent {
+    if (locale === 'en') {
+      const what = p.madePublic ? `${p.author} shared the list “${p.list}”` : `${p.author} created the list “${p.list}”`;
+      return render(`${what} in ${p.family}`, {
+        heading: p.madePublic ? 'A list is now shared with the group' : 'New list in your group',
+        paragraphs: [`${what} in ${p.family}. Everyone in the group can see it and check its items.`],
+        action: { label: 'Open list', url: p.url },
+        footnote: settingsNote(locale, p.settingsUrl),
+      });
+    }
+    const what = p.madePublic ? `${p.author} compartió la lista «${p.list}»` : `${p.author} creó la lista «${p.list}»`;
+    return render(`${what} en ${p.family}`, {
+      heading: p.madePublic ? 'Una lista ahora es del grupo' : 'Nueva lista en tu grupo',
+      paragraphs: [`${what} en ${p.family}. Todo el grupo puede verla y marcar sus ítems.`],
+      action: { label: 'Abrir lista', url: p.url },
+      footnote: settingsNote(locale, p.settingsUrl),
+    });
+  },
+
+  /** Alguien te asignó una tarea */
+  assigned(locale: Locale, p: { author: string; task: string; list: string; due: string | null; url: string; settingsUrl: string }): EmailContent {
+    if (locale === 'en') {
+      return render(`${p.author} assigned you “${p.task}”`, {
+        heading: 'You have a new task',
+        paragraphs: [`${p.author} assigned you “${p.task}” in the list “${p.list}”.`, ...(p.due ? [`Due: ${p.due}.`] : [])],
+        action: { label: 'See task', url: p.url },
+        footnote: settingsNote(locale, p.settingsUrl),
+      });
+    }
+    return render(`${p.author} te asignó «${p.task}»`, {
+      heading: 'Tienes una tarea nueva',
+      paragraphs: [`${p.author} te asignó «${p.task}» en la lista «${p.list}».`, ...(p.due ? [`Fecha límite: ${p.due}.`] : [])],
+      action: { label: 'Ver tarea', url: p.url },
+      footnote: settingsNote(locale, p.settingsUrl),
+    });
+  },
+
   verifyEmail(locale: Locale, p: { nickname: string; url: string }): EmailContent {
     return locale === 'en'
       ? render('Confirm your Our House account', {

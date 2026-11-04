@@ -5,6 +5,7 @@ import { conflict, forbidden, notFound } from '../lib/http-error.js';
 import { familiesRepository, type FamilyRole } from '../repositories/families.repository.js';
 import { listsRepository, type ItemRow, type ListCardRow } from '../repositories/lists.repository.js';
 import { listRef, logActivity } from './activity.service.js';
+import { notificationsService } from './notifications.service.js';
 import { activityRepository } from '../repositories/activity.repository.js';
 import { requireMember } from './families.service.js';
 
@@ -150,6 +151,7 @@ export const listsService = {
     } else {
       const card = (await listsRepository.findCard(id, userId))!;
       await logActivity(familyId, userId, 'list.created', { ...listRef(card), details: { type: card.type } });
+      if (!card.is_private) notificationsService.listShared(card, userId, false);
     }
     return listsService.detail(id, userId);
   },
@@ -183,6 +185,7 @@ export const listsService = {
     if (data.isPrivate !== undefined && data.isPrivate !== before.is_private) {
       // Visible para los líderes: el nombre era (o pasa a ser) del grupo
       await logActivity(before.family_id, userId, 'list.privacy_changed', { ...ref, privateOwnerId: null, details: { isPrivate: data.isPrivate } });
+      if (!data.isPrivate) notificationsService.listShared({ ...before, name: data.name ?? before.name }, userId, true);
     }
     return listsService.detail(listId, userId);
   },
