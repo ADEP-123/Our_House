@@ -134,7 +134,13 @@ Opcional. Sin estas variables la app funciona igual y la opción no aparece acti
 1. Entra a [console.cloud.google.com](https://console.cloud.google.com) con tu cuenta de Google y crea un proyecto llamado **Our House**.
 2. **APIs y servicios > Biblioteca**: busca **Google Calendar API** y pulsa **Habilitar**.
 3. **Google Auth Platform** (o "Pantalla de consentimiento de OAuth"):
-   - **Branding / Información de la app**: nombre `Our House`, tu correo como soporte y como contacto del desarrollador. En dominios autorizados agrega `our-house-fawn.vercel.app`.
+   - **Branding / Información de la app**: nombre `Our House`, tu correo como soporte y como contacto del desarrollador. Sin logo (subir uno obliga a pasar la verificación de Google). Enlaces de la app:
+     - página principal: `https://our-house-fawn.vercel.app`
+     - política de privacidad: `https://our-house-fawn.vercel.app/privacidad`
+     - términos de uso: `https://our-house-fawn.vercel.app/terminos`
+     - dominios autorizados: `our-house-fawn.vercel.app`
+
+     Las páginas de privacidad y términos tienen que estar publicadas (la fase 3 en `main`) antes de pulsar **Publicar app**. El correo de contacto que muestran está en `frontend/src/app/features/legal/legal-content.ts`.
    - **Público (Audience)**: tipo **Externo**. Luego pulsa **Publicar app** para pasarla a **En producción**. Importante: en modo "Prueba" Google corta el permiso cada 7 días y habría que reconectar.
    - **Acceso a datos (Data access)**: agrega los permisos `openid`, `.../auth/userinfo.email` y `https://www.googleapis.com/auth/calendar.app.created`. Este último solo deja a la app crear y manejar su propio calendario "Our House", no ve tus otros calendarios.
 4. **Clientes (Clients) > Crear cliente**: tipo **Aplicación web**, nombre `Our House`. En **URI de redireccionamiento autorizados** agrega:
