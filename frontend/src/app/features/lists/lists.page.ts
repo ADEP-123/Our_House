@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { toApiError } from '../../core/api/api-error';
 import { I18n } from '../../core/i18n/i18n.service';
@@ -45,6 +45,18 @@ export class ListsPage implements OnInit {
       const family = this.family();
       const archived = this.archived();
       if (family) untracked(() => void this.load(family.id, archived));
+    });
+
+    // Resúmenes al día: cada 15 segundos y al volver a la app
+    const refresh = () => {
+      const family = this.family();
+      if (family && document.visibilityState === 'visible' && !this.creating()) void this.load(family.id, this.archived());
+    };
+    const timer = setInterval(refresh, 15_000);
+    document.addEventListener('visibilitychange', refresh);
+    inject(DestroyRef).onDestroy(() => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', refresh);
     });
   }
 

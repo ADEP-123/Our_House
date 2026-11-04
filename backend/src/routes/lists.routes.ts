@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { itemsController } from '../controllers/items.controller.js';
 import { listsController } from '../controllers/lists.controller.js';
 import { LIST_COLORS, LIST_ICONS, LIST_TYPES } from '../lib/lists.js';
 import { checkIds } from '../lib/route-ids.js';
@@ -50,3 +51,32 @@ list.post('/restore', listsController.restore);
 list.delete('/', listsController.remove);
 list.put('/pin', validateBody(z.object({ pinned: z.boolean() })), listsController.pin);
 list.post('/duplicate', validateBody(z.object({ id: clientId, name: listName })), listsController.duplicate);
+
+// ---------- Ítems ----------
+
+/** Texto opcional: vacío se guarda como null */
+const optionalText = (max: number, code: string) =>
+  z
+    .string()
+    .trim()
+    .max(max, code)
+    .transform((v) => v || null)
+    .nullable()
+    .optional();
+
+const itemFields = {
+  note: optionalText(500, 'ITEM_NOTE_TOO_LONG'),
+  quantity: optionalText(30, 'ITEM_QUANTITY_TOO_LONG'),
+  category: optionalText(40, 'ITEM_CATEGORY_TOO_LONG'),
+  assigneeId: z.uuid().nullable().optional(),
+  dueDate: z.iso.date('DUE_DATE_INVALID').nullable().optional(),
+  position: z.number().finite().optional(),
+};
+const itemText = z.string().trim().min(1, 'ITEM_TEXT_REQUIRED').max(200, 'ITEM_TEXT_TOO_LONG');
+
+list.post('/items', validateBody(z.object({ id: clientId, text: itemText, ...itemFields })), itemsController.create);
+list.post('/reset', itemsController.uncheckAll);
+list.post('/clear-completed', itemsController.deleteCompleted);
+list.patch('/items/:itemId', checkIds, validateBody(z.object({ text: itemText.optional(), ...itemFields })), itemsController.update);
+list.put('/items/:itemId/completed', checkIds, validateBody(z.object({ completed: z.boolean() })), itemsController.setCompleted);
+list.delete('/items/:itemId', checkIds, itemsController.remove);
