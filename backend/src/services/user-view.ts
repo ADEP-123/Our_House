@@ -10,6 +10,7 @@ export function toUserView(user: UserRow) {
     lastName: user.last_name,
     avatarUrl: user.avatar_url,
     avatarPreset: user.avatar_preset,
+    theme: user.theme,
     locale: user.locale,
     timezone: user.timezone,
   };

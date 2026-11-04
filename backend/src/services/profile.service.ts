@@ -110,6 +110,11 @@ export const profileService = {
     return toUserView(updated);
   },
 
+  /** theme = null vuelve al tema claro por defecto. */
+  async setTheme(userId: string, theme: unknown | null): Promise<UserView> {
+    return toUserView(await usersRepository.setTheme(userId, theme));
+  },
+
   async deleteAccount(userId: string, password: string): Promise<void> {
     const user = await getUser(userId);
     await requirePassword(user, password);

@@ -14,6 +14,7 @@ export interface UserRow {
   last_name: string | null;
   avatar_url: string | null;
   avatar_preset: string | null;
+  theme: unknown | null;
   created_at: Date;
 }
 
@@ -87,6 +88,10 @@ export const usersRepository = {
       'UPDATE users SET avatar_url = $2, avatar_preset = $3, updated_at = now() WHERE id = $1 RETURNING *',
       [id, avatar.url, avatar.preset],
     ))!;
+  },
+
+  async setTheme(id: string, theme: unknown | null) {
+    return (await one('UPDATE users SET theme = $2, updated_at = now() WHERE id = $1 RETURNING *', [id, theme]))!;
   },
 
   updateEmail: (id: string, email: string, conn: Db) =>
