@@ -1,11 +1,13 @@
 import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { ConfirmDialogComponent } from './shared/confirm-dialog.component';
+import { ToastComponent } from './shared/toast.component';
 import { ThemeService } from './core/theme/theme.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
-  template: '<router-outlet />',
+  imports: [RouterOutlet, ConfirmDialogComponent, ToastComponent],
+  template: '<router-outlet /><oh-confirm-dialog /><oh-toast />',
 })
 export class App {
   // Aplica la paleta del usuario desde el arranque
