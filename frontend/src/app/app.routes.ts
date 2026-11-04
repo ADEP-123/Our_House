@@ -46,6 +46,14 @@ export const routes: Routes = [
     children: [
       { path: 'inicio', loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage) },
       {
+        path: 'familias',
+        loadComponent: () => import('./features/families/families.page').then((m) => m.FamiliesPage),
+      },
+      {
+        path: 'familias/:id',
+        loadComponent: () => import('./features/families/family.page').then((m) => m.FamilyPage),
+      },
+      {
         path: 'apariencia',
         loadComponent: () => import('./features/appearance/appearance.page').then((m) => m.AppearancePage),
       },

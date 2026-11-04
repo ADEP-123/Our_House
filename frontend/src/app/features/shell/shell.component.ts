@@ -26,6 +26,7 @@ export class ShellComponent {
 
   protected readonly nav: NavItem[] = [
     { path: '/inicio', label: 'shell.home', icon: 'home' },
+    { path: '/familias', label: 'shell.families', icon: 'family' },
     { path: '/apariencia', label: 'shell.appearance', icon: 'palette' },
     { path: '/perfil', label: 'shell.profile', icon: 'user' },
   ];

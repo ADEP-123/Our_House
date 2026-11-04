@@ -1,0 +1,216 @@
+<a class="back" routerLink="/familias">← {{ 'families.detail.back' | t }}</a>
+
+@if (loadError(); as err) {
+  <p class="oh-alert is-error" role="alert">{{ err }}</p>
+} @else if (family(); as f) {
+  <!-- Encabezado -->
+  <header class="head">
+    <oh-avatar [name]="f.name" [url]="f.avatarUrl" [presetId]="f.avatarPreset" [presets]="familyPresets" [size]="80" />
+    <div class="head-text">
+      @if (renaming()) {
+        <form class="rename" [formGroup]="nameForm" (ngSubmit)="rename()" novalidate>
+          <label class="oh-sr-only" for="family-rename">{{ 'families.create.name' | t }}</label>
+          <input id="family-rename" class="oh-input" formControlName="name" maxlength="60" />
+          <button class="oh-btn oh-btn--filled" type="submit" [disabled]="nameForm.invalid || busy() === 'rename'">
+            {{ 'families.detail.save' | t }}
+          </button>
+          <button class="oh-btn oh-btn--text" type="button" (click)="renaming.set(false)">{{ 'families.detail.cancel' | t }}</button>
+        </form>
+      } @else {
+        <h1>{{ f.name }}</h1>
+      }
+      <p class="oh-muted">
+        {{ roleKey(f.role) | t }} ·
+        {{ f.members.length === 1 ? ('families.oneMember' | t) : ('families.members' | t: { n: f.members.length }) }}
+      </p>
+      @if (isLeader() && !renaming()) {
+        <div class="head-actions">
+          <button type="button" class="oh-btn oh-btn--text" (click)="startRename()">{{ 'families.detail.rename' | t }}</button>
+          <button type="button" class="oh-btn oh-btn--text" [attr.aria-expanded]="showAvatar()" (click)="showAvatar.set(!showAvatar())">
+            {{ 'families.detail.avatar' | t }}
+          </button>
+        </div>
+      }
+    </div>
+  </header>
+  @if (message()?.area === 'header') {
+    <p class="oh-alert is-error" role="alert">{{ message()!.text }}</p>
+  }
+  @if (isLeader() && showAvatar()) {
+    <div class="oh-panel avatar-panel">
+      <oh-avatar-picker
+        [name]="f.name"
+        [url]="f.avatarUrl"
+        [presetId]="f.avatarPreset"
+        [presets]="familyPresets"
+        [busy]="busy() === 'avatar'"
+        (upload)="uploadAvatar($event)"
+        (pick)="pickAvatar($event)"
+      />
+      @if (message()?.area === 'avatar') {
+        <p class="oh-alert is-error" role="alert">{{ message()!.text }}</p>
+      }
+    </div>
+  }
+
+  <div class="grid">
+    <!-- Miembros -->
+    <section class="members">
+      <h2>{{ 'families.detail.membersTitle' | t }}</h2>
+      <ul class="list">
+        @for (m of f.members; track m.userId) {
+          <li class="member">
+            <oh-avatar [name]="m.nickname" [url]="m.avatarUrl" [presetId]="m.avatarPreset" [size]="44" />
+            <div class="info">
+              <p class="name">
+                {{ displayName(m) }}
+                @if (m.userId === me()) {
+                  <span class="oh-muted">({{ 'families.detail.you' | t }})</span>
+                }
+              </p>
+              <p class="meta">&#64;{{ m.nickname }}</p>
+            </div>
+            <span class="chip" [class.leader]="m.role === 'leader'">{{ roleKey(m.role) | t }}</span>
+
+            @if (isLeader() && m.userId !== me()) {
+              <div class="member-actions">
+                @if (confirmExpel() === m.userId) {
+                  <span class="confirm-text">{{ 'families.detail.confirmExpel' | t: { name: m.nickname } }}</span>
+                  <button type="button" class="oh-btn oh-btn--danger" (click)="expel(m)" [disabled]="busy() === m.userId">
+                    {{ 'families.detail.expel' | t }}
+                  </button>
+                  <button type="button" class="oh-btn oh-btn--text" (click)="confirmExpel.set(null)">
+                    {{ 'families.detail.cancel' | t }}
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="oh-btn oh-btn--text"
+                    (click)="setRole(m, m.role === 'leader' ? 'member' : 'leader')"
+                    [disabled]="busy() === m.userId"
+                  >
+                    {{ (m.role === 'leader' ? 'families.detail.removeLeader' : 'families.detail.makeLeader') | t }}
+                  </button>
+                  <button type="button" class="oh-btn oh-btn--text danger" (click)="confirmExpel.set(m.userId)">
+                    {{ 'families.detail.expel' | t }}
+                  </button>
+                }
+              </div>
+            } @else if (isLeader() && m.userId === me() && leaderCount() > 1) {
+              <div class="member-actions">
+                <button type="button" class="oh-btn oh-btn--text" (click)="setRole(m, 'member')" [disabled]="busy() === m.userId">
+                  {{ 'families.detail.removeLeader' | t }}
+                </button>
+              </div>
+            }
+          </li>
+        }
+      </ul>
+      @if (message()?.area === 'members') {
+        <p class="oh-alert is-error" role="alert">{{ message()!.text }}</p>
+      }
+    </section>
+
+    @if (isLeader()) {
+      <div class="side">
+        <!-- Invitar -->
+        <section class="oh-panel">
+          <h2>{{ 'families.detail.inviteTitle' | t }}</h2>
+          <form class="oh-form" [formGroup]="inviteForm" (ngSubmit)="invite()" novalidate>
+            <div class="oh-field">
+              <label for="invite-target">{{ 'families.detail.inviteLabel' | t }}</label>
+              <input
+                id="invite-target"
+                class="oh-input"
+                formControlName="target"
+                autocapitalize="none"
+                autocomplete="off"
+                spellcheck="false"
+                aria-describedby="invite-hint"
+              />
+              <span id="invite-hint" class="oh-hint">{{ 'families.detail.inviteHint' | t }}</span>
+            </div>
+            <div aria-live="polite">
+              @if (message()?.area === 'invite') {
+                <p class="oh-alert" [class.is-error]="message()!.error" [class.is-success]="!message()!.error">{{ message()!.text }}</p>
+              }
+            </div>
+            <button class="oh-btn oh-btn--filled" type="submit" [disabled]="inviteForm.invalid || busy() === 'invite'">
+              {{ 'families.detail.inviteSubmit' | t }}
+            </button>
+          </form>
+
+          <h3>{{ 'families.detail.invitationsTitle' | t }}</h3>
+          @if (invitations().length) {
+            <ul class="invitations">
+              @for (inv of invitations(); track inv.id) {
+                <li>
+                  <div class="inv-main">
+                    <span class="inv-email">{{ inv.email }}</span>
+                    <span class="status" [attr.data-status]="inv.status">{{ statusKey(inv.status) | t }}</span>
+                  </div>
+                  <span class="meta">{{ 'families.detail.sentOn' | t: { date: formatDate(inv.createdAt) } }}</span>
+                  @if (inv.status === 'pending' || inv.status === 'expired') {
+                    <div class="inv-actions">
+                      <button type="button" class="oh-btn oh-btn--text" (click)="resend(inv)" [disabled]="busy() === inv.id">
+                        {{ 'families.detail.resend' | t }}
+                      </button>
+                      @if (inv.status === 'pending') {
+                        <button type="button" class="oh-btn oh-btn--text danger" (click)="cancel(inv)" [disabled]="busy() === inv.id">
+                          {{ 'families.detail.cancelInvitation' | t }}
+                        </button>
+                      }
+                    </div>
+                  }
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="oh-hint">{{ 'families.detail.noInvitations' | t }}</p>
+          }
+        </section>
+
+        <!-- Código para unirse -->
+        <section class="oh-panel">
+          <h2>{{ 'families.detail.codeTitle' | t }}</h2>
+          <p class="oh-muted small">{{ 'families.detail.codeBody' | t }}</p>
+          <p class="code" aria-live="polite">{{ f.inviteCode }}</p>
+          <div class="actions">
+            <button type="button" class="oh-btn oh-btn--tonal" (click)="copyCode()">
+              {{ (copied() ? 'families.detail.copied' : 'families.detail.copy') | t }}
+            </button>
+            <button type="button" class="oh-btn oh-btn--text" (click)="regenerate()" [disabled]="busy() === 'code'">
+              {{ 'families.detail.regenerate' | t }}
+            </button>
+          </div>
+          @if (message()?.area === 'code') {
+            <p class="oh-alert" [class.is-error]="message()!.error" [class.is-success]="!message()!.error">{{ message()!.text }}</p>
+          }
+        </section>
+      </div>
+    }
+  </div>
+
+  <!-- Salir del grupo -->
+  <section class="leave">
+    <h2>{{ 'families.detail.leaveTitle' | t }}</h2>
+    <p class="oh-muted">{{ 'families.detail.leaveBody' | t }}</p>
+    @if (message()?.area === 'leave') {
+      <p class="oh-alert is-error" role="alert">{{ message()!.text }}</p>
+    }
+    <div class="actions">
+      @if (confirmLeave()) {
+        <button type="button" class="oh-btn oh-btn--danger" (click)="leave()" [disabled]="busy() === 'leave'">
+          {{ 'families.detail.confirmLeave' | t }}
+        </button>
+        <button type="button" class="oh-btn oh-btn--text" (click)="confirmLeave.set(false)">{{ 'families.detail.cancel' | t }}</button>
+      } @else {
+        <button type="button" class="oh-btn oh-btn--outline danger" (click)="confirmLeave.set(true)">
+          {{ 'families.detail.leave' | t }}
+        </button>
+      }
+    </div>
+  </section>
+} @else {
+  <p class="oh-muted" role="status">{{ 'common.loading' | t }}</p>
+}
