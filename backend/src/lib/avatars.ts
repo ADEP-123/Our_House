@@ -3,6 +3,10 @@ export const USER_AVATAR_PRESETS = [
   'fox', 'cat', 'dog', 'panda', 'owl', 'frog', 'bear', 'rabbit', 'koala', 'penguin', 'turtle', 'bee',
 ] as const;
 
+export const FAMILY_AVATAR_PRESETS = [
+  'house', 'cottage', 'tree', 'sunflower', 'clover', 'star', 'moon', 'sun', 'wave', 'mountain', 'orange', 'balloon',
+] as const;
+
 export const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 
 const SIGNATURES: { type: string; ext: string; test: (b: Buffer) => boolean }[] = [
