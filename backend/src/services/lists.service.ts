@@ -5,6 +5,7 @@ import { conflict, forbidden, notFound } from '../lib/http-error.js';
 import { familiesRepository, type FamilyRole } from '../repositories/families.repository.js';
 import { listsRepository, type ItemRow, type ListCardRow } from '../repositories/lists.repository.js';
 import { listRef, logActivity } from './activity.service.js';
+import { calendarService } from './calendar.service.js';
 import { notificationsService } from './notifications.service.js';
 import { activityRepository } from '../repositories/activity.repository.js';
 import { requireMember } from './families.service.js';
@@ -196,6 +197,8 @@ export const listsService = {
       await logActivity(before.family_id, userId, 'list.privacy_changed', { ...ref, privateOwnerId: null, details: { isPrivate: data.isPrivate } });
       if (!data.isPrivate) notificationsService.listShared({ ...before, name: data.name ?? before.name }, userId, true);
     }
+    // Cambió quién puede ver la lista o su nombre (aparece en la descripción del evento)
+    if ((data.isPrivate !== undefined && data.isPrivate !== before.is_private) || changes['name']) calendarService.syncList(listId);
     return listsService.detail(listId, userId);
   },
 
@@ -205,6 +208,7 @@ export const listsService = {
     if (!!access.list.archived_at !== archived) {
       await listsRepository.setArchived(listId, archived);
       await logActivity(access.list.family_id, userId, archived ? 'list.archived' : 'list.restored', listRef(access.list));
+      calendarService.syncList(listId);
     }
     return listsService.detail(listId, userId);
   },

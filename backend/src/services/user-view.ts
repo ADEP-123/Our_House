@@ -24,6 +24,8 @@ export function toUserView(user: UserRow) {
       startDays: user.reminder_start_days,
       everyDays: user.reminder_every_days,
     },
+    /** Ya no mostrar el aviso de conectar Google Calendar al poner una fecha */
+    calendarPromptDismissed: user.calendar_prompt_dismissed,
   };
 }
 
