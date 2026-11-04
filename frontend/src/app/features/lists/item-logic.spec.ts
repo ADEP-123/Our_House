@@ -15,6 +15,7 @@ const leche: ListItem = {
   dueDate: null,
   dueTime: null,
   dueAt: null,
+  reminders: { startDays: null, everyDays: null, off: false },
   position: 1,
   completedAt: null,
   completedBy: null,
