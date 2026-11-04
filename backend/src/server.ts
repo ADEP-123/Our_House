@@ -1,16 +1,9 @@
-import { createApp } from './app.js';
+// Solo para desarrollo local o un servidor propio. En Vercel la entrada es app.ts.
+import app from './app.js';
 import { env } from './config/env.js';
-import { closePool, initPool } from './config/database.js';
+import { closePool } from './config/database.js';
 
-try {
-  await initPool();
-  console.log('Pool de Oracle listo');
-} catch (err) {
-  // La API arranca igual; /api/health reportará db: "down" hasta que la base responda
-  console.error('No se pudo crear el pool de Oracle:', (err as Error).message);
-}
-
-const server = createApp().listen(env.port, () => {
+const server = app.listen(env.port, () => {
   console.log(`API escuchando en el puerto ${env.port} (${env.nodeEnv})`);
 });
 
