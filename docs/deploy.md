@@ -106,6 +106,45 @@ Después de cambiar variables, haz **Redeploy** del proyecto `our-house-api` par
 - **Variable opcional** en `our-house-api`: `LIST_ARCHIVE_RETENTION_DAYS`, los días que una lista archivada espera antes de borrarse sola. Si no se define, son 15. El borrado ocurre al abrir las listas del grupo, sin tareas programadas.
 - **Sin conexión:** funciona con la PWA publicada (el service worker no corre en `ng serve`). Las listas que se abrieron con conexión quedan guardadas en el dispositivo; los cambios hechos sin red se envían solos al volver. Cerrar sesión borra esa copia.
 
+## 7. Listas avanzadas y recordatorios (fase 3)
+
+- **Migraciones:** de `008_notificaciones` a `013_google_calendar`. Las aplica el workflow **Migraciones** al llegar a `main`.
+- **Correos nuevos:** lista nueva del grupo, tarea asignada y recordatorios. Usan el mismo Gmail de la sección 5.1. Gmail permite unos 500 correos al día, de sobra para un grupo familiar. Cada persona los apaga en Perfil > Notificaciones.
+
+### 7.1 Recordatorios cada hora
+
+Vercel gratis solo permite tareas programadas una vez al día, así que el reloj es un workflow de GitHub (gratis en repos públicos) que llama a la API cada hora.
+
+1. Genera una clave larga (por ejemplo con `openssl rand -base64 32`).
+2. En Vercel, proyecto `our-house-api` > Settings > Environment Variables: agrega `CRON_SECRET` con esa clave y haz **Redeploy**.
+3. En GitHub > Settings > Secrets and variables > Actions:
+   - pestaña **Secrets**: `CRON_SECRET` con la misma clave;
+   - pestaña **Variables**: `API_URL` = `https://our-house-api.vercel.app`.
+4. En Actions > **Recordatorios** > **Run workflow** pruébalo a mano: debe terminar en verde y mostrar `{"sent":0}` (o los que haya enviado).
+
+Notas:
+- GitHub puede atrasar unos minutos cada ejecución; la API envía cada recordatorio una sola vez por día y persona.
+- En repos públicos, GitHub **pausa los workflows programados tras 60 días sin actividad** en el repo. Si pasa, te avisa por correo; se reactiva con un clic en Actions o con cualquier push.
+- El mismo envío repasa Google Calendar: borra eventos de tareas eliminadas y reintenta lo que haya fallado.
+
+## 8. Google Calendar
+
+Opcional. Sin estas variables la app funciona igual y la opción no aparece activa. Se hace una sola vez, unos 15 minutos.
+
+1. Entra a [console.cloud.google.com](https://console.cloud.google.com) con tu cuenta de Google y crea un proyecto llamado **Our House**.
+2. **APIs y servicios > Biblioteca**: busca **Google Calendar API** y pulsa **Habilitar**.
+3. **Google Auth Platform** (o "Pantalla de consentimiento de OAuth"):
+   - **Branding / Información de la app**: nombre `Our House`, tu correo como soporte y como contacto del desarrollador. En dominios autorizados agrega `our-house-fawn.vercel.app`.
+   - **Público (Audience)**: tipo **Externo**. Luego pulsa **Publicar app** para pasarla a **En producción**. Importante: en modo "Prueba" Google corta el permiso cada 7 días y habría que reconectar.
+   - **Acceso a datos (Data access)**: agrega los permisos `openid`, `.../auth/userinfo.email` y `https://www.googleapis.com/auth/calendar.app.created`. Este último solo deja a la app crear y manejar su propio calendario "Our House", no ve tus otros calendarios.
+4. **Clientes (Clients) > Crear cliente**: tipo **Aplicación web**, nombre `Our House`. En **URI de redireccionamiento autorizados** agrega:
+   - `https://our-house-fawn.vercel.app/api/google/callback`
+   - `http://localhost:4200/api/google/callback` (para desarrollo)
+5. Copia el **ID de cliente** y el **Secreto**. En Vercel, proyecto `our-house-api`, agrega `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` y haz **Redeploy**.
+6. En la app: Perfil > Google Calendar > **Conectar**. Como la app no pasó la verificación de Google (no hace falta para uso familiar, hasta 100 personas), Google muestra "Google no verificó esta app": toca **Configuración avanzada** > **Ir a Our House** y acepta.
+
+Cómo funciona: cada tarea con fecha aparece en el calendario "Our House" de su responsable (o de quien la creó, si no tiene). Con hora, dura 30 minutos con aviso 30 minutos antes; sin hora, es de todo el día con aviso a las 9 del día anterior. Al completarla su título pasa a "✓ tarea". El refresh token se guarda cifrado con una clave derivada de `JWT_SECRET`: si cambias `JWT_SECRET`, cada persona tiene que volver a conectar.
+
 ## Desarrollo local
 
 ```bash
