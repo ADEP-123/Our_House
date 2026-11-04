@@ -57,11 +57,58 @@ La región de la función está fijada en `pdx1` (Portland), junto a la base de 
 
 > Las previews del frontend también reenvían `/api` a la API de producción.
 
+## 5. Usuarios, correos y avatares (fase 1)
+
+Haz esto **antes** de mergear la fase 1 a `main`. En producción la API no arranca sin `JWT_SECRET`.
+
+### 5.1 Gmail para enviar correos
+
+1. Crea una cuenta de Gmail solo para la app (por ejemplo, `ourhouse.app@gmail.com`).
+2. Activa la **verificación en 2 pasos** en https://myaccount.google.com/security.
+3. Entra a https://myaccount.google.com/apppasswords, crea una contraseña de aplicación llamada `Our House` y copia las 16 letras, sin espacios.
+
+### 5.2 Variables del proyecto `our-house-api` en Vercel
+
+Ve a Settings > Environment Variables y agrega estas variables para *Production* y *Preview*:
+
+| Variable | Valor |
+|---|---|
+| `JWT_SECRET` | Texto aleatorio de 32 caracteres o más. Puedes generarlo con `openssl rand -base64 48` o con cualquier generador de contraseñas largas. |
+| `APP_URL` | La URL de la PWA, por ejemplo `https://our-house-fawn.vercel.app` (sin `/` al final). Se usa en los enlaces de los correos. |
+| `SMTP_USER` | El Gmail de la app |
+| `SMTP_PASS` | La contraseña de aplicación de 16 letras |
+| `MAIL_FROM_NAME` | Opcional; por defecto es `Our House` |
+
+### 5.3 Fotos de perfil y de grupo (Vercel Blob)
+
+1. En el proyecto `our-house-api` ve a **Storage > Create Database > Blob**. Ponle el nombre `our-house-avatars` y conéctalo al proyecto.
+2. Vercel agrega solo la variable `BLOB_READ_WRITE_TOKEN`.
+
+Mientras no exista el Blob store, la app funciona igual, pero solo con avatares predefinidos o iniciales.
+
+### 5.4 Migraciones de la base de datos
+
+Las tablas se crean con los archivos de `backend/migrations/`, en orden y una sola vez.
+
+- **Automático:** en GitHub ve a Settings > Secrets and variables > Actions y crea el secret `DATABASE_URL` con la cadena de Neon **sin** `-pooler`. Con eso, el workflow **Migraciones** se ejecuta solo cuando llegan migraciones nuevas a `main`, y también se puede lanzar a mano desde Actions.
+- **Manual:** desde tu equipo:
+
+```bash
+cd backend
+DATABASE_URL="postgresql://...neon.tech/neondb?sslmode=require" npm run migrate
+```
+
+Después de cambiar variables, haz **Redeploy** del proyecto `our-house-api` para que las tome.
+
 ## Desarrollo local
 
 ```bash
-# API (necesita DATABASE_URL en backend/.env; puede ser la de Neon o un Postgres local)
-cd backend && cp .env.example .env && npm install && npm run dev
+# PostgreSQL local para desarrollo y pruebas (o usa una rama de Neon)
+# API: completa backend/.env (DATABASE_URL, APP_URL=http://localhost:4200) y aplica las migraciones
+cd backend && cp .env.example .env && npm install && npm run migrate && npm run dev
+# Sin SMTP_USER/SMTP_PASS los correos se muestran en la consola de la API (ahí están los enlaces)
+# Pruebas: necesitan un PostgreSQL local; crean y borran la base ourhouse_test
+TEST_DATABASE_URL=postgresql://postgres@localhost:5432/ourhouse_test npm test
 # PWA (reenvía /api al puerto 3000)
 cd frontend && npm install && npm start
 ```
