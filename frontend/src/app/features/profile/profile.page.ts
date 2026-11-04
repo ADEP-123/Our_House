@@ -4,6 +4,7 @@ import { TPipe } from '../../core/i18n/t.pipe';
 import { AvatarComponent } from '../../shared/avatar.component';
 import { ProfileDetailsComponent } from './profile-details.component';
 import { ProfileEmailComponent } from './profile-email.component';
+import { ProfileNotificationsComponent } from './profile-notifications.component';
 import { ProfilePasswordComponent } from './profile-password.component';
 import { ProfilePhotoComponent } from './profile-photo.component';
 import { ProfileSecurityComponent } from './profile-security.component';
@@ -17,6 +18,7 @@ import { ProfileSecurityComponent } from './profile-security.component';
     ProfileDetailsComponent,
     ProfileEmailComponent,
     ProfilePasswordComponent,
+    ProfileNotificationsComponent,
     ProfileSecurityComponent,
   ],
   template: `
@@ -34,6 +36,7 @@ import { ProfileSecurityComponent } from './profile-security.component';
     <oh-profile-details />
     <oh-profile-email />
     <oh-profile-password />
+    <oh-profile-notifications />
     <oh-profile-security />
   `,
   styles: `

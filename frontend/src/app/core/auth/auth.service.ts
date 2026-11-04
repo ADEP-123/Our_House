@@ -18,6 +18,12 @@ export interface User {
   theme: Theme | null;
   locale: Locale;
   timezone: string;
+  notifications: UserNotifications;
+}
+
+export interface UserNotifications {
+  newLists: boolean;
+  assignments: boolean;
 }
 
 const USER_KEY = 'oh_user';
