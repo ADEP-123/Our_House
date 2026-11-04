@@ -38,6 +38,7 @@ export interface ItemRow {
   spent: number | null;
   last_purchase_id: string | null;
   category: string | null;
+  parent_id: string | null;
   assignee_id: string | null;
   due_date: string | null;
   position: number;
@@ -50,8 +51,8 @@ export interface ItemRow {
 
 const CARD_SELECT = `
   SELECT l.*, u.nickname AS creator_nickname, fm.role AS creator_role,
-         (SELECT count(*)::int FROM list_items i WHERE i.list_id = l.id) AS total,
-         (SELECT count(*)::int FROM list_items i WHERE i.list_id = l.id AND i.completed_at IS NOT NULL) AS completed,
+         (SELECT count(*)::int FROM list_items i WHERE i.list_id = l.id AND i.parent_id IS NULL) AS total,
+         (SELECT count(*)::int FROM list_items i WHERE i.list_id = l.id AND i.parent_id IS NULL AND i.completed_at IS NOT NULL) AS completed,
          (SELECT sum(i.spent) FROM list_items i WHERE i.list_id = l.id) AS spent,
          f.currency,
          EXISTS (SELECT 1 FROM list_pins p WHERE p.list_id = l.id AND p.user_id = $2) AS pinned
@@ -136,12 +137,13 @@ export const listsRepository = {
       ? db().query('INSERT INTO list_pins (list_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [listId, userId])
       : db().query('DELETE FROM list_pins WHERE list_id = $1 AND user_id = $2', [listId, userId]),
 
-  /** Copia los ítems de una lista a otra, todos sin marcar y con ids nuevos. */
+  /** Copia los ítems de una lista a otra, todos sin marcar y con ids nuevos (las subtareas siguen a su tarea). */
   copyItems: (fromId: string, toId: string, userId: string, conn: Db) =>
     conn.query(
-      `INSERT INTO list_items (list_id, text, note, amount, unit, category, assignee_id, due_date, position, created_by)
-       SELECT $2, text, note, amount, unit, category, assignee_id, due_date, position, $3
-         FROM list_items WHERE list_id = $1`,
+      `WITH src AS (SELECT *, gen_random_uuid() AS new_id FROM list_items WHERE list_id = $1)
+       INSERT INTO list_items (id, list_id, parent_id, text, note, amount, unit, category, assignee_id, due_date, position, created_by)
+       SELECT s.new_id, $2, p.new_id, s.text, s.note, s.amount, s.unit, s.category, s.assignee_id, s.due_date, s.position, $3
+         FROM src s LEFT JOIN src p ON p.id = s.parent_id`,
       [fromId, toId, userId],
     ),
 

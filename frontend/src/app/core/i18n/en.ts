@@ -336,6 +336,14 @@ export const en: Dictionary = {
       save: 'Save',
       cancel: 'Cancel',
     },
+    subtasks: {
+      add: 'Subtask',
+      placeholder: 'New subtask of “{task}”',
+      progress: '{done} of {total} subtasks done',
+      confirmTitle: 'Complete “{task}”?',
+      confirmBody: 'Its {n} pending subtask(s) will also be marked as done.',
+      confirm: 'Complete all',
+    },
     purchase: {
       already: 'You already bought {done} of {of}.',
       howMuch: 'How much did you buy?',
@@ -413,6 +421,9 @@ export const en: Dictionary = {
     },
   },
   activity: {
+    bySubtasks: 'when all its subtasks were done',
+    withSubtasks: 'along with {n} subtask(s)',
+    asSubtask: 'as a subtask',
     partial: 'partial: {done} of {of}',
     title: 'Activity log',
     lead: 'Everything that happens in the lists of {family}. Only leaders can see it.',
@@ -457,6 +468,9 @@ export const en: Dictionary = {
     },
   },
   errors: {
+    PARENT_NOT_FOUND: 'The task no longer exists',
+    SUBTASK_TOO_DEEP: 'A subtask cannot have subtasks',
+    SUBTASKS_ONLY_TODO: 'Subtasks only exist in to-do lists',
     required: 'This field is required',
     EMAIL_INVALID: 'Enter a valid email, like name@gmail.com',
     EMAIL_TAKEN: 'There is already an account with that email',

@@ -335,6 +335,14 @@ export const es = {
       save: 'Guardar',
       cancel: 'Cancelar',
     },
+    subtasks: {
+      add: 'Subtarea',
+      placeholder: 'Nueva subtarea de «{task}»',
+      progress: '{done} de {total} subtareas hechas',
+      confirmTitle: '¿Completar «{task}»?',
+      confirmBody: 'También se marcarán como hechas sus {n} subtarea(s) pendiente(s).',
+      confirm: 'Completar todo',
+    },
     purchase: {
       already: 'Ya compraste {done} de {of}.',
       howMuch: '¿Cuánto compraste?',
@@ -412,6 +420,9 @@ export const es = {
     },
   },
   activity: {
+    bySubtasks: 'al terminar sus subtareas',
+    withSubtasks: 'junto con {n} subtarea(s)',
+    asSubtask: 'como subtarea',
     partial: 'parcial: {done} de {of}',
     title: 'Bitácora',
     lead: 'Todo lo que pasa en las listas de {family}. Solo la ven los líderes.',
@@ -456,6 +467,9 @@ export const es = {
     },
   },
   errors: {
+    PARENT_NOT_FOUND: 'La tarea ya no existe',
+    SUBTASK_TOO_DEEP: 'Una subtarea no puede tener subtareas',
+    SUBTASKS_ONLY_TODO: 'Las subtareas solo existen en listas de tareas',
     required: 'Este campo es obligatorio',
     EMAIL_INVALID: 'Escribe un correo válido, por ejemplo nombre@gmail.com',
     EMAIL_TAKEN: 'Ya existe una cuenta con ese correo',

@@ -27,18 +27,33 @@ function log(access: ListAccess, userId: string, action: string, item: { id: str
   });
 }
 
+/** Después de cambiar una subtarea, la tarea se completa o vuelve a pendiente según corresponda. */
+async function syncParent(access: ListAccess, userId: string, parentId: string | null): Promise<void> {
+  if (!parentId) return;
+  const change = await itemsRepository.syncParent(parentId, userId);
+  if (change) await log(access, userId, change === 'completed' ? 'item.completed' : 'item.uncompleted', (await itemsRepository.find(parentId))!, { bySubtasks: true });
+}
+
 export const itemsService = {
   async create(listId: string, userId: string, data: ItemFields & { id?: string; text: string }) {
     const access = await getAccess(listId, userId);
     requireEdit(access);
     await checkAssignee(access, data.assigneeId);
+    if (data.parentId) {
+      // Un solo nivel y solo en listas de tareas
+      if (access.list.type !== 'todo') throw badRequest('SUBTASKS_ONLY_TODO');
+      const parent = await itemsRepository.find(data.parentId);
+      if (!parent || parent.list_id !== listId) throw badRequest('PARENT_NOT_FOUND');
+      if (parent.parent_id) throw badRequest('SUBTASK_TOO_DEEP');
+    }
     const id = data.id ?? randomUUID();
     const created = await itemsRepository.create(listId, id, userId, data);
     const item = await itemsRepository.find(id);
     // Reenvío del mismo ítem (cola sin conexión): válido solo si es de esta lista
     if (!created && item?.list_id !== listId) throw conflict('ITEM_ID_TAKEN');
     if (created) {
-      await log(access, userId, 'item.created', item!);
+      await log(access, userId, 'item.created', item!, item!.parent_id ? { subtaskOf: data.parentId } : undefined);
+      await syncParent(access, userId, item!.parent_id);
       notificationsService.assigned(item!, access.list, userId, item!.assignee_id);
     }
     return toItemView(item!);
@@ -78,8 +93,13 @@ export const itemsService = {
     if (!access.canCheck) throw forbidden(access.list.archived_at ? 'LIST_ARCHIVED' : 'LIST_READ_ONLY');
     const before = await getItem(access, itemId);
     await itemsRepository.setCompleted(itemId, listId, completed, userId);
+    // Completar una tarea completa sus subtareas; una subtarea arrastra a su tarea
+    const cascaded = completed && !before.parent_id ? await itemsRepository.completeChildren(itemId, userId) : 0;
     const wasDone = completed ? !!before.completed_at : !!before.completed_at || before.purchased !== null;
-    if (wasDone !== completed) await log(access, userId, completed ? 'item.completed' : 'item.uncompleted', before);
+    if (wasDone !== completed) {
+      await log(access, userId, completed ? 'item.completed' : 'item.uncompleted', before, cascaded ? { subtasks: cascaded } : undefined);
+    }
+    await syncParent(access, userId, before.parent_id);
     return toItemView((await itemsRepository.find(itemId))!);
   },
 
@@ -116,6 +136,7 @@ export const itemsService = {
     if (item.list_id !== listId) throw notFound('ITEM_NOT_FOUND');
     await itemsRepository.delete(itemId, listId);
     await log(access, userId, 'item.deleted', item);
+    await syncParent(access, userId, item.parent_id);
   },
 
   async uncheckAll(listId: string, userId: string) {

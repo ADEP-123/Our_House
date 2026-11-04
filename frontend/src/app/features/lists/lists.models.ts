@@ -29,6 +29,8 @@ export interface ListSummary {
 
 export interface ListItem {
   id: string;
+  /** Tarea de la que es subtarea (un solo nivel) */
+  parentId: string | null;
   text: string;
   note: string | null;
   /** Cantidad pedida (compras) */

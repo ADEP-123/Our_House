@@ -9,10 +9,10 @@ import { TPipe } from '../../core/i18n/t.pipe';
 import { ConfirmService } from '../../shared/confirm.service';
 import { ToastService } from '../../shared/toast.service';
 import { FamilyMember } from '../families/families.service';
-import { applyCompleted, applyPurchase, formatAmount, formatMoney, isPartial, unitsFor } from './item-logic';
+import { applyPurchase, applyToggle, formatAmount, formatMoney, isPartial, removeItem, syncParent, unitsFor } from './item-logic';
 import { ListDetail, ListItem } from './lists.models';
 import { PurchaseDialogComponent, PurchaseInput } from './purchase-dialog.component';
-import { ItemChanges, ListsStore } from './lists.store';
+import { ItemChanges, ListsStore, NewItem } from './lists.store';
 
 interface Group {
   key: string;
@@ -52,6 +52,9 @@ export class ListItemsComponent implements OnDestroy {
   protected readonly buying = signal<ListItem | null>(null);
   protected readonly units = computed(() => unitsFor(this.i18n.locale()));
   protected readonly isPartial = isPartial;
+  /** Tarea en la que se está escribiendo una subtarea */
+  protected readonly addingSubtaskTo = signal<string | null>(null);
+  protected readonly subtaskText = signal('');
 
   /** Ítems borrados que todavía se pueden recuperar (se ocultan, pero aún no se envían) */
   private readonly pendingDeletes = new Map<string, { item: ListItem; timer: ReturnType<typeof setTimeout> }>();
@@ -76,10 +79,21 @@ export class ListItemsComponent implements OnDestroy {
   });
 
   private readonly visibleItems = computed(() => this.list().items.filter((i) => !this.hidden().has(i.id)));
+  /** Tareas principales (las subtareas se muestran dentro de su tarea) */
+  private readonly topLevel = computed(() => this.visibleItems().filter((i) => !i.parentId));
+  private readonly subtasks = computed(() => {
+    const byParent = new Map<string, ListItem[]>();
+    for (const item of this.visibleItems()) {
+      if (!item.parentId) continue;
+      byParent.set(item.parentId, [...(byParent.get(item.parentId) ?? []), item]);
+    }
+    for (const subs of byParent.values()) subs.sort((a, b) => a.position - b.position);
+    return byParent;
+  });
 
   /** Pendientes en orden manual; en compras, agrupados por categoría */
   protected readonly groups = computed<Group[]>(() => {
-    const pending = this.visibleItems()
+    const pending = this.topLevel()
       .filter((i) => !i.completedAt)
       .sort((a, b) => a.position - b.position);
     if (!this.isShopping()) return [{ key: 'all', label: null, items: pending }];
@@ -96,7 +110,7 @@ export class ListItemsComponent implements OnDestroy {
 
   /** Los completados bajan al final, el último marcado primero */
   protected readonly completed = computed(() =>
-    this.visibleItems()
+    this.topLevel()
       .filter((i) => i.completedAt)
       .sort((a, b) => b.completedAt!.localeCompare(a.completedAt!)),
   );
@@ -145,6 +159,17 @@ export class ListItemsComponent implements OnDestroy {
     return { text: this.i18n.t(overdue ? 'lists.items.overdue' : 'lists.items.due', { date }), overdue };
   }
 
+  protected subtasksOf(id: string): ListItem[] {
+    return this.subtasks().get(id) ?? [];
+  }
+
+  /** Avance de una tarea con subtareas: "2/3" */
+  protected progress(item: ListItem): { done: number; total: number } | null {
+    if (item.parentId) return null;
+    const subs = this.subtasksOf(item.id);
+    return subs.length ? { done: subs.filter((s) => s.completedAt).length, total: subs.length } : null;
+  }
+
   /** "2 L"; si es parcial, "1 de 2 L" */
   protected amountLabel(item: ListItem): string | null {
     if (item.amount === null) return null;
@@ -174,12 +199,13 @@ export class ListItemsComponent implements OnDestroy {
 
   private recount(): void {
     this.list.update((l) => {
-      const items = l.items.filter((i) => !this.hidden().has(i.id));
-      const completed = items.filter((i) => i.completedAt).length;
+      const items = l.items.filter((i) => !this.hidden().has(i.id) && !this.hidden().has(i.parentId ?? ''));
+      const tasks = items.filter((i) => !i.parentId);
+      const completed = tasks.filter((i) => i.completedAt).length;
       const spent = items.reduce((sum, i) => sum + (i.spent ?? 0), 0);
       return {
         ...l,
-        counts: { total: items.length, completed, pending: items.length - completed },
+        counts: { total: tasks.length, completed, pending: tasks.length - completed },
         spent: items.some((i) => i.spent !== null) ? Math.round(spent * 100) / 100 : null,
       };
     });
@@ -194,18 +220,37 @@ export class ListItemsComponent implements OnDestroy {
   async add(): Promise<void> {
     if (this.addForm.invalid) return;
     const v = this.addForm.getRawValue();
-    const item: ItemChanges & { text: string } = { text: v.text.trim() };
+    const item: NewItem = { text: v.text.trim() };
     if (this.isShopping()) Object.assign(item, this.shoppingFields(v));
     if (this.isTodo()) Object.assign(item, { assigneeId: v.assigneeId || null, dueDate: v.dueDate || null });
     this.addForm.reset({ text: '', amount: '', unit: '', category: v.category, assigneeId: '', dueDate: '' });
     this.error.set(null);
+    await this.create(item);
+  }
+
+  private async create(item: NewItem): Promise<void> {
     try {
       const created = await this.store.addItem(this.list().id, item);
-      this.list.update((l) => ({ ...l, items: [...l.items.filter((i) => i.id !== created.id), created] }));
+      // Una subtarea nueva reabre su tarea si estaba completa
+      this.list.update((l) => ({ ...l, items: syncParent([...l.items.filter((i) => i.id !== created.id), created], created.parentId, this.me()) }));
       this.recount();
     } catch (err) {
       this.fail(err);
     }
+  }
+
+  startSubtask(item: ListItem): void {
+    this.subtaskText.set('');
+    this.addingSubtaskTo.set(item.id);
+  }
+
+  /** Agrega la subtarea y deja el campo listo para la siguiente */
+  async addSubtask(parent: ListItem): Promise<void> {
+    const text = this.subtaskText().trim();
+    if (!text) return;
+    this.subtaskText.set('');
+    this.error.set(null);
+    await this.create({ text, parentId: parent.id });
   }
 
   private shoppingFields(v: { amount: string | number | null; unit: string; category: string }): ItemChanges {
@@ -225,16 +270,31 @@ export class ListItemsComponent implements OnDestroy {
       this.buying.set(item);
       return;
     }
-    await this.setCompleted(item, !item.completedAt);
+    const completed = !item.completedAt;
+    // Completar una tarea con subtareas pendientes las completa todas: se pide confirmación
+    const pendingSubs = completed && !item.parentId ? this.subtasksOf(item.id).filter((s) => !s.completedAt).length : 0;
+    if (pendingSubs) {
+      const ok = await this.confirm.ask({
+        title: this.i18n.t('lists.subtasks.confirmTitle', { task: item.text }),
+        message: this.i18n.t('lists.subtasks.confirmBody', { n: pendingSubs }),
+        confirmLabel: this.i18n.t('lists.subtasks.confirm'),
+        cancelLabel: this.i18n.t('lists.items.cancel'),
+      });
+      if (!ok) return;
+    }
+    await this.setCompleted(item, completed);
   }
 
   private async setCompleted(item: ListItem, completed: boolean): Promise<void> {
-    // Al instante en pantalla; la respuesta del servidor trae el autor y la hora reales
-    this.patchItem(item.id, applyCompleted(item, completed, this.me()));
+    const before = this.list().items;
+    // Al instante en pantalla (con su tarea y subtareas); la respuesta trae el autor y la hora reales
+    this.list.update((l) => ({ ...l, items: applyToggle(l.items, item.id, completed, this.me()) }));
+    this.recount();
     try {
       this.patchItem(item.id, await this.store.setCompleted(this.list().id, item.id, completed));
     } catch (err) {
-      this.patchItem(item.id, item);
+      this.list.update((l) => ({ ...l, items: before }));
+      this.recount();
       this.fail(err);
     }
   }
@@ -292,7 +352,7 @@ export class ListItemsComponent implements OnDestroy {
       this.pendingDeletes.delete(item.id);
       this.store
         .deleteItem(listId, item.id)
-        .then(() => this.list.update((l) => ({ ...l, items: l.items.filter((i) => i.id !== item.id) })))
+        .then(() => this.list.update((l) => ({ ...l, items: removeItem(l.items, item.id, this.me()) })))
         .catch((err) => {
           this.unhide(item.id);
           this.fail(err);
