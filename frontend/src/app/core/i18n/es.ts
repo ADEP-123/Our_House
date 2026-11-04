@@ -447,6 +447,7 @@ export const es = {
       markDone: 'Marcar «{text}» como hecho',
       markPending: 'Marcar «{text}» como pendiente',
       edit: 'Editar «{text}»',
+      editHint: 'Editar: responsable, fecha, cantidad y más',
       drag: 'Arrastrar para reordenar',
       save: 'Guardar',
       cancel: 'Cancelar',

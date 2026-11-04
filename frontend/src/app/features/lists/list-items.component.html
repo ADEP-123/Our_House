@@ -194,7 +194,13 @@
       </button>
       <div class="body">
         @if (canEdit()) {
-          <button type="button" class="text editable" [attr.aria-label]="'lists.items.edit' | t: { text: item.text }" (click)="startEdit(item)">
+          <button
+            type="button"
+            class="text editable"
+            [attr.aria-label]="'lists.items.edit' | t: { text: item.text }"
+            [title]="'lists.items.editHint' | t"
+            (click)="startEdit(item)"
+          >
             {{ item.text }}
           </button>
         } @else {

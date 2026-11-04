@@ -448,6 +448,7 @@ export const en: Dictionary = {
       markDone: 'Mark "{text}" as done',
       markPending: 'Mark "{text}" as pending',
       edit: 'Edit "{text}"',
+      editHint: 'Edit: assignee, date, quantity and more',
       drag: 'Drag to reorder',
       save: 'Save',
       cancel: 'Cancel',
