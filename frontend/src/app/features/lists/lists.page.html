@@ -16,9 +16,14 @@
       }
     }
   </div>
-  @if (family() && !archived() && !creating()) {
-    <button type="button" class="oh-btn oh-btn--filled" (click)="creating.set(true)">+ {{ 'lists.newList' | t }}</button>
-  }
+  <div class="head-actions">
+    @if (family()?.role === 'leader') {
+      <a class="oh-btn oh-btn--text" [routerLink]="['/familias', family()!.id, 'bitacora']">{{ 'activity.title' | t }}</a>
+    }
+    @if (family() && !archived() && !creating()) {
+      <button type="button" class="oh-btn oh-btn--filled" (click)="creating.set(true)">+ {{ 'lists.newList' | t }}</button>
+    }
+  </div>
 </header>
 
 @if (families.families() !== null && !family()) {

@@ -29,6 +29,7 @@
           <button type="button" class="oh-btn oh-btn--text" [attr.aria-expanded]="showAvatar()" (click)="showAvatar.set(!showAvatar())">
             {{ 'families.detail.avatar' | t }}
           </button>
+          <a class="oh-btn oh-btn--text" [routerLink]="['/familias', f.id, 'bitacora']">{{ 'activity.open' | t }}</a>
         </div>
       }
     </div>

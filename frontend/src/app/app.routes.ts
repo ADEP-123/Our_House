@@ -59,6 +59,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/families/family.page').then((m) => m.FamilyPage),
       },
       {
+        path: 'familias/:id/bitacora',
+        loadComponent: () => import('./features/activity/activity.page').then((m) => m.ActivityPage),
+      },
+      {
         path: 'apariencia',
         loadComponent: () => import('./features/appearance/appearance.page').then((m) => m.AppearancePage),
       },
