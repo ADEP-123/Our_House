@@ -8,13 +8,15 @@ import { TPipe } from '../../core/i18n/t.pipe';
 import { FAMILY_AVATAR_PRESETS } from '../../shared/avatar-presets';
 import { AvatarPickerComponent } from '../../shared/avatar-picker.component';
 import { AvatarComponent } from '../../shared/avatar.component';
+import { ConfirmService } from '../../shared/confirm.service';
 import { FamiliesService, FamilyDetail, FamilyMember, FamilyRole, InvitationStatus, SentInvitation } from './families.service';
+import { RoleDialogComponent } from './role-dialog.component';
 
 type Area = 'header' | 'avatar' | 'members' | 'invite' | 'code' | 'leave';
 
 @Component({
   selector: 'oh-family-page',
-  imports: [ReactiveFormsModule, RouterLink, TPipe, AvatarComponent, AvatarPickerComponent],
+  imports: [ReactiveFormsModule, RouterLink, TPipe, AvatarComponent, AvatarPickerComponent, RoleDialogComponent],
   templateUrl: './family.page.html',
   styleUrl: './family.page.scss',
 })
@@ -26,10 +28,10 @@ export class FamilyPage implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly i18n = inject(I18n);
+  private readonly confirm = inject(ConfirmService);
   private readonly fb = inject(FormBuilder).nonNullable;
 
   protected readonly familyPresets = FAMILY_AVATAR_PRESETS;
-  protected readonly roles: FamilyRole[] = ['leader', 'member', 'supervised'];
   protected readonly family = signal<FamilyDetail | null>(null);
   protected readonly invitations = signal<SentInvitation[]>([]);
   protected readonly isLeader = computed(() => this.family()?.role === 'leader');
@@ -40,6 +42,8 @@ export class FamilyPage implements OnInit {
   protected readonly renaming = signal(false);
   protected readonly showAvatar = signal(false);
   protected readonly confirmExpel = signal<string | null>(null);
+  /** Persona cuyo rol se está cambiando (diálogo abierto) */
+  protected readonly editingRole = signal<FamilyMember | null>(null);
   protected readonly confirmLeave = signal(false);
   protected readonly copied = signal(false);
   protected readonly busy = signal<string | null>(null);
@@ -115,8 +119,31 @@ export class FamilyPage implements OnInit {
     void this.act('avatar', 'avatar', async () => this.family.set(await this.store.setAvatarPreset(this.id(), preset)));
   }
 
-  setRole(member: FamilyMember, role: FamilyRole): void {
-    void this.act('members', member.userId, async () => this.family.set(await this.store.setRole(this.id(), member.userId, role)));
+  /** Tras elegir en el diálogo: confirma con las consecuencias y, si es uno mismo, una segunda vez. */
+  async changeRole(member: FamilyMember, role: FamilyRole): Promise<void> {
+    const t = this.i18n.t.bind(this.i18n);
+    const self = member.userId === this.me();
+    const consequences = [t(`families.roleDialog.becomes_${role}`, { name: member.nickname })];
+    if (member.role === 'leader') consequences.push(t('families.roleDialog.losesLeader'));
+    if (member.role === 'supervised') consequences.push(t('families.roleDialog.losesSupervision'));
+    const ok = await this.confirm.ask({
+      title: t('families.roleDialog.confirmTitle', { name: member.nickname, role: t(this.roleKey(role)).toLocaleLowerCase(this.i18n.locale()) }),
+      message: consequences.join(' '),
+      confirmLabel: t('families.roleDialog.confirm'),
+      cancelLabel: t('families.detail.cancel'),
+    });
+    if (!ok) return;
+    if (self) {
+      const sure = await this.confirm.ask({
+        title: t('families.roleDialog.selfTitle'),
+        message: t('families.roleDialog.selfMessage'),
+        confirmLabel: t('families.roleDialog.selfConfirm'),
+        cancelLabel: t('families.detail.cancel'),
+        danger: true,
+      });
+      if (!sure) return;
+    }
+    await this.act('members', member.userId, async () => this.family.set(await this.store.setRole(this.id(), member.userId, role)));
   }
 
   async expel(member: FamilyMember): Promise<void> {
