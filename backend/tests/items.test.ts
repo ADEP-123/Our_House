@@ -12,12 +12,12 @@ describe('ítems de las listas', () => {
   it('agrega ítems al final, con campos de compras y de tareas', async () => {
     const { familyId, users } = await setupFamily(['ana', 'beto']);
     const list = await createList(users.ana!, familyId);
-    const a = (await users.ana!.agent.post(`/api/lists/${list.id}/items`).send({ text: ' Leche ', quantity: '2 L', category: 'Lácteos' }).expect(201)).body.item;
+    const a = (await users.ana!.agent.post(`/api/lists/${list.id}/items`).send({ text: ' Leche ', amount: 2, unit: 'L', category: 'Lácteos' }).expect(201)).body.item;
     const b = (await users.ana!.agent
       .post(`/api/lists/${list.id}/items`)
       .send({ text: 'Pagar luz', assigneeId: users.beto!.user.id, dueDate: '2026-11-20', note: '' })
       .expect(201)).body.item;
-    expect(a).toMatchObject({ text: 'Leche', quantity: '2 L', category: 'Lácteos', completedAt: null });
+    expect(a).toMatchObject({ text: 'Leche', amount: 2, unit: 'L', category: 'Lácteos', completedAt: null });
     expect(b).toMatchObject({ assigneeId: users.beto!.user.id, dueDate: '2026-11-20', note: null });
     expect(b.position).toBeGreaterThan(a.position);
 
@@ -56,8 +56,8 @@ describe('ítems de las listas', () => {
     await users.caro!.agent.delete(`/api/lists/${list.id}/items/${item.id}`).expect(403);
     await users.caro!.agent.post(`/api/lists/${list.id}/reset`).expect(403);
 
-    const edited = (await users.ana!.agent.patch(`/api/lists/${list.id}/items/${item.id}`).send({ text: 'Pan integral', position: 0.5, quantity: null }).expect(200)).body.item;
-    expect(edited).toMatchObject({ text: 'Pan integral', position: 0.5, quantity: null });
+    const edited = (await users.ana!.agent.patch(`/api/lists/${list.id}/items/${item.id}`).send({ text: 'Pan integral', position: 0.5, amount: null }).expect(200)).body.item;
+    expect(edited).toMatchObject({ text: 'Pan integral', position: 0.5, amount: null });
     await users.ana!.agent.delete(`/api/lists/${list.id}/items/${item.id}`).expect(204);
     await users.ana!.agent.delete(`/api/lists/${list.id}/items/${item.id}`).expect(204); // idempotente
   });

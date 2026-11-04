@@ -67,7 +67,10 @@
 
       <p class="summary">
         {{ 'lists.summary' | t: { done: l.counts.completed, total: l.counts.total } }}
-        <span class="oh-hint">· {{ 'lists.items.updatedAgo' | t }}</span>
+        @if (l.type === 'shopping' && l.spent) {
+          · <strong>{{ 'lists.purchase.spentTotal' | t: { spent: money(l.spent) } }}</strong>
+        }
+        <span class="oh-hint"> · {{ 'lists.items.updatedAgo' | t }}</span>
       </p>
 
       <oh-list-items [list]="l" (listChange)="list.set($event)" [members]="members()" />

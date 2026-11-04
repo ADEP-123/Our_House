@@ -4,6 +4,8 @@ import { env } from './env.js';
 
 // Las columnas DATE llegan como texto 'AAAA-MM-DD' (sin convertirlas a medianoche de la zona del servidor)
 pg.types.setTypeParser(pg.types.builtins.DATE, (value) => value);
+// NUMERIC (cantidades y montos) como número: los valores de la app caben sin perder precisión
+pg.types.setTypeParser(pg.types.builtins.NUMERIC, (value) => Number(value));
 
 let pool: pg.Pool | undefined;
 

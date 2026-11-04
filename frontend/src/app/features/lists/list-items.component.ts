@@ -1,16 +1,25 @@
 import { CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, OnDestroy, computed, inject, input, model, signal } from '@angular/core';
+import { Component, OnDestroy, computed, effect, inject, input, model, signal, untracked } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { toApiError } from '../../core/api/api-error';
 import { AuthService } from '../../core/auth/auth.service';
 import { I18n } from '../../core/i18n/i18n.service';
 import { TPipe } from '../../core/i18n/t.pipe';
+import { RouterLink } from '@angular/router';
 import { ConfirmService } from '../../shared/confirm.service';
+import { GoogleCalendarService } from '../calendar/google-calendar.service';
+import { ProfileService } from '../profile/profile.service';
 import { ToastService } from '../../shared/toast.service';
 import { FamilyMember } from '../families/families.service';
+import { applyPurchase, applyToggle, formatAmount, formatMoney, isPartial, removeItem, syncParent, unitsFor } from './item-logic';
+import { dueLabel } from './due-label';
 import { ListDetail, ListItem } from './lists.models';
-import { ItemChanges, ListsStore } from './lists.store';
+import { PurchaseDialogComponent, PurchaseInput } from './purchase-dialog.component';
+import { ItemChanges, ListsStore, NewItem } from './lists.store';
+
+/** default = lo que diga el perfil de quien recibe la tarea */
+type ReminderMode = 'default' | 'custom' | 'off';
 
 interface Group {
   key: string;
@@ -20,10 +29,12 @@ interface Group {
 
 const UNDO_MS = 5000;
 
+const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, Math.round(Number(n) || 0)));
+
 /** Checklist de una lista: agregar, marcar, editar, reordenar, borrar con deshacer, reiniciar y limpiar. */
 @Component({
   selector: 'oh-list-items',
-  imports: [ReactiveFormsModule, NgTemplateOutlet, TPipe, CdkDropList, CdkDrag, CdkDragHandle],
+  imports: [ReactiveFormsModule, NgTemplateOutlet, RouterLink, TPipe, CdkDropList, CdkDrag, CdkDragHandle, PurchaseDialogComponent],
   templateUrl: './list-items.component.html',
   styleUrl: './list-items.component.scss',
 })
@@ -38,6 +49,8 @@ export class ListItemsComponent implements OnDestroy {
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18n);
   private readonly fb = inject(FormBuilder).nonNullable;
+  private readonly calendar = inject(GoogleCalendarService);
+  private readonly profile = inject(ProfileService);
 
   protected readonly canEdit = computed(() => this.list().permissions.canEdit);
   protected readonly canCheck = computed(() => this.list().permissions.canCheck);
@@ -46,6 +59,15 @@ export class ListItemsComponent implements OnDestroy {
   protected readonly error = signal<string | null>(null);
   protected readonly showMore = signal(false);
   protected readonly editingId = signal<string | null>(null);
+  /** Ítem de compras cuyo diálogo "¿Cuánto compraste?" está abierto */
+  protected readonly buying = signal<ListItem | null>(null);
+  protected readonly units = computed(() => unitsFor(this.i18n.locale()));
+  /** Recordatorios por defecto (perfil) para proponer al personalizar */
+  protected readonly defaults = computed(() => ({ startDays: 3, everyDays: 1, ...this.auth.user()?.reminders }));
+  protected readonly isPartial = isPartial;
+  /** Tarea en la que se está escribiendo una subtarea */
+  protected readonly addingSubtaskTo = signal<string | null>(null);
+  protected readonly subtaskText = signal('');
 
   /** Ítems borrados que todavía se pueden recuperar (se ocultan, pero aún no se envían) */
   private readonly pendingDeletes = new Map<string, { item: ListItem; timer: ReturnType<typeof setTimeout> }>();
@@ -53,25 +75,46 @@ export class ListItemsComponent implements OnDestroy {
 
   protected readonly addForm = this.fb.group({
     text: ['', [Validators.required, Validators.maxLength(200)]],
-    quantity: ['', Validators.maxLength(30)],
+    amount: [''],
+    unit: ['', Validators.maxLength(20)],
     category: ['', Validators.maxLength(40)],
     assigneeId: [''],
     dueDate: [''],
+    dueTime: [''],
+    reminderMode: ['default' as ReminderMode],
+    reminderStart: [3],
+    reminderEvery: [1],
   });
   protected readonly editForm = this.fb.group({
     text: ['', [Validators.required, Validators.maxLength(200)]],
     note: ['', Validators.maxLength(500)],
-    quantity: ['', Validators.maxLength(30)],
+    amount: [''],
+    unit: ['', Validators.maxLength(20)],
     category: ['', Validators.maxLength(40)],
     assigneeId: [''],
     dueDate: [''],
+    dueTime: [''],
+    reminderMode: ['default' as ReminderMode],
+    reminderStart: [3],
+    reminderEvery: [1],
   });
 
   private readonly visibleItems = computed(() => this.list().items.filter((i) => !this.hidden().has(i.id)));
+  /** Tareas principales (las subtareas se muestran dentro de su tarea) */
+  private readonly topLevel = computed(() => this.visibleItems().filter((i) => !i.parentId));
+  private readonly subtasks = computed(() => {
+    const byParent = new Map<string, ListItem[]>();
+    for (const item of this.visibleItems()) {
+      if (!item.parentId) continue;
+      byParent.set(item.parentId, [...(byParent.get(item.parentId) ?? []), item]);
+    }
+    for (const subs of byParent.values()) subs.sort((a, b) => a.position - b.position);
+    return byParent;
+  });
 
   /** Pendientes en orden manual; en compras, agrupados por categoría */
   protected readonly groups = computed<Group[]>(() => {
-    const pending = this.visibleItems()
+    const pending = this.topLevel()
       .filter((i) => !i.completedAt)
       .sort((a, b) => a.position - b.position);
     if (!this.isShopping()) return [{ key: 'all', label: null, items: pending }];
@@ -88,7 +131,7 @@ export class ListItemsComponent implements OnDestroy {
 
   /** Los completados bajan al final, el último marcado primero */
   protected readonly completed = computed(() =>
-    this.visibleItems()
+    this.topLevel()
       .filter((i) => i.completedAt)
       .sort((a, b) => b.completedAt!.localeCompare(a.completedAt!)),
   );
@@ -98,6 +141,24 @@ export class ListItemsComponent implements OnDestroy {
   ]);
 
   protected readonly pendingCount = computed(() => this.groups().reduce((n, g) => n + g.items.length, 0));
+
+  /** Aviso al poner una fecha: "puedes llevar tus tareas a Google Calendar" (hasta conectarlo o pedir no verlo más) */
+  private readonly promptClosed = signal(false);
+  protected readonly calendarPrompt = computed(() => {
+    const status = this.calendar.status();
+    return !!status?.available && !status.connected && !this.auth.user()?.calendarPromptDismissed && !this.promptClosed();
+  });
+
+  constructor() {
+    effect(() => {
+      if (this.isTodo()) untracked(() => void this.calendar.load());
+    });
+  }
+
+  dismissCalendarPrompt(forever: boolean): void {
+    this.promptClosed.set(true);
+    if (forever) void this.profile.setSettings({ calendarPromptDismissed: true }).catch(() => undefined);
+  }
 
   ngOnDestroy(): void {
     // Al salir de la pantalla, los borrados pendientes se confirman
@@ -125,16 +186,39 @@ export class ListItemsComponent implements OnDestroy {
     return `${date.toLocaleDateString(locale, { day: 'numeric', month: 'short' })} ${time}`;
   }
 
-  /** dueDate viene como 'AAAA-MM-DD': se interpreta como fecha local, sin zona horaria */
-  protected dueLabel(item: ListItem): { text: string; overdue: boolean } | null {
-    if (!item.dueDate) return null;
-    const [y, m, d] = item.dueDate.split('-').map(Number);
-    const due = new Date(y!, m! - 1, d!);
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const overdue = !item.completedAt && due < start;
-    const date = due.toLocaleDateString(this.i18n.locale(), { day: 'numeric', month: 'short' });
-    return { text: this.i18n.t(overdue ? 'lists.items.overdue' : 'lists.items.due', { date }), overdue };
+  protected dueLabel(item: ListItem) {
+    return dueLabel(item, this.i18n);
+  }
+
+  protected subtasksOf(id: string): ListItem[] {
+    return this.subtasks().get(id) ?? [];
+  }
+
+  /** Avance de una tarea con subtareas: "2/3" */
+  protected progress(item: ListItem): { done: number; total: number } | null {
+    if (item.parentId) return null;
+    const subs = this.subtasksOf(item.id);
+    return subs.length ? { done: subs.filter((s) => s.completedAt).length, total: subs.length } : null;
+  }
+
+  /** "2 L"; si es parcial, "1 de 2 L" */
+  protected amountLabel(item: ListItem): string | null {
+    if (item.amount === null) return null;
+    const locale = this.i18n.locale();
+    const of = [formatAmount(item.amount, locale), item.unit].filter(Boolean).join(' ');
+    return isPartial(item) ? this.i18n.t('lists.purchase.partialTag', { done: formatAmount(item.purchased!, locale), of }) : of;
+  }
+
+  protected money(value: number): string {
+    return formatMoney(value, this.list().currency, this.i18n.locale());
+  }
+
+  /** Cantidad escrita en el formulario: número positivo o vacío (acepta coma decimal) */
+  private amountOf(raw: string | number | null): number | null {
+    // input type=number entrega un número (o null si está vacío)
+    const text = String(raw ?? '').trim();
+    const value = Number(text.replace(',', '.'));
+    return text && value > 0 ? value : null;
   }
 
   // ---------- Cambios locales ----------
@@ -146,9 +230,15 @@ export class ListItemsComponent implements OnDestroy {
 
   private recount(): void {
     this.list.update((l) => {
-      const items = l.items.filter((i) => !this.hidden().has(i.id));
-      const completed = items.filter((i) => i.completedAt).length;
-      return { ...l, counts: { total: items.length, completed, pending: items.length - completed } };
+      const items = l.items.filter((i) => !this.hidden().has(i.id) && !this.hidden().has(i.parentId ?? ''));
+      const tasks = items.filter((i) => !i.parentId);
+      const completed = tasks.filter((i) => i.completedAt).length;
+      const spent = items.reduce((sum, i) => sum + (i.spent ?? 0), 0);
+      return {
+        ...l,
+        counts: { total: tasks.length, completed, pending: tasks.length - completed },
+        spent: items.some((i) => i.spent !== null) ? Math.round(spent * 100) / 100 : null,
+      };
     });
   }
 
@@ -161,36 +251,130 @@ export class ListItemsComponent implements OnDestroy {
   async add(): Promise<void> {
     if (this.addForm.invalid) return;
     const v = this.addForm.getRawValue();
-    const item: ItemChanges & { text: string } = { text: v.text.trim() };
-    if (this.isShopping()) Object.assign(item, { quantity: v.quantity.trim() || null, category: v.category.trim() || null });
-    if (this.isTodo()) Object.assign(item, { assigneeId: v.assigneeId || null, dueDate: v.dueDate || null });
-    this.addForm.reset({ text: '', quantity: '', category: v.category, assigneeId: '', dueDate: '' });
+    const item: NewItem = { text: v.text.trim() };
+    if (this.isShopping()) Object.assign(item, this.shoppingFields(v));
+    if (this.isTodo()) Object.assign(item, this.todoFields(v));
+    this.addForm.reset({
+      text: '',
+      amount: '',
+      unit: '',
+      category: v.category,
+      assigneeId: '',
+      dueDate: '',
+      dueTime: '',
+      reminderMode: 'default',
+      reminderStart: this.defaults().startDays,
+      reminderEvery: this.defaults().everyDays,
+    });
     this.error.set(null);
+    await this.create(item);
+  }
+
+  private async create(item: NewItem): Promise<void> {
     try {
       const created = await this.store.addItem(this.list().id, item);
-      this.list.update((l) => ({ ...l, items: [...l.items.filter((i) => i.id !== created.id), created] }));
+      // Una subtarea nueva reabre su tarea si estaba completa
+      this.list.update((l) => ({ ...l, items: syncParent([...l.items.filter((i) => i.id !== created.id), created], created.parentId, this.me()) }));
       this.recount();
     } catch (err) {
       this.fail(err);
     }
   }
 
+  startSubtask(item: ListItem): void {
+    this.subtaskText.set('');
+    this.addingSubtaskTo.set(item.id);
+  }
+
+  /** Agrega la subtarea y deja el campo listo para la siguiente */
+  async addSubtask(parent: ListItem): Promise<void> {
+    const text = this.subtaskText().trim();
+    if (!text) return;
+    this.subtaskText.set('');
+    this.error.set(null);
+    await this.create({ text, parentId: parent.id });
+  }
+
+  private shoppingFields(v: { amount: string | number | null; unit: string; category: string }): ItemChanges {
+    const amount = this.amountOf(v.amount);
+    return { amount, unit: amount !== null ? v.unit.trim() || null : null, category: v.category.trim() || null };
+  }
+
+  /** La hora solo cuenta si hay fecha; los recordatorios, "como en el perfil", personalizados o apagados */
+  private todoFields(v: {
+    assigneeId: string;
+    dueDate: string;
+    dueTime: string;
+    reminderMode: ReminderMode;
+    reminderStart: number;
+    reminderEvery: number;
+  }): ItemChanges {
+    const dueDate = v.dueDate || null;
+    const custom = v.reminderMode === 'custom';
+    return {
+      assigneeId: v.assigneeId || null,
+      dueDate,
+      dueTime: dueDate ? v.dueTime || null : null,
+      remindersOff: v.reminderMode === 'off',
+      reminderStartDays: custom ? clamp(v.reminderStart, 0, 60) : null,
+      reminderEveryDays: custom ? clamp(v.reminderEvery, 1, 30) : null,
+    };
+  }
+
+  private me() {
+    const me = this.auth.user();
+    return me ? { id: me.id, nickname: me.nickname } : null;
+  }
+
+  /** En compras, marcar abre "¿Cuánto compraste?"; desmarcar un comprado lo vuelve a pendiente. */
   async toggle(item: ListItem): Promise<void> {
     if (!this.canCheck()) return;
+    if (this.isShopping() && !item.completedAt) {
+      this.buying.set(item);
+      return;
+    }
     const completed = !item.completedAt;
-    const me = this.auth.user();
-    // Al instante en pantalla; la respuesta del servidor trae el autor y la hora reales
-    this.patchItem(item.id, {
-      completedAt: completed ? new Date().toISOString() : null,
-      completedBy: completed && me ? { id: me.id, nickname: me.nickname } : null,
-    });
+    // Completar una tarea con subtareas pendientes las completa todas: se pide confirmación
+    const pendingSubs = completed && !item.parentId ? this.subtasksOf(item.id).filter((s) => !s.completedAt).length : 0;
+    if (pendingSubs) {
+      const ok = await this.confirm.ask({
+        title: this.i18n.t('lists.subtasks.confirmTitle', { task: item.text }),
+        message: this.i18n.t('lists.subtasks.confirmBody', { n: pendingSubs }),
+        confirmLabel: this.i18n.t('lists.subtasks.confirm'),
+        cancelLabel: this.i18n.t('lists.items.cancel'),
+      });
+      if (!ok) return;
+    }
+    await this.setCompleted(item, completed);
+  }
+
+  private async setCompleted(item: ListItem, completed: boolean): Promise<void> {
+    const before = this.list().items;
+    // Al instante en pantalla (con su tarea y subtareas); la respuesta trae el autor y la hora reales
+    this.list.update((l) => ({ ...l, items: applyToggle(l.items, item.id, completed, this.me()) }));
+    this.recount();
     try {
-      const saved = await this.store.setCompleted(this.list().id, item.id, completed);
-      this.patchItem(item.id, saved);
+      this.patchItem(item.id, await this.store.setCompleted(this.list().id, item.id, completed));
     } catch (err) {
-      this.patchItem(item.id, { completedAt: item.completedAt, completedBy: item.completedBy });
+      this.list.update((l) => ({ ...l, items: before }));
+      this.recount();
       this.fail(err);
     }
+  }
+
+  async purchase(item: ListItem, input: PurchaseInput): Promise<void> {
+    this.patchItem(item.id, applyPurchase(item, input.amount, input.spent, this.me()));
+    try {
+      this.patchItem(item.id, await this.store.purchase(this.list().id, item.id, input));
+    } catch (err) {
+      this.patchItem(item.id, item);
+      this.fail(err);
+    }
+  }
+
+  /** "Quitar lo comprado" desde el diálogo */
+  clearPurchase(item: ListItem): void {
+    void this.setCompleted(item, false);
   }
 
   startEdit(item: ListItem): void {
@@ -198,10 +382,15 @@ export class ListItemsComponent implements OnDestroy {
     this.editForm.setValue({
       text: item.text,
       note: item.note ?? '',
-      quantity: item.quantity ?? '',
+      amount: item.amount === null ? '' : String(item.amount),
+      unit: item.unit ?? '',
       category: item.category ?? '',
       assigneeId: item.assigneeId ?? '',
       dueDate: item.dueDate ?? '',
+      dueTime: item.dueTime ?? '',
+      reminderMode: item.reminders?.off ? 'off' : item.reminders?.startDays !== null && item.reminders?.startDays !== undefined ? 'custom' : 'default',
+      reminderStart: item.reminders?.startDays ?? this.defaults().startDays,
+      reminderEvery: item.reminders?.everyDays ?? this.defaults().everyDays,
     });
     this.editingId.set(item.id);
   }
@@ -210,10 +399,10 @@ export class ListItemsComponent implements OnDestroy {
     if (this.editForm.invalid) return;
     const v = this.editForm.getRawValue();
     const changes: ItemChanges = { text: v.text.trim(), note: v.note.trim() || null };
-    if (this.isShopping()) Object.assign(changes, { quantity: v.quantity.trim() || null, category: v.category.trim() || null });
-    if (this.isTodo()) Object.assign(changes, { assigneeId: v.assigneeId || null, dueDate: v.dueDate || null });
+    if (this.isShopping()) Object.assign(changes, this.shoppingFields(v));
+    if (this.isTodo()) Object.assign(changes, this.todoFields(v));
     this.editingId.set(null);
-    this.patchItem(item.id, changes);
+    this.patchItem(item.id, { ...changes, dueAt: changes.dueDate && changes.dueTime ? new Date(`${changes.dueDate}T${changes.dueTime}`).toISOString() : null });
     try {
       this.patchItem(item.id, await this.store.updateItem(this.list().id, item.id, changes));
     } catch (err) {
@@ -230,7 +419,7 @@ export class ListItemsComponent implements OnDestroy {
       this.pendingDeletes.delete(item.id);
       this.store
         .deleteItem(listId, item.id)
-        .then(() => this.list.update((l) => ({ ...l, items: l.items.filter((i) => i.id !== item.id) })))
+        .then(() => this.list.update((l) => ({ ...l, items: removeItem(l.items, item.id, this.me()) })))
         .catch((err) => {
           this.unhide(item.id);
           this.fail(err);

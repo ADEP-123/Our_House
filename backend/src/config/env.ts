@@ -25,6 +25,13 @@ export const env = {
   },
   /** Días que una lista archivada espera antes de borrarse definitivamente */
   listArchiveRetentionDays: Math.max(1, Number(optional('LIST_ARCHIVE_RETENTION_DAYS') ?? 15)),
+  /** Clave que debe traer quien dispara los recordatorios (workflow de GitHub cada hora). Sin ella, el envío queda apagado. */
+  cronSecret: optional('CRON_SECRET'),
+  /** Google Calendar (OAuth). Sin estas variables la opción de conectar el calendario no aparece. */
+  google: {
+    clientId: optional('GOOGLE_CLIENT_ID'),
+    clientSecret: optional('GOOGLE_CLIENT_SECRET'),
+  },
   mail: {
     // Gmail SMTP con contraseña de aplicación. Sin estas variables los correos se escriben en la consola.
     user: optional('SMTP_USER'),

@@ -34,7 +34,20 @@ const family = Router({ mergeParams: true });
 familiesRoutes.use('/:familyId', checkIds, family);
 
 family.get('/', familiesController.detail);
-family.patch('/', validateBody(z.object({ name: familyName })), familiesController.rename);
+family.patch(
+  '/',
+  validateBody(
+    z
+      .strictObject({
+        name: familyName,
+        // Código ISO 4217 (USD, EUR, COP...); el frontend ofrece los que conoce el navegador
+        currency: z.string().regex(/^[A-Z]{3}$/, 'CURRENCY_INVALID'),
+      })
+      .partial()
+      .refine((v) => Object.keys(v).length > 0, 'NOTHING_TO_UPDATE'),
+  ),
+  familiesController.update,
+);
 family.put(
   '/avatar',
   express.raw({ type: ['image/png', 'image/jpeg', 'image/webp'], limit: MAX_AVATAR_BYTES }),

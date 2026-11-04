@@ -5,6 +5,7 @@ import { toApiError } from '../../core/api/api-error';
 import { I18n, TranslationKey } from '../../core/i18n/i18n.service';
 import { TPipe } from '../../core/i18n/t.pipe';
 import { FamiliesService } from '../families/families.service';
+import { formatAmount, formatMoney } from '../lists/item-logic';
 import { ActivityEntry, ActivityFilters, ActivityService } from './activity.service';
 
 interface Day {
@@ -27,6 +28,8 @@ export class ActivityPage implements OnInit {
   private readonly api = inject(ActivityService);
   private readonly families = inject(FamiliesService);
   private readonly i18n = inject(I18n);
+  /** Moneda del grupo, para mostrar lo pagado en las compras */
+  private readonly currency = computed(() => this.families.families()?.find((f) => f.id === this.id())?.currency ?? 'USD');
 
   protected readonly familyName = signal('');
   protected readonly entries = signal<ActivityEntry[]>([]);
@@ -137,6 +140,21 @@ export class ActivityPage implements OnInit {
         k === 'text' ? `${field(k)} (${this.i18n.t('activity.previously', { text: String(e.details!['previousText']) })})` : field(k),
       );
       return this.i18n.t('activity.changed', { fields: fields.join(', ') });
+    }
+    if (e.details['bySubtasks']) return this.i18n.t('activity.bySubtasks');
+    if (e.details['subtasks']) return this.i18n.t('activity.withSubtasks', { n: Number(e.details['subtasks']) });
+    if (e.details['subtaskOf']) return this.i18n.t('activity.asSubtask');
+    if (e.action === 'item.purchased') {
+      const d = e.details;
+      const locale = this.i18n.locale();
+      const parts: string[] = [];
+      if (d['of'] !== null && d['of'] !== undefined) {
+        const unit = d['unit'] ? ` ${String(d['unit'])}` : '';
+        parts.push(`${formatAmount(Number(d['amount']), locale)}${unit}`);
+        if (!d['complete']) parts.push(this.i18n.t('activity.partial', { done: formatAmount(Number(d['total']), locale), of: `${formatAmount(Number(d['of']), locale)}${unit}` }));
+      }
+      if (d['spent'] !== null && d['spent'] !== undefined) parts.push(formatMoney(Number(d['spent']), this.currency(), locale));
+      return parts.join(' · ') || null;
     }
     return null;
   }

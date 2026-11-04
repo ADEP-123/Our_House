@@ -21,6 +21,9 @@ export interface ListCardRow extends ListRow {
   creator_role: FamilyRole | null;
   total: number;
   completed: number;
+  /** Suma de lo pagado en los ítems (listas de compras) */
+  spent: number | null;
+  currency: string;
   pinned: boolean;
 }
 
@@ -29,10 +32,23 @@ export interface ItemRow {
   list_id: string;
   text: string;
   note: string | null;
-  quantity: string | null;
+  amount: number | null;
+  unit: string | null;
+  purchased: number | null;
+  spent: number | null;
+  last_purchase_id: string | null;
   category: string | null;
+  parent_id: string | null;
   assignee_id: string | null;
   due_date: string | null;
+  /** 'HH:MM:SS' o null (todo el día) */
+  due_time: string | null;
+  due_tz: string | null;
+  /** Momento exacto del vencimiento cuando hay hora */
+  due_at: Date | null;
+  reminder_start_days: number | null;
+  reminder_every_days: number | null;
+  reminders_off: boolean;
   position: number;
   completed_at: Date | null;
   completed_by: string | null;
@@ -41,12 +57,21 @@ export interface ItemRow {
   updated_at: Date;
 }
 
+/** Ítem con quién lo completó y el momento exacto del vencimiento (si tiene hora) */
+export const ITEM_SELECT = `
+  SELECT i.*, u.nickname AS completed_by_nickname,
+         CASE WHEN i.due_time IS NOT NULL THEN (i.due_date + i.due_time) AT TIME ZONE COALESCE(i.due_tz, 'UTC') END AS due_at
+    FROM list_items i LEFT JOIN users u ON u.id = i.completed_by`;
+
 const CARD_SELECT = `
   SELECT l.*, u.nickname AS creator_nickname, fm.role AS creator_role,
-         (SELECT count(*)::int FROM list_items i WHERE i.list_id = l.id) AS total,
-         (SELECT count(*)::int FROM list_items i WHERE i.list_id = l.id AND i.completed_at IS NOT NULL) AS completed,
+         (SELECT count(*)::int FROM list_items i WHERE i.list_id = l.id AND i.parent_id IS NULL) AS total,
+         (SELECT count(*)::int FROM list_items i WHERE i.list_id = l.id AND i.parent_id IS NULL AND i.completed_at IS NOT NULL) AS completed,
+         (SELECT sum(i.spent) FROM list_items i WHERE i.list_id = l.id) AS spent,
+         f.currency,
          EXISTS (SELECT 1 FROM list_pins p WHERE p.list_id = l.id AND p.user_id = $2) AS pinned
     FROM lists l
+    JOIN families f ON f.id = l.family_id
     LEFT JOIN users u ON u.id = l.created_by
     LEFT JOIN family_members fm ON fm.family_id = l.family_id AND fm.user_id = l.created_by`;
 
@@ -126,12 +151,13 @@ export const listsRepository = {
       ? db().query('INSERT INTO list_pins (list_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [listId, userId])
       : db().query('DELETE FROM list_pins WHERE list_id = $1 AND user_id = $2', [listId, userId]),
 
-  /** Copia los ítems de una lista a otra, todos sin marcar y con ids nuevos. */
+  /** Copia los ítems de una lista a otra, todos sin marcar y con ids nuevos (las subtareas siguen a su tarea). */
   copyItems: (fromId: string, toId: string, userId: string, conn: Db) =>
     conn.query(
-      `INSERT INTO list_items (list_id, text, note, quantity, category, assignee_id, due_date, position, created_by)
-       SELECT $2, text, note, quantity, category, assignee_id, due_date, position, $3
-         FROM list_items WHERE list_id = $1`,
+      `WITH src AS (SELECT *, gen_random_uuid() AS new_id FROM list_items WHERE list_id = $1)
+       INSERT INTO list_items (id, list_id, parent_id, text, note, amount, unit, category, assignee_id, due_date, due_time, due_tz, position, created_by)
+       SELECT s.new_id, $2, p.new_id, s.text, s.note, s.amount, s.unit, s.category, s.assignee_id, s.due_date, s.due_time, s.due_tz, s.position, $3
+         FROM src s LEFT JOIN src p ON p.id = s.parent_id`,
       [fromId, toId, userId],
     ),
 
@@ -141,8 +167,7 @@ export const listsRepository = {
 
   async items(listId: string, conn: Db = db()): Promise<ItemRow[]> {
     const { rows } = await conn.query<ItemRow>(
-      `SELECT i.*, u.nickname AS completed_by_nickname
-         FROM list_items i LEFT JOIN users u ON u.id = i.completed_by
+      `${ITEM_SELECT}
         WHERE i.list_id = $1
         ORDER BY i.position`,
       [listId],

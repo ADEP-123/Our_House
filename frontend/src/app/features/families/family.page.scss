@@ -116,12 +116,6 @@ h3 {
   }
 }
 
-.role-select select {
-  min-height: 36px;
-  padding: 0 10px;
-  font-size: 0.875rem;
-}
-
 .role-hint {
   margin-top: 10px;
 }
@@ -256,5 +250,31 @@ h3 {
 @media (min-width: 1024px) {
   .grid {
     grid-template-columns: minmax(0, 1fr) 360px;
+  }
+}
+
+.currency {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 4px;
+}
+
+.currency-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+
+  label {
+    width: 100%;
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+
+  select {
+    max-width: 320px;
   }
 }

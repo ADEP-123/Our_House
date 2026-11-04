@@ -18,6 +18,23 @@ export interface User {
   theme: Theme | null;
   locale: Locale;
   timezone: string;
+  notifications: UserNotifications;
+  /** Recordatorios de tareas con fecha: valores por defecto */
+  reminders: ReminderDefaults;
+  /** Ya no mostrar el aviso de conectar Google Calendar */
+  calendarPromptDismissed: boolean;
+}
+
+export interface UserNotifications {
+  newLists: boolean;
+  assignments: boolean;
+  reminders: boolean;
+}
+
+export interface ReminderDefaults {
+  hour: number;
+  startDays: number;
+  everyDays: number;
 }
 
 const USER_KEY = 'oh_user';

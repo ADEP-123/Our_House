@@ -5,6 +5,8 @@ import { conflict, forbidden, notFound } from '../lib/http-error.js';
 import { familiesRepository, type FamilyRole } from '../repositories/families.repository.js';
 import { listsRepository, type ItemRow, type ListCardRow } from '../repositories/lists.repository.js';
 import { listRef, logActivity } from './activity.service.js';
+import { calendarService } from './calendar.service.js';
+import { notificationsService } from './notifications.service.js';
 import { activityRepository } from '../repositories/activity.repository.js';
 import { requireMember } from './families.service.js';
 
@@ -81,6 +83,8 @@ export function toListView(list: ListCardRow, access?: Pick<ListAccess, 'canEdit
     purgeAt: list.archived_at ? new Date(list.archived_at.getTime() + env.listArchiveRetentionDays * DAY_MS) : null,
     createdBy: list.created_by ? { id: list.created_by, nickname: list.creator_nickname } : null,
     counts: { total: list.total, completed: list.completed, pending: list.total - list.completed },
+    spent: list.spent,
+    currency: list.currency,
     permissions: access
       ? { canEdit: access.canEdit, canCheck: access.canCheck, canChangePrivacy: access.canChangePrivacy, supervision: access.supervision }
       : undefined,
@@ -91,12 +95,19 @@ export function toListView(list: ListCardRow, access?: Pick<ListAccess, 'canEdit
 export function toItemView(item: ItemRow) {
   return {
     id: item.id,
+    parentId: item.parent_id,
     text: item.text,
     note: item.note,
-    quantity: item.quantity,
+    amount: item.amount,
+    unit: item.unit,
+    purchased: item.purchased,
+    spent: item.spent,
     category: item.category,
     assigneeId: item.assignee_id,
     dueDate: item.due_date,
+    dueTime: item.due_time?.slice(0, 5) ?? null,
+    dueAt: item.due_at,
+    reminders: { startDays: item.reminder_start_days, everyDays: item.reminder_every_days, off: item.reminders_off },
     position: item.position,
     completedAt: item.completed_at,
     completedBy: item.completed_by ? { id: item.completed_by, nickname: item.completed_by_nickname } : null,
@@ -150,6 +161,7 @@ export const listsService = {
     } else {
       const card = (await listsRepository.findCard(id, userId))!;
       await logActivity(familyId, userId, 'list.created', { ...listRef(card), details: { type: card.type } });
+      if (!card.is_private) notificationsService.listShared(card, userId, false);
     }
     return listsService.detail(id, userId);
   },
@@ -183,7 +195,10 @@ export const listsService = {
     if (data.isPrivate !== undefined && data.isPrivate !== before.is_private) {
       // Visible para los líderes: el nombre era (o pasa a ser) del grupo
       await logActivity(before.family_id, userId, 'list.privacy_changed', { ...ref, privateOwnerId: null, details: { isPrivate: data.isPrivate } });
+      if (!data.isPrivate) notificationsService.listShared({ ...before, name: data.name ?? before.name }, userId, true);
     }
+    // Cambió quién puede ver la lista o su nombre (aparece en la descripción del evento)
+    if ((data.isPrivate !== undefined && data.isPrivate !== before.is_private) || changes['name']) calendarService.syncList(listId);
     return listsService.detail(listId, userId);
   },
 
@@ -193,6 +208,7 @@ export const listsService = {
     if (!!access.list.archived_at !== archived) {
       await listsRepository.setArchived(listId, archived);
       await logActivity(access.list.family_id, userId, archived ? 'list.archived' : 'list.restored', listRef(access.list));
+      calendarService.syncList(listId);
     }
     return listsService.detail(listId, userId);
   },

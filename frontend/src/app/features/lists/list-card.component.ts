@@ -2,6 +2,7 @@ import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { I18n } from '../../core/i18n/i18n.service';
 import { TPipe } from '../../core/i18n/t.pipe';
+import { formatMoney } from './item-logic';
 import { colorOf, iconOf, LIST_TYPES } from './list-presets';
 import { ListSummary } from './lists.models';
 
@@ -43,12 +44,20 @@ import { ListSummary } from './lists.models';
         <div><dt>{{ 'lists.counts.total' | t }}</dt><dd>{{ l.counts.total }}</dd></div>
       </dl>
 
+      @if (l.type === 'shopping' && l.spent) {
+        <p class="spent">{{ 'lists.purchase.spentTotal' | t: { spent: spent() } }}</p>
+      }
+
       @if (l.purgeAt) {
         <p class="purge">{{ 'lists.purgesOn' | t: { date: purgeDate() } }}</p>
       }
     </a>
   `,
   styles: `
+    .spent {
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
     .card {
       display: grid;
       gap: 14px;
@@ -143,6 +152,7 @@ export class ListCardComponent {
     const { total, completed } = this.list().counts;
     return total ? Math.round((completed / total) * 100) : 0;
   });
+  protected readonly spent = computed(() => formatMoney(this.list().spent ?? 0, this.list().currency, this.i18n.locale()));
   protected readonly purgeDate = computed(() =>
     new Date(this.list().purgeAt!).toLocaleDateString(this.i18n.locale(), { day: 'numeric', month: 'long' }),
   );

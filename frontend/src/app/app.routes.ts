@@ -7,6 +7,9 @@ export const routes: Routes = [
   // La raíz va a /inicio; sin sesión, el authGuard lleva a /ingresar.
   // Debe ir primero: si no, '/' coincide con el marco de acceso vacío de abajo.
   { path: '', pathMatch: 'full', redirectTo: 'inicio' },
+  // Públicas, con o sin sesión (Google las pide para la pantalla de permisos)
+  { path: 'privacidad', loadComponent: () => import('./features/legal/legal.page').then((m) => m.LegalPage), data: { doc: 'privacy' } },
+  { path: 'terminos', loadComponent: () => import('./features/legal/legal.page').then((m) => m.LegalPage), data: { doc: 'terms' } },
   {
     path: '',
     component: AuthLayoutComponent,
@@ -48,6 +51,7 @@ export const routes: Routes = [
     loadComponent: () => import('./features/shell/shell.component').then((m) => m.ShellComponent),
     children: [
       { path: 'inicio', loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage) },
+      { path: 'mis-tareas', loadComponent: () => import('./features/tasks/my-tasks.page').then((m) => m.MyTasksPage) },
       { path: 'listas', loadComponent: () => import('./features/lists/lists.page').then((m) => m.ListsPage) },
       { path: 'listas/:id', loadComponent: () => import('./features/lists/list.page').then((m) => m.ListPage) },
       {

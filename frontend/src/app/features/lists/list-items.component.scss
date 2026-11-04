@@ -24,6 +24,12 @@
   font-size: 0.875rem;
 }
 
+.qty-row {
+  display: grid;
+  grid-template-columns: minmax(70px, 1fr) minmax(90px, 1.3fr);
+  gap: 8px;
+}
+
 .extra {
   display: grid;
   gap: 12px;
@@ -96,6 +102,12 @@
     color: #fff;
   }
 
+  // Compra parcial: mitad rellena
+  &[aria-checked='mixed'] {
+    border-color: var(--list-color, var(--oh-primary));
+    background: linear-gradient(to top, color-mix(in srgb, var(--list-color, var(--oh-primary)) 45%, var(--oh-surface)) 50%, var(--oh-surface) 50%);
+  }
+
   &:disabled {
     cursor: default;
     opacity: 0.6;
@@ -145,6 +157,15 @@ button.text {
   border-radius: 999px;
   font-size: 0.8125rem;
   background: color-mix(in srgb, var(--list-color, var(--oh-primary)) 12%, var(--oh-surface));
+
+  &.partial {
+    font-weight: 600;
+  }
+
+  &.today {
+    background: color-mix(in srgb, #e8a33d 22%, var(--oh-surface));
+    font-weight: 600;
+  }
 
   &.overdue {
     background: var(--oh-error-soft);
@@ -220,4 +241,59 @@ button.text {
 
 .cdk-drop-list-dragging .item:not(.cdk-drag-placeholder) {
   transition: transform 200ms ease;
+}
+
+// ---------- Subtareas ----------
+.items.subtasks {
+  margin: 0 12px 8px 52px;
+  border: 0;
+  border-left: 2px solid color-mix(in srgb, var(--list-color, var(--oh-primary)) 30%, transparent);
+  border-radius: 0;
+  overflow: visible;
+
+  .row {
+    padding: 6px 4px 6px 10px;
+  }
+
+  .check {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.item.sub + .item.sub {
+  border-top: 0;
+}
+
+.add-sub {
+  display: flex;
+  gap: 8px;
+  margin: 0 12px 10px 52px;
+
+  input {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.add-sub-btn {
+  margin: -6px 0 6px 52px;
+  font-size: 0.8125rem;
+  min-height: 32px;
+}
+
+.calendar-prompt {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--oh-primary) 8%, var(--oh-surface));
+  line-height: 1.45;
+
+  .prompt-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
 }

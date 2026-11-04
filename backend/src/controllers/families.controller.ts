@@ -19,8 +19,8 @@ export const familiesController = {
     res.json({ family: await familiesService.detail(familyId(req), currentUserId(req)) });
   },
 
-  async rename(req: Request, res: Response): Promise<void> {
-    res.json({ family: await familiesService.rename(familyId(req), currentUserId(req), req.body.name) });
+  async update(req: Request, res: Response): Promise<void> {
+    res.json({ family: await familiesService.update(familyId(req), currentUserId(req), req.body) });
   },
 
   async uploadAvatar(req: Request, res: Response): Promise<void> {

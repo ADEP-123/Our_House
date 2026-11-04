@@ -5,9 +5,15 @@ import { AuthService } from '../../core/auth/auth.service';
 import { isNetworkError, isRetryable } from '../../core/offline/network';
 import { OfflineDb } from '../../core/offline/offline-db.service';
 import { SyncStatus } from '../../core/offline/sync-status.service';
-import { FamilyLists, ListDetail, ListInput, ListItem, ListSummary } from './lists.models';
+import { applyPurchase, applyToggle, removeItem, syncParent } from './item-logic';
+import { FamilyLists, ListDetail, ListInput, ListItem, ListSummary, MyTask } from './lists.models';
 
-export type ItemChanges = Partial<Pick<ListItem, 'text' | 'note' | 'quantity' | 'category' | 'assigneeId' | 'dueDate' | 'position'>>;
+export type ItemChanges = Partial<Pick<ListItem, 'text' | 'note' | 'amount' | 'unit' | 'category' | 'assigneeId' | 'dueDate' | 'dueTime' | 'position'>> & {
+  reminderStartDays?: number | null;
+  reminderEveryDays?: number | null;
+  remindersOff?: boolean;
+};
+export type NewItem = ItemChanges & { text: string; parentId?: string | null };
 
 /** Un cambio guardado en el dispositivo, listo para reenviarse tal cual al servidor */
 interface Mutation {
@@ -18,6 +24,7 @@ interface Mutation {
 }
 
 const QUEUE_KEY = 'queue';
+const MY_TASKS_KEY = 'my-tasks';
 const listKey = (id: string) => `list:${id}`;
 const familyKey = (familyId: string, archived: boolean) => `lists:${familyId}:${archived ? 'archived' : 'active'}`;
 
@@ -167,10 +174,13 @@ export class ListsStore {
     if (!cached) return undefined;
     const changed = change(cached);
     const items = changed.items;
-    const completed = items.filter((i) => i.completedAt).length;
+    const tasks = items.filter((i) => !i.parentId);
+    const completed = tasks.filter((i) => i.completedAt).length;
+    const spent = items.reduce((sum, i) => sum + (i.spent ?? 0), 0);
     const updated: ListDetail = {
       ...changed,
-      counts: { total: items.length, completed, pending: items.length - completed },
+      counts: { total: tasks.length, completed, pending: tasks.length - completed },
+      spent: items.some((i) => i.spent !== null) ? Math.round(spent * 100) / 100 : null,
       updatedAt: new Date().toISOString(),
     };
     await this.db.set(listKey(listId), updated);
@@ -235,6 +245,8 @@ export class ListsStore {
       purgeAt: null,
       createdBy: me ? { id: me.id, nickname: me.nickname } : null,
       counts: { total: 0, completed: 0, pending: 0 },
+      spent: null,
+      currency: (await this.db.get<FamilyLists>(familyKey(familyId, false)))?.lists[0]?.currency ?? 'USD',
       permissions: { canEdit: true, canCheck: true, canChangePrivacy: true, supervision: false },
       updatedAt: new Date().toISOString(),
       items: [],
@@ -278,6 +290,28 @@ export class ListsStore {
     return (await firstValueFrom(this.http.post<{ list: ListDetail }>(`/api/lists/${listId}/duplicate`, body))).list;
   }
 
+  // ---------- Mis tareas ----------
+
+  /** Lo asignado a mí en todos mis grupos; sin conexión, la última copia (con los cambios pendientes). */
+  async myTasks(): Promise<MyTask[]> {
+    await this.flush();
+    if (this.queue.length) {
+      const cached = await this.db.get<MyTask[]>(MY_TASKS_KEY);
+      if (cached) return cached;
+    }
+    return this.read(MY_TASKS_KEY, async () => (await firstValueFrom(this.http.get<{ tasks: MyTask[] }>('/api/me/tasks'))).tasks);
+  }
+
+  private async updateCachedTasks(itemId: string, completed: boolean): Promise<void> {
+    const cached = await this.db.get<MyTask[]>(MY_TASKS_KEY);
+    if (!cached) return;
+    const now = new Date().toISOString();
+    await this.db.set(
+      MY_TASKS_KEY,
+      cached.map((t) => (t.id === itemId ? { ...t, completedAt: completed ? now : null } : t)),
+    );
+  }
+
   // ---------- Ítems (funcionan sin conexión) ----------
 
   private async itemResult(listId: string, res: unknown): Promise<ListItem> {
@@ -286,7 +320,7 @@ export class ListsStore {
     return item;
   }
 
-  async addItem(listId: string, input: ItemChanges & { text: string }): Promise<ListItem> {
+  async addItem(listId: string, input: NewItem): Promise<ListItem> {
     const id = crypto.randomUUID();
     return this.mutate(
       { method: 'POST', url: `/api/lists/${listId}/items`, body: { id, ...input }, listId },
@@ -295,19 +329,27 @@ export class ListsStore {
         const last = Math.max(0, ...(list?.items.map((i) => i.position) ?? []));
         const item: ListItem = {
           id,
+          parentId: input.parentId ?? null,
           text: input.text,
           note: input.note ?? null,
-          quantity: input.quantity ?? null,
+          amount: input.amount ?? null,
+          unit: input.unit ?? null,
+          purchased: null,
+          spent: null,
           category: input.category ?? null,
           assigneeId: input.assigneeId ?? null,
           dueDate: input.dueDate ?? null,
+          dueTime: input.dueDate ? (input.dueTime ?? null) : null,
+          // El momento exacto lo calcula el servidor; sin conexión se aproxima con la hora local
+          dueAt: input.dueDate && input.dueTime ? new Date(`${input.dueDate}T${input.dueTime}`).toISOString() : null,
+          reminders: { startDays: input.reminderStartDays ?? null, everyDays: input.reminderEveryDays ?? null, off: input.remindersOff ?? false },
           position: input.position ?? last + 1,
           completedAt: null,
           completedBy: null,
         };
         // La posición calculada aquí viaja con el ítem, así el orden coincide al sincronizar
         m.body = { ...(m.body as object), position: item.position };
-        await this.updateCached(listId, (l) => ({ ...l, items: [...l.items, item] }));
+        await this.updateCached(listId, (l) => ({ ...l, items: syncParent([...l.items, item], item.parentId, this.me()) }));
         return item;
       },
       (res) => this.itemResult(listId, res),
@@ -329,33 +371,52 @@ export class ListsStore {
   }
 
   async setCompleted(listId: string, itemId: string, completed: boolean): Promise<ListItem> {
-    const me = this.auth.user();
     return this.mutate(
       { method: 'PUT', url: `/api/lists/${listId}/items/${itemId}/completed`, body: { completed }, listId },
       async () => {
-        const updated = await this.updateCached(listId, (l) => ({
+        const updated = await this.updateCached(listId, (l) => ({ ...l, items: applyToggle(l.items, itemId, completed, this.me()) }));
+        await this.updateCachedTasks(itemId, completed);
+        // Desde "Mis tareas" la lista puede no estar guardada: igual queda en la cola
+        return updated?.items.find((i) => i.id === itemId) ?? ({ id: itemId, completedAt: completed ? new Date().toISOString() : null } as ListItem);
+      },
+      async (res) => {
+        // El servidor también cambió la tarea o sus subtareas: la copia local aplica las mismas reglas
+        const item = (res as { item: ListItem }).item;
+        await this.updateCached(listId, (l) => ({
           ...l,
-          items: l.items.map((i) =>
-            i.id === itemId
-              ? {
-                  ...i,
-                  completedAt: completed ? (i.completedAt ?? new Date().toISOString()) : null,
-                  completedBy: completed ? (i.completedBy ?? (me ? { id: me.id, nickname: me.nickname } : null)) : null,
-                }
-              : i,
-          ),
+          items: applyToggle(l.items, itemId, completed, this.me()).map((i) => (i.id === item.id ? item : i)),
         }));
-        const item = updated?.items.find((i) => i.id === itemId);
-        if (!item) throw new Error('ITEM_NOT_CACHED');
         return item;
       },
+    );
+  }
+
+  /** Compra (se suma a lo ya comprado). El id evita que un reenvío la cuente dos veces. */
+  async purchase(listId: string, itemId: string, purchase: { amount: number | null; spent: number | null }): Promise<ListItem> {
+    const body = { id: crypto.randomUUID(), ...purchase };
+    return this.mutate(
+      { method: 'POST', url: `/api/lists/${listId}/items/${itemId}/purchases`, body, listId },
+      () => this.changeCachedItem(listId, itemId, (i) => applyPurchase(i, purchase.amount, purchase.spent, this.me())),
       (res) => this.itemResult(listId, res),
     );
   }
 
+  private me() {
+    const me = this.auth.user();
+    return me ? { id: me.id, nickname: me.nickname } : null;
+  }
+
+  /** Cambia un ítem en la copia local. Si la lista no está guardada, no hay nada que mostrar sin conexión. */
+  private async changeCachedItem(listId: string, itemId: string, change: (item: ListItem) => ListItem): Promise<ListItem> {
+    const updated = await this.updateCached(listId, (l) => ({ ...l, items: l.items.map((i) => (i.id === itemId ? change(i) : i)) }));
+    const item = updated?.items.find((i) => i.id === itemId);
+    if (!item) throw new Error('ITEM_NOT_CACHED');
+    return item;
+  }
+
   deleteItem(listId: string, itemId: string): Promise<void> {
     const removeLocal = async () => {
-      await this.updateCached(listId, (l) => ({ ...l, items: l.items.filter((i) => i.id !== itemId) }));
+      await this.updateCached(listId, (l) => ({ ...l, items: removeItem(l.items, itemId, this.me()) }));
     };
     return this.mutate({ method: 'DELETE', url: `/api/lists/${listId}/items/${itemId}`, listId }, removeLocal, removeLocal);
   }

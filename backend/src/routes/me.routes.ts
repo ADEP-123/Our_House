@@ -1,5 +1,6 @@
 import express, { Router } from 'express';
 import { z } from 'zod';
+import { itemsController } from '../controllers/items.controller.js';
 import { profileController } from '../controllers/profile.controller.js';
 import { MAX_AVATAR_BYTES, USER_AVATAR_PRESETS } from '../lib/avatars.js';
 import { passwordSchema } from '../lib/password.js';
@@ -32,6 +33,29 @@ meRoutes.patch(
       .partial(),
   ),
   profileController.update,
+);
+
+// Mis tareas: lo asignado a mí en todos mis grupos
+meRoutes.get('/tasks', itemsController.assignedToMe);
+
+// Preferencias de notificaciones (y más adelante recordatorios y calendario)
+meRoutes.patch(
+  '/settings',
+  validateBody(
+    z
+      .strictObject({
+        newLists: z.boolean(),
+        assignments: z.boolean(),
+        reminders: z.boolean(),
+        reminderHour: z.int('REMINDER_HOUR_INVALID').min(0, 'REMINDER_HOUR_INVALID').max(23, 'REMINDER_HOUR_INVALID'),
+        reminderStartDays: z.int('REMINDER_DAYS_INVALID').min(0, 'REMINDER_DAYS_INVALID').max(60, 'REMINDER_DAYS_INVALID'),
+        reminderEveryDays: z.int('REMINDER_EVERY_INVALID').min(1, 'REMINDER_EVERY_INVALID').max(30, 'REMINDER_EVERY_INVALID'),
+        calendarPromptDismissed: z.boolean(),
+      })
+      .partial()
+      .refine((v) => Object.keys(v).length > 0, 'SETTINGS_EMPTY'),
+  ),
+  profileController.setSettings,
 );
 
 meRoutes.put(

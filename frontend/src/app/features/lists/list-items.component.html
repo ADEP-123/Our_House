@@ -13,9 +13,13 @@
     @if (showMore()) {
       <div class="extra">
         @if (isShopping()) {
-          <div class="oh-field">
-            <label for="new-qty">{{ 'lists.items.quantity' | t }}</label>
-            <input id="new-qty" class="oh-input" formControlName="quantity" maxlength="30" [placeholder]="'lists.items.quantityPlaceholder' | t" />
+          <div class="oh-field qty">
+            <label for="new-amount">{{ 'lists.items.quantity' | t }}</label>
+            <div class="qty-row">
+              <input id="new-amount" class="oh-input" type="number" inputmode="decimal" min="0" step="any" formControlName="amount" placeholder="2" />
+              <label class="oh-sr-only" for="new-unit">{{ 'lists.items.unit' | t }}</label>
+              <input id="new-unit" class="oh-input" formControlName="unit" maxlength="20" list="units" [placeholder]="'lists.items.unitPlaceholder' | t" />
+            </div>
           </div>
           <div class="oh-field">
             <label for="new-cat">{{ 'lists.items.category' | t }}</label>
@@ -36,10 +40,49 @@
             <label for="new-due">{{ 'lists.items.dueDate' | t }}</label>
             <input id="new-due" class="oh-input" type="date" formControlName="dueDate" />
           </div>
+          <div class="oh-field">
+            <label for="new-time">{{ 'lists.items.dueTime' | t }}</label>
+            <input id="new-time" class="oh-input" type="time" formControlName="dueTime" />
+          </div>
+          @if (addForm.controls.dueDate.value && calendarPrompt()) {
+            <div class="calendar-prompt wide" role="note">
+              <p>📆 {{ 'lists.calendarPrompt.body' | t }}</p>
+              <div class="prompt-actions">
+                <a class="oh-btn oh-btn--outline" routerLink="/perfil" fragment="calendario">{{ 'lists.calendarPrompt.setup' | t }}</a>
+                <button type="button" class="oh-btn oh-btn--text" (click)="dismissCalendarPrompt(false)">{{ 'lists.calendarPrompt.later' | t }}</button>
+                <button type="button" class="oh-btn oh-btn--text" (click)="dismissCalendarPrompt(true)">{{ 'lists.calendarPrompt.never' | t }}</button>
+              </div>
+            </div>
+          }
+          @if (addForm.controls.dueDate.value) {
+            <div class="oh-field wide">
+              <label for="new-reminders">{{ 'lists.reminders.label' | t }}</label>
+              <select id="new-reminders" class="oh-input" formControlName="reminderMode">
+                <option value="default">{{ 'lists.reminders.default' | t: defaults() }}</option>
+                <option value="custom">{{ 'lists.reminders.custom' | t }}</option>
+                <option value="off">{{ 'lists.reminders.off' | t }}</option>
+              </select>
+            </div>
+            @if (addForm.controls.reminderMode.value === 'custom') {
+              <div class="oh-field">
+                <label for="new-rem-start">{{ 'profile.notifications.startDays' | t }}</label>
+                <input id="new-rem-start" class="oh-input" type="number" min="0" max="60" formControlName="reminderStart" />
+              </div>
+              <div class="oh-field">
+                <label for="new-rem-every">{{ 'profile.notifications.everyDays' | t }}</label>
+                <input id="new-rem-every" class="oh-input" type="number" min="1" max="30" formControlName="reminderEvery" />
+              </div>
+            }
+          }
         }
       </div>
     }
   </form>
+  <datalist id="units">
+    @for (u of units(); track u) {
+      <option [value]="u"></option>
+    }
+  </datalist>
   <datalist id="categories">
     @for (c of categories(); track c) {
       <option [value]="c"></option>
@@ -60,9 +103,13 @@
       </div>
       <div class="extra">
         @if (isShopping()) {
-          <div class="oh-field">
-            <label [for]="'edit-qty-' + item.id">{{ 'lists.items.quantity' | t }}</label>
-            <input [id]="'edit-qty-' + item.id" class="oh-input" formControlName="quantity" maxlength="30" />
+          <div class="oh-field qty">
+            <label [for]="'edit-amount-' + item.id">{{ 'lists.items.quantity' | t }}</label>
+            <div class="qty-row">
+              <input [id]="'edit-amount-' + item.id" class="oh-input" type="number" inputmode="decimal" min="0" step="any" formControlName="amount" />
+              <label class="oh-sr-only" [for]="'edit-unit-' + item.id">{{ 'lists.items.unit' | t }}</label>
+              <input [id]="'edit-unit-' + item.id" class="oh-input" formControlName="unit" maxlength="20" list="units" />
+            </div>
           </div>
           <div class="oh-field">
             <label [for]="'edit-cat-' + item.id">{{ 'lists.items.category' | t }}</label>
@@ -83,6 +130,40 @@
             <label [for]="'edit-due-' + item.id">{{ 'lists.items.dueDate' | t }}</label>
             <input [id]="'edit-due-' + item.id" class="oh-input" type="date" formControlName="dueDate" />
           </div>
+          <div class="oh-field">
+            <label [for]="'edit-time-' + item.id">{{ 'lists.items.dueTime' | t }}</label>
+            <input [id]="'edit-time-' + item.id" class="oh-input" type="time" formControlName="dueTime" />
+          </div>
+          @if (editForm.controls.dueDate.value && calendarPrompt()) {
+            <div class="calendar-prompt wide" role="note">
+              <p>📆 {{ 'lists.calendarPrompt.body' | t }}</p>
+              <div class="prompt-actions">
+                <a class="oh-btn oh-btn--outline" routerLink="/perfil" fragment="calendario">{{ 'lists.calendarPrompt.setup' | t }}</a>
+                <button type="button" class="oh-btn oh-btn--text" (click)="dismissCalendarPrompt(false)">{{ 'lists.calendarPrompt.later' | t }}</button>
+                <button type="button" class="oh-btn oh-btn--text" (click)="dismissCalendarPrompt(true)">{{ 'lists.calendarPrompt.never' | t }}</button>
+              </div>
+            </div>
+          }
+          @if (editForm.controls.dueDate.value) {
+            <div class="oh-field wide">
+              <label [for]="'edit-rem-' + item.id">{{ 'lists.reminders.label' | t }}</label>
+              <select [id]="'edit-rem-' + item.id" class="oh-input" formControlName="reminderMode">
+                <option value="default">{{ 'lists.reminders.default' | t: defaults() }}</option>
+                <option value="custom">{{ 'lists.reminders.custom' | t }}</option>
+                <option value="off">{{ 'lists.reminders.off' | t }}</option>
+              </select>
+            </div>
+            @if (editForm.controls.reminderMode.value === 'custom') {
+              <div class="oh-field">
+                <label [for]="'edit-rem-start-' + item.id">{{ 'profile.notifications.startDays' | t }}</label>
+                <input [id]="'edit-rem-start-' + item.id" class="oh-input" type="number" min="0" max="60" formControlName="reminderStart" />
+              </div>
+              <div class="oh-field">
+                <label [for]="'edit-rem-every-' + item.id">{{ 'profile.notifications.everyDays' | t }}</label>
+                <input [id]="'edit-rem-every-' + item.id" class="oh-input" type="number" min="1" max="30" formControlName="reminderEvery" />
+              </div>
+            }
+          }
         }
         <div class="oh-field wide">
           <label [for]="'edit-note-' + item.id">{{ 'lists.items.note' | t }}</label>
@@ -92,16 +173,19 @@
       <div class="edit-actions">
         <button class="oh-btn oh-btn--filled" type="submit" [disabled]="editForm.invalid">{{ 'lists.items.save' | t }}</button>
         <button class="oh-btn oh-btn--text" type="button" (click)="editingId.set(null)">{{ 'lists.items.cancel' | t }}</button>
+        @if (isTodo() && !item.parentId) {
+          <button class="oh-btn oh-btn--text" type="button" (click)="editingId.set(null); startSubtask(item)">+ {{ 'lists.subtasks.add' | t }}</button>
+        }
         <button class="oh-btn oh-btn--text danger" type="button" (click)="remove(item)">{{ 'lists.items.delete' | t }}</button>
       </div>
     </form>
   } @else {
-    <div class="row" [class.done]="item.completedAt">
+    <div class="row" [class.done]="item.completedAt" [class.partial]="isPartial(item)">
       <button
         type="button"
         class="check"
         role="checkbox"
-        [attr.aria-checked]="!!item.completedAt"
+        [attr.aria-checked]="item.completedAt ? 'true' : isPartial(item) ? 'mixed' : 'false'"
         [attr.aria-label]="(item.completedAt ? 'lists.items.markPending' : 'lists.items.markDone') | t: { text: item.text }"
         [disabled]="!canCheck()"
         (click)="toggle(item)"
@@ -117,14 +201,20 @@
           <span class="text">{{ item.text }}</span>
         }
         <span class="meta">
-          @if (item.quantity) {
-            <span class="tag">{{ item.quantity }}</span>
+          @if (amountLabel(item); as qty) {
+            <span class="tag" [class.partial]="isPartial(item)">{{ qty }}</span>
+          }
+          @if (item.spent !== null) {
+            <span class="tag">{{ money(item.spent) }}</span>
           }
           @if (memberName(item.assigneeId); as who) {
             <span class="tag">👤 {{ who }}</span>
           }
           @if (dueLabel(item); as due) {
-            <span class="tag" [class.overdue]="due.overdue">📅 {{ due.text }}</span>
+            <span class="tag" [class.overdue]="due.kind === 'overdue'" [class.today]="due.kind === 'today'">📅 {{ due.text }}</span>
+          }
+          @if (progress(item); as p) {
+            <span class="tag" [attr.aria-label]="'lists.subtasks.progress' | t: p">☑ {{ p.done }}/{{ p.total }}</span>
           }
           @if (item.note) {
             <span class="note">{{ item.note }}</span>
@@ -140,6 +230,40 @@
         </span>
       }
     </div>
+
+    <!-- Subtareas: debajo de su tarea, con su propio orden -->
+    @if (isTodo() && !item.parentId) {
+      @let subs = subtasksOf(item.id);
+      @if (subs.length) {
+        <ul class="items subtasks" cdkDropList [cdkDropListData]="subs" [cdkDropListDisabled]="!canEdit()" (cdkDropListDropped)="drop($event)">
+          @for (sub of subs; track sub.id) {
+            <li cdkDrag [cdkDragDisabled]="!canEdit() || editingId() === sub.id" class="item sub">
+              <ng-container *ngTemplateOutlet="itemTpl; context: { $implicit: sub, draggable: canEdit() }" />
+            </li>
+          }
+        </ul>
+      }
+      @if (addingSubtaskTo() === item.id) {
+        <form class="add-sub" (submit)="$event.preventDefault(); addSubtask(item)">
+          <label class="oh-sr-only" [for]="'sub-' + item.id">{{ 'lists.subtasks.placeholder' | t: { task: item.text } }}</label>
+          <input
+            [id]="'sub-' + item.id"
+            class="oh-input"
+            maxlength="200"
+            autocomplete="off"
+            [placeholder]="'lists.subtasks.placeholder' | t: { task: item.text }"
+            [value]="subtaskText()"
+            (input)="subtaskText.set($any($event.target).value)"
+            (keydown.escape)="addingSubtaskTo.set(null)"
+          />
+          <button class="oh-btn oh-btn--filled" type="submit" [disabled]="!subtaskText().trim()">{{ 'lists.items.add' | t }}</button>
+          <button class="oh-btn oh-btn--text" type="button" (click)="addingSubtaskTo.set(null)">{{ 'lists.items.cancel' | t }}</button>
+        </form>
+      } @else if (canEdit() && subs.length) {
+        <!-- Sin subtareas, se agregan desde "Editar"; con subtareas, también aquí debajo -->
+        <button type="button" class="oh-btn oh-btn--text add-sub-btn" (click)="startSubtask(item)">+ {{ 'lists.subtasks.add' | t }}</button>
+      }
+    }
   }
 </ng-template>
 
@@ -182,4 +306,14 @@
     <button type="button" class="oh-btn oh-btn--outline" (click)="reset()">{{ 'lists.items.reset' | t }}</button>
     <button type="button" class="oh-btn oh-btn--text danger" (click)="clearCompleted()">{{ 'lists.items.clear' | t }}</button>
   </div>
+}
+
+@if (buying(); as item) {
+  <oh-purchase-dialog
+    [item]="item"
+    [currency]="list().currency"
+    (confirmed)="purchase(item, $event)"
+    (cleared)="clearPurchase(item)"
+    (closed)="buying.set(null)"
+  />
 }
