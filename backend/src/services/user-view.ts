@@ -6,6 +6,10 @@ export function toUserView(user: UserRow) {
     id: user.id,
     email: user.email,
     nickname: user.nickname,
+    firstName: user.first_name,
+    lastName: user.last_name,
+    avatarUrl: user.avatar_url,
+    avatarPreset: user.avatar_preset,
     locale: user.locale,
     timezone: user.timezone,
   };

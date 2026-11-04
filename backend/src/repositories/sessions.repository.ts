@@ -30,5 +30,9 @@ export const sessionsRepository = {
 
   delete: (id: string) => db().query('DELETE FROM sessions WHERE id = $1', [id]),
 
+  /** Cierra las demás sesiones del usuario y deja viva la actual. */
+  deleteOthers: (userId: string, keepSessionId: string) =>
+    db().query('DELETE FROM sessions WHERE user_id = $1 AND id <> $2', [userId, keepSessionId]),
+
   deleteAllForUser: (userId: string, conn: Db = db()) => conn.query('DELETE FROM sessions WHERE user_id = $1', [userId]),
 };

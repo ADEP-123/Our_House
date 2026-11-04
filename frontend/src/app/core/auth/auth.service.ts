@@ -8,11 +8,15 @@ export interface User {
   id: string;
   email: string;
   nickname: string;
+  firstName: string | null;
+  lastName: string | null;
+  avatarUrl: string | null;
+  avatarPreset: string | null;
   locale: Locale;
   timezone: string;
 }
 
-const browserTimezone = (): string => {
+export const browserTimezone = (): string => {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
   } catch {
@@ -46,6 +50,12 @@ export class AuthService {
       this.current.set(null);
     }
     return this.current()!;
+  }
+
+  /** Vuelve a pedir los datos del usuario (ej. tras confirmar un cambio de correo). */
+  async reload(): Promise<User | null> {
+    this.current.set(undefined);
+    return this.ensureLoaded();
   }
 
   isNicknameAvailable(nickname: string) {

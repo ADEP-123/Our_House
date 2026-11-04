@@ -24,7 +24,10 @@ interface NavItem {
 export class ShellComponent {
   protected readonly auth = inject(AuthService);
 
-  protected readonly nav: NavItem[] = [{ path: '/inicio', label: 'shell.home', icon: 'home' }];
+  protected readonly nav: NavItem[] = [
+    { path: '/inicio', label: 'shell.home', icon: 'home' },
+    { path: '/perfil', label: 'shell.profile', icon: 'user' },
+  ];
 
   logout(): void {
     void this.auth.logout();

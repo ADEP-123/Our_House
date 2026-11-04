@@ -1,0 +1,46 @@
+// Cada bloque del perfil: título a la izquierda en escritorio, arriba en móvil
+:host {
+  display: grid;
+  gap: 16px;
+  padding: 28px 0;
+  border-top: 1px solid var(--oh-border);
+}
+
+h2 {
+  font-size: 1.0625rem;
+}
+
+.section-body {
+  display: grid;
+  gap: 16px;
+  max-width: 480px;
+}
+
+.oh-form {
+  gap: 16px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.two {
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 640px) {
+  .two {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 1024px) {
+  :host {
+    grid-template-columns: 220px 1fr;
+    gap: 32px;
+  }
+}

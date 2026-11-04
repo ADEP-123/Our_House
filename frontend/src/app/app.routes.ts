@@ -30,6 +30,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/auth/verify-email.page').then((m) => m.VerifyEmailPage),
       },
       {
+        path: 'confirmar-correo',
+        loadComponent: () => import('./features/auth/confirm-email.page').then((m) => m.ConfirmEmailPage),
+      },
+      {
         path: 'restablecer-contrasena',
         loadComponent: () => import('./features/auth/reset-password.page').then((m) => m.ResetPasswordPage),
       },
@@ -41,6 +45,7 @@ export const routes: Routes = [
     loadComponent: () => import('./features/shell/shell.component').then((m) => m.ShellComponent),
     children: [
       { path: 'inicio', loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage) },
+      { path: 'perfil', loadComponent: () => import('./features/profile/profile.page').then((m) => m.ProfilePage) },
       { path: '', pathMatch: 'full', redirectTo: 'inicio' },
     ],
   },

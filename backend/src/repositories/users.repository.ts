@@ -10,6 +10,10 @@ export interface UserRow {
   email_verified_at: Date | null;
   failed_login_count: number;
   locked_until: Date | null;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+  avatar_preset: string | null;
   created_at: Date;
 }
 
@@ -51,6 +55,44 @@ export const usersRepository = {
 
   resetFailedLogins: (id: string) =>
     db().query('UPDATE users SET failed_login_count = 0, locked_until = NULL WHERE id = $1', [id]),
+
+  async updateProfile(
+    id: string,
+    data: { firstName?: string | null; lastName?: string | null; nickname?: string; locale?: string; timezone?: string },
+  ) {
+    return (await one(
+      `UPDATE users SET
+         first_name = CASE WHEN $2 THEN $3 ELSE first_name END,
+         last_name  = CASE WHEN $4 THEN $5 ELSE last_name END,
+         nickname   = COALESCE($6, nickname),
+         locale     = COALESCE($7, locale),
+         timezone   = COALESCE($8, timezone),
+         updated_at = now()
+       WHERE id = $1 RETURNING *`,
+      [
+        id,
+        data.firstName !== undefined,
+        data.firstName ?? null,
+        data.lastName !== undefined,
+        data.lastName ?? null,
+        data.nickname ?? null,
+        data.locale ?? null,
+        data.timezone ?? null,
+      ],
+    ))!;
+  },
+
+  async setAvatar(id: string, avatar: { url: string | null; preset: string | null }) {
+    return (await one(
+      'UPDATE users SET avatar_url = $2, avatar_preset = $3, updated_at = now() WHERE id = $1 RETURNING *',
+      [id, avatar.url, avatar.preset],
+    ))!;
+  },
+
+  updateEmail: (id: string, email: string, conn: Db) =>
+    conn.query('UPDATE users SET email = $2, email_verified_at = now(), updated_at = now() WHERE id = $1', [id, email]),
+
+  delete: (id: string, conn: Db = db()) => conn.query('DELETE FROM users WHERE id = $1', [id]),
 
   updatePassword: (id: string, passwordHash: string, conn: Db) =>
     conn.query(
