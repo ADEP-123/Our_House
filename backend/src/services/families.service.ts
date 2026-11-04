@@ -23,7 +23,7 @@ export async function requireLeader(familyId: string, userId: string): Promise<v
   if ((await requireMember(familyId, userId)) !== 'leader') throw forbidden('NOT_LEADER');
 }
 
-const familyAvatar = (f: FamilyRow) => ({ avatarUrl: f.avatar_url, avatarPreset: f.avatar_preset });
+const familyAvatar = (f: FamilyRow) => ({ avatarUrl: f.avatar_url, avatarPreset: f.avatar_preset, currency: f.currency });
 
 /**
  * Saca a un usuario del grupo dentro de una transacción.
@@ -89,9 +89,10 @@ export const familiesService = {
     };
   },
 
-  async rename(familyId: string, userId: string, name: string) {
+  /** Nombre y moneda del grupo: solo líderes. */
+  async update(familyId: string, userId: string, data: { name?: string; currency?: string }) {
     await requireLeader(familyId, userId);
-    await familiesRepository.update(familyId, { name });
+    await familiesRepository.update(familyId, data);
     return this.detail(familyId, userId);
   },
 

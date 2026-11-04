@@ -9,6 +9,7 @@ export interface FamilyRow {
   avatar_url: string | null;
   avatar_preset: string | null;
   invite_code: string;
+  currency: string;
   created_at: Date;
 }
 
@@ -58,16 +59,28 @@ export const familiesRepository = {
     return rows;
   },
 
-  async update(id: string, data: { name?: string; avatarUrl?: string | null; avatarPreset?: string | null; inviteCode?: string }) {
+  async update(
+    id: string,
+    data: { name?: string; avatarUrl?: string | null; avatarPreset?: string | null; inviteCode?: string; currency?: string },
+  ) {
     const { rows } = await db().query<FamilyRow>(
       `UPDATE families SET
          name = COALESCE($2, name),
          avatar_url = CASE WHEN $3 THEN $4 ELSE avatar_url END,
          avatar_preset = CASE WHEN $3 THEN $5 ELSE avatar_preset END,
          invite_code = COALESCE($6, invite_code),
+         currency = COALESCE($7, currency),
          updated_at = now()
        WHERE id = $1 RETURNING *`,
-      [id, data.name ?? null, 'avatarUrl' in data || 'avatarPreset' in data, data.avatarUrl ?? null, data.avatarPreset ?? null, data.inviteCode ?? null],
+      [
+        id,
+        data.name ?? null,
+        'avatarUrl' in data || 'avatarPreset' in data,
+        data.avatarUrl ?? null,
+        data.avatarPreset ?? null,
+        data.inviteCode ?? null,
+        data.currency ?? null,
+      ],
     );
     return rows[0]!;
   },

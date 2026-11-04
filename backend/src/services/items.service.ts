@@ -49,10 +49,18 @@ export const itemsService = {
     requireEdit(access);
     const before = await getItem(access, itemId);
     await checkAssignee(access, data.assigneeId);
-    await itemsRepository.update(itemId, listId, data);
+    await itemsRepository.update(itemId, listId, userId, data);
     const after = (await itemsRepository.find(itemId))!;
 
-    const columns = { text: 'text', note: 'note', quantity: 'quantity', category: 'category', assigneeId: 'assignee_id', dueDate: 'due_date' } as const;
+    const columns = {
+      text: 'text',
+      note: 'note',
+      amount: 'amount',
+      unit: 'unit',
+      category: 'category',
+      assigneeId: 'assignee_id',
+      dueDate: 'due_date',
+    } as const;
     const fields = (Object.keys(columns) as (keyof typeof columns)[]).filter((k) => before[columns[k]] !== after[columns[k]]);
     if (fields.length) {
       const details = { fields, ...(fields.includes('text') ? { previousText: before.text } : {}) };
@@ -70,8 +78,33 @@ export const itemsService = {
     if (!access.canCheck) throw forbidden(access.list.archived_at ? 'LIST_ARCHIVED' : 'LIST_READ_ONLY');
     const before = await getItem(access, itemId);
     await itemsRepository.setCompleted(itemId, listId, completed, userId);
-    if (!!before.completed_at !== completed) await log(access, userId, completed ? 'item.completed' : 'item.uncompleted', before);
+    const wasDone = completed ? !!before.completed_at : !!before.completed_at || before.purchased !== null;
+    if (wasDone !== completed) await log(access, userId, completed ? 'item.completed' : 'item.uncompleted', before);
     return toItemView((await itemsRepository.find(itemId))!);
+  },
+
+  /**
+   * Compra en una lista de compras: se suma a lo ya comprado. Si alcanza lo pedido queda completo;
+   * si no, parcial (sigue pendiente). amount null = lo que faltaba. spent = lo pagado en esta compra.
+   */
+  async purchase(listId: string, itemId: string, userId: string, data: { id: string; amount?: number | null; spent?: number | null }) {
+    const access = await getAccess(listId, userId);
+    if (!access.canCheck) throw forbidden(access.list.archived_at ? 'LIST_ARCHIVED' : 'LIST_READ_ONLY');
+    if (access.list.type !== 'shopping') throw badRequest('NOT_A_SHOPPING_LIST');
+    const before = await getItem(access, itemId);
+    const added = await itemsRepository.addPurchase(itemId, listId, userId, { id: data.id, amount: data.amount ?? null, spent: data.spent ?? null });
+    const after = (await itemsRepository.find(itemId))!;
+    if (added) {
+      await log(access, userId, 'item.purchased', after, {
+        amount: after.amount === null ? null : after.purchased! - (before.purchased ?? 0),
+        unit: after.unit,
+        total: after.amount === null ? null : after.purchased,
+        of: after.amount,
+        spent: data.spent ?? null,
+        complete: !!after.completed_at,
+      });
+    }
+    return toItemView(after);
   },
 
   /** Borrar es idempotente: si ya no existe responde igual (reintentos sin conexión). */

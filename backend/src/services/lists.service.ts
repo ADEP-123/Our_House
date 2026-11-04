@@ -82,6 +82,8 @@ export function toListView(list: ListCardRow, access?: Pick<ListAccess, 'canEdit
     purgeAt: list.archived_at ? new Date(list.archived_at.getTime() + env.listArchiveRetentionDays * DAY_MS) : null,
     createdBy: list.created_by ? { id: list.created_by, nickname: list.creator_nickname } : null,
     counts: { total: list.total, completed: list.completed, pending: list.total - list.completed },
+    spent: list.spent,
+    currency: list.currency,
     permissions: access
       ? { canEdit: access.canEdit, canCheck: access.canCheck, canChangePrivacy: access.canChangePrivacy, supervision: access.supervision }
       : undefined,
@@ -94,7 +96,10 @@ export function toItemView(item: ItemRow) {
     id: item.id,
     text: item.text,
     note: item.note,
-    quantity: item.quantity,
+    amount: item.amount,
+    unit: item.unit,
+    purchased: item.purchased,
+    spent: item.spent,
     category: item.category,
     assigneeId: item.assignee_id,
     dueDate: item.due_date,
