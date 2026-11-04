@@ -89,6 +89,12 @@ export const es = {
     families: 'Familias',
     logout: 'Cerrar sesión',
   },
+  sync: {
+    offline: 'Sin conexión. Puedes seguir usando las listas que ya abriste; los cambios se enviarán al volver.',
+    offlinePending: 'Sin conexión · {n} cambio(s) guardado(s) en este dispositivo, se enviarán al volver.',
+    sending: 'Enviando {n} cambio(s) hechos sin conexión…',
+    rejected: 'Algunos cambios hechos sin conexión no se guardaron: la lista cambió mientras tanto (por ejemplo, se archivó).',
+  },
   home: {
     greeting: 'Hola, {name}',
     intro: 'Aquí verás lo que pasa en tu casa: tareas, calendario y finanzas, a medida que los vayamos agregando.',
