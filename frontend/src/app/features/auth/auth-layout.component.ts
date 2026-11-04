@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { RouterLink, RouterOutlet } from '@angular/router';
 import { TPipe } from '../../core/i18n/t.pipe';
 import { LangSwitchComponent } from '../../shared/lang-switch.component';
 
@@ -9,7 +9,7 @@ import { LangSwitchComponent } from '../../shared/lang-switch.component';
  */
 @Component({
   selector: 'oh-auth-layout',
-  imports: [RouterOutlet, TPipe, LangSwitchComponent],
+  imports: [RouterOutlet, RouterLink, TPipe, LangSwitchComponent],
   template: `
     <div class="auth">
       <aside class="brand">
@@ -25,6 +25,10 @@ import { LangSwitchComponent } from '../../shared/lang-switch.component';
         <div class="form-area">
           <router-outlet />
         </div>
+        <footer class="legal">
+          <a routerLink="/privacidad">{{ 'legal.privacy' | t }}</a>
+          <a routerLink="/terminos">{{ 'legal.terms' | t }}</a>
+        </footer>
       </main>
     </div>
   `,
@@ -57,6 +61,16 @@ import { LangSwitchComponent } from '../../shared/lang-switch.component';
       width: 100%;
       max-width: 420px;
       margin: 0 auto;
+    }
+    .legal {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 32px;
+      font-size: 0.8125rem;
+    }
+    .legal a {
+      color: var(--oh-text-muted);
     }
     @media (min-width: 960px) {
       .auth {
