@@ -114,6 +114,10 @@ export const es = {
     updated: 'Actualizada el {date}',
     back: 'Volver a Our House',
   },
+  update: {
+    ready: 'Hay una versión nueva de Our House.',
+    reload: 'Actualizar',
+  },
   home: {
     greeting: 'Hola, {name}',
     intro: 'Aquí verás lo que pasa en tu casa: tareas, calendario y finanzas, a medida que los vayamos agregando.',

@@ -115,6 +115,10 @@ export const en: Dictionary = {
     updated: 'Updated {date}',
     back: 'Back to Our House',
   },
+  update: {
+    ready: 'A new version of Our House is available.',
+    reload: 'Update',
+  },
   home: {
     greeting: 'Hi, {name}',
     intro: "This is where you'll see what's happening at home: tasks, calendar and finances, as we add them.",
