@@ -11,6 +11,7 @@ const COLUMNS = {
   assigneeId: 'assignee_id',
   dueDate: 'due_date',
   position: 'position',
+  parentId: 'parent_id',
 } as const;
 
 export type ItemFields = {
@@ -22,6 +23,8 @@ export type ItemFields = {
   assigneeId?: string | null;
   dueDate?: string | null;
   position?: number;
+  /** Solo al crear: la tarea de la que es subtarea */
+  parentId?: string | null;
 };
 
 const present = (f: ItemFields) => (Object.keys(COLUMNS) as (keyof ItemFields)[]).filter((k) => f[k] !== undefined);
@@ -124,6 +127,42 @@ export const itemsRepository = {
     await conn.query(`UPDATE list_items SET ${SYNC_COMPLETION} WHERE id = $1`, [itemId, userId]);
     await touchList(listId, conn);
     return true;
+  },
+
+  // ---------- Subtareas ----------
+
+  /** Completa las subtareas pendientes de una tarea. Devuelve cuántas cambiaron. */
+  async completeChildren(parentId: string, userId: string, conn: Db = db()): Promise<number> {
+    const { rowCount } = await conn.query(
+      `UPDATE list_items SET completed_at = now(), completed_by = $2, updated_at = now()
+        WHERE parent_id = $1 AND completed_at IS NULL`,
+      [parentId, userId],
+    );
+    return rowCount ?? 0;
+  },
+
+  /**
+   * La tarea sigue a sus subtareas: se completa sola cuando todas están hechas
+   * y vuelve a pendiente si alguna se desmarca o se agrega una nueva.
+   * Devuelve el cambio que hubo en la tarea (para la bitácora).
+   */
+  async syncParent(parentId: string, userId: string, conn: Db = db()): Promise<'completed' | 'uncompleted' | null> {
+    const { rows } = await conn.query<{ result: 'completed' | 'uncompleted' }>(
+      `WITH c AS (
+         SELECT count(*) AS total, count(*) FILTER (WHERE completed_at IS NULL) AS pending
+           FROM list_items WHERE parent_id = $1
+       )
+       UPDATE list_items p
+          SET completed_at = CASE WHEN c.pending = 0 THEN now() ELSE NULL END,
+              completed_by = CASE WHEN c.pending = 0 THEN $2::uuid ELSE NULL END,
+              updated_at = now()
+         FROM c
+        WHERE p.id = $1 AND c.total > 0
+          AND ((c.pending = 0 AND p.completed_at IS NULL) OR (c.pending > 0 AND p.completed_at IS NOT NULL))
+       RETURNING CASE WHEN c.pending = 0 THEN 'completed' ELSE 'uncompleted' END AS result`,
+      [parentId, userId],
+    );
+    return rows[0]?.result ?? null;
   },
 
   async delete(itemId: string, listId: string, conn: Db = db()): Promise<void> {

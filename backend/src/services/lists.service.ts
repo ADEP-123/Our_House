@@ -94,6 +94,7 @@ export function toListView(list: ListCardRow, access?: Pick<ListAccess, 'canEdit
 export function toItemView(item: ItemRow) {
   return {
     id: item.id,
+    parentId: item.parent_id,
     text: item.text,
     note: item.note,
     amount: item.amount,

@@ -82,7 +82,11 @@ const itemFields = {
 };
 const itemText = z.string().trim().min(1, 'ITEM_TEXT_REQUIRED').max(200, 'ITEM_TEXT_TOO_LONG');
 
-list.post('/items', validateBody(z.object({ id: clientId, text: itemText, ...itemFields })), itemsController.create);
+list.post(
+  '/items',
+  validateBody(z.object({ id: clientId, parentId: z.uuid().nullable().optional(), text: itemText, ...itemFields })),
+  itemsController.create,
+);
 list.post('/reset', itemsController.uncheckAll);
 list.post('/clear-completed', itemsController.deleteCompleted);
 list.patch('/items/:itemId', checkIds, validateBody(z.object({ text: itemText.optional(), ...itemFields })), itemsController.update);
