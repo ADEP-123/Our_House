@@ -1,4 +1,5 @@
 import { Component, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { TPipe } from '../../core/i18n/t.pipe';
 import { AvatarComponent } from '../../shared/avatar.component';
@@ -13,6 +14,7 @@ import { ProfileSecurityComponent } from './profile-security.component';
 @Component({
   selector: 'oh-profile-page',
   imports: [
+    RouterLink,
     TPipe,
     AvatarComponent,
     ProfilePhotoComponent,
@@ -41,6 +43,10 @@ import { ProfileSecurityComponent } from './profile-security.component';
     <oh-profile-notifications />
     <oh-profile-calendar />
     <oh-profile-security />
+    <p class="legal">
+      <a routerLink="/privacidad">{{ 'legal.privacy' | t }}</a>
+      <a routerLink="/terminos">{{ 'legal.terms' | t }}</a>
+    </p>
   `,
   styles: `
     .who {
@@ -56,6 +62,16 @@ import { ProfileSecurityComponent } from './profile-security.component';
     }
     .oh-muted {
       overflow-wrap: anywhere;
+    }
+    .legal {
+      display: flex;
+      gap: 20px;
+      padding-top: 24px;
+      border-top: 1px solid var(--oh-border);
+      font-size: 0.875rem;
+    }
+    .legal a {
+      color: var(--oh-text-muted);
     }
   `,
 })

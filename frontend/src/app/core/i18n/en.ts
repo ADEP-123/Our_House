@@ -109,6 +109,12 @@ export const en: Dictionary = {
     goLists: 'See lists',
     completed: '“{task}” done',
   },
+  legal: {
+    privacy: 'Privacy',
+    terms: 'Terms',
+    updated: 'Updated {date}',
+    back: 'Back to Our House',
+  },
   home: {
     greeting: 'Hi, {name}',
     intro: "This is where you'll see what's happening at home: tasks, calendar and finances, as we add them.",

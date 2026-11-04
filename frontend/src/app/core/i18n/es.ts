@@ -108,6 +108,12 @@ export const es = {
     goLists: 'Ver listas',
     completed: '«{task}» hecha',
   },
+  legal: {
+    privacy: 'Privacidad',
+    terms: 'Términos',
+    updated: 'Actualizada el {date}',
+    back: 'Volver a Our House',
+  },
   home: {
     greeting: 'Hola, {name}',
     intro: 'Aquí verás lo que pasa en tu casa: tareas, calendario y finanzas, a medida que los vayamos agregando.',
