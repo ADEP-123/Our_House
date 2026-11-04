@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { isNetworkError } from '../../core/offline/network';
 
 export type FamilyRole = 'leader' | 'member' | 'supervised';
 export type InvitationStatus = 'pending' | 'accepted' | 'rejected' | 'expired' | 'cancelled';
@@ -47,6 +48,7 @@ export interface ReceivedInvitation {
 }
 
 const ACTIVE_KEY = 'oh_active_family';
+const CACHE_KEY = 'oh_families';
 
 /**
  * Grupos del usuario y cuál está activo. El grupo activo es el que usarán
@@ -68,12 +70,33 @@ export class FamiliesService {
   });
 
   async load(): Promise<void> {
-    const [{ families }, { invitations }] = await Promise.all([
-      firstValueFrom(this.http.get<{ families: FamilySummary[] }>('/api/families')),
-      firstValueFrom(this.http.get<{ invitations: ReceivedInvitation[] }>('/api/invitations')),
-    ]);
-    this.list.set(families);
-    this.received.set(invitations);
+    try {
+      const [{ families }, { invitations }] = await Promise.all([
+        firstValueFrom(this.http.get<{ families: FamilySummary[] }>('/api/families')),
+        firstValueFrom(this.http.get<{ invitations: ReceivedInvitation[] }>('/api/invitations')),
+      ]);
+      this.list.set(families);
+      this.received.set(invitations);
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(families));
+      } catch {
+        // sin almacenamiento local
+      }
+    } catch (err) {
+      // Sin conexión: los grupos de la última visita (para abrir las listas guardadas)
+      const cached = isNetworkError(err) ? this.readCache() : null;
+      if (!cached) throw err;
+      this.list.set(cached);
+    }
+  }
+
+  private readCache(): FamilySummary[] | null {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      return raw ? (JSON.parse(raw) as FamilySummary[]) : null;
+    } catch {
+      return null;
+    }
   }
 
   setActive(id: string): void {

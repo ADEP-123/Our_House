@@ -90,6 +90,12 @@ export const en: Dictionary = {
     families: 'Families',
     logout: 'Sign out',
   },
+  sync: {
+    offline: "You're offline. You can keep using the lists you've already opened; changes will be sent when you're back.",
+    offlinePending: "Offline · {n} change(s) saved on this device, they'll be sent when you're back.",
+    sending: 'Sending {n} change(s) made offline…',
+    rejected: "Some changes made offline weren't saved: the list changed in the meantime (for example, it was archived).",
+  },
   home: {
     greeting: 'Hi, {name}',
     intro: "This is where you'll see what's happening at home: tasks, calendar and finances, as we add them.",
