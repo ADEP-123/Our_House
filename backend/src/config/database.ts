@@ -2,6 +2,9 @@ import pg from 'pg';
 import { attachDatabasePool } from '@vercel/functions';
 import { env } from './env.js';
 
+// Las columnas DATE llegan como texto 'AAAA-MM-DD' (sin convertirlas a medianoche de la zona del servidor)
+pg.types.setTypeParser(pg.types.builtins.DATE, (value) => value);
+
 let pool: pg.Pool | undefined;
 
 /** Crea el pool la primera vez que se necesita, así la API arranca aunque falte DATABASE_URL. */
