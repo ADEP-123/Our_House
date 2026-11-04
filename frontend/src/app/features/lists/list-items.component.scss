@@ -237,3 +237,42 @@ button.text {
 .cdk-drop-list-dragging .item:not(.cdk-drag-placeholder) {
   transition: transform 200ms ease;
 }
+
+// ---------- Subtareas ----------
+.items.subtasks {
+  margin: 0 12px 8px 52px;
+  border: 0;
+  border-left: 2px solid color-mix(in srgb, var(--list-color, var(--oh-primary)) 30%, transparent);
+  border-radius: 0;
+  overflow: visible;
+
+  .row {
+    padding: 6px 4px 6px 10px;
+  }
+
+  .check {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.item.sub + .item.sub {
+  border-top: 0;
+}
+
+.add-sub {
+  display: flex;
+  gap: 8px;
+  margin: 0 12px 10px 52px;
+
+  input {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.add-sub-btn {
+  margin: -6px 0 6px 52px;
+  font-size: 0.8125rem;
+  min-height: 32px;
+}

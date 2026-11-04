@@ -105,6 +105,9 @@
       <div class="edit-actions">
         <button class="oh-btn oh-btn--filled" type="submit" [disabled]="editForm.invalid">{{ 'lists.items.save' | t }}</button>
         <button class="oh-btn oh-btn--text" type="button" (click)="editingId.set(null)">{{ 'lists.items.cancel' | t }}</button>
+        @if (isTodo() && !item.parentId) {
+          <button class="oh-btn oh-btn--text" type="button" (click)="editingId.set(null); startSubtask(item)">+ {{ 'lists.subtasks.add' | t }}</button>
+        }
         <button class="oh-btn oh-btn--text danger" type="button" (click)="remove(item)">{{ 'lists.items.delete' | t }}</button>
       </div>
     </form>
@@ -142,6 +145,9 @@
           @if (dueLabel(item); as due) {
             <span class="tag" [class.overdue]="due.overdue">📅 {{ due.text }}</span>
           }
+          @if (progress(item); as p) {
+            <span class="tag" [attr.aria-label]="'lists.subtasks.progress' | t: p">☑ {{ p.done }}/{{ p.total }}</span>
+          }
           @if (item.note) {
             <span class="note">{{ item.note }}</span>
           }
@@ -156,6 +162,40 @@
         </span>
       }
     </div>
+
+    <!-- Subtareas: debajo de su tarea, con su propio orden -->
+    @if (isTodo() && !item.parentId) {
+      @let subs = subtasksOf(item.id);
+      @if (subs.length) {
+        <ul class="items subtasks" cdkDropList [cdkDropListData]="subs" [cdkDropListDisabled]="!canEdit()" (cdkDropListDropped)="drop($event)">
+          @for (sub of subs; track sub.id) {
+            <li cdkDrag [cdkDragDisabled]="!canEdit() || editingId() === sub.id" class="item sub">
+              <ng-container *ngTemplateOutlet="itemTpl; context: { $implicit: sub, draggable: canEdit() }" />
+            </li>
+          }
+        </ul>
+      }
+      @if (addingSubtaskTo() === item.id) {
+        <form class="add-sub" (submit)="$event.preventDefault(); addSubtask(item)">
+          <label class="oh-sr-only" [for]="'sub-' + item.id">{{ 'lists.subtasks.placeholder' | t: { task: item.text } }}</label>
+          <input
+            [id]="'sub-' + item.id"
+            class="oh-input"
+            maxlength="200"
+            autocomplete="off"
+            [placeholder]="'lists.subtasks.placeholder' | t: { task: item.text }"
+            [value]="subtaskText()"
+            (input)="subtaskText.set($any($event.target).value)"
+            (keydown.escape)="addingSubtaskTo.set(null)"
+          />
+          <button class="oh-btn oh-btn--filled" type="submit" [disabled]="!subtaskText().trim()">{{ 'lists.items.add' | t }}</button>
+          <button class="oh-btn oh-btn--text" type="button" (click)="addingSubtaskTo.set(null)">{{ 'lists.items.cancel' | t }}</button>
+        </form>
+      } @else if (canEdit() && subs.length) {
+        <!-- Sin subtareas, se agregan desde "Editar"; con subtareas, también aquí debajo -->
+        <button type="button" class="oh-btn oh-btn--text add-sub-btn" (click)="startSubtask(item)">+ {{ 'lists.subtasks.add' | t }}</button>
+      }
+    }
   }
 </ng-template>
 

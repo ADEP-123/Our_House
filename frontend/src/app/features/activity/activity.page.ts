@@ -141,6 +141,9 @@ export class ActivityPage implements OnInit {
       );
       return this.i18n.t('activity.changed', { fields: fields.join(', ') });
     }
+    if (e.details['bySubtasks']) return this.i18n.t('activity.bySubtasks');
+    if (e.details['subtasks']) return this.i18n.t('activity.withSubtasks', { n: Number(e.details['subtasks']) });
+    if (e.details['subtaskOf']) return this.i18n.t('activity.asSubtask');
     if (e.action === 'item.purchased') {
       const d = e.details;
       const locale = this.i18n.locale();

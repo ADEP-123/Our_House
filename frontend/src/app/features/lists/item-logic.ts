@@ -31,6 +31,40 @@ export function applyCompleted(item: ListItem, completed: boolean, who: Who, now
   };
 }
 
+// ---------- Subtareas ----------
+
+/** La tarea sigue a sus subtareas: completa si todas lo están, pendiente si alguna no. */
+export function syncParent(items: ListItem[], parentId: string | null, who: Who, now = new Date()): ListItem[] {
+  if (!parentId) return items;
+  const subs = items.filter((i) => i.parentId === parentId);
+  if (!subs.length) return items;
+  const allDone = subs.every((s) => s.completedAt);
+  return items.map((i) => {
+    if (i.id !== parentId) return i;
+    if (allDone && !i.completedAt) return { ...i, completedAt: now.toISOString(), completedBy: who };
+    if (!allDone && i.completedAt) return { ...i, completedAt: null, completedBy: null };
+    return i;
+  });
+}
+
+/** Marcar o desmarcar dentro de la lista: completar una tarea completa sus subtareas; una subtarea arrastra a su tarea. */
+export function applyToggle(items: ListItem[], itemId: string, completed: boolean, who: Who, now = new Date()): ListItem[] {
+  const target = items.find((i) => i.id === itemId);
+  if (!target) return items;
+  let next = items.map((i) => (i.id === itemId ? applyCompleted(i, completed, who, now) : i));
+  if (completed && !target.parentId) {
+    next = next.map((i) => (i.parentId === itemId && !i.completedAt ? { ...i, completedAt: now.toISOString(), completedBy: who } : i));
+  }
+  return syncParent(next, target.parentId, who, now);
+}
+
+/** Quita un ítem (y sus subtareas) y actualiza su tarea si era subtarea. */
+export function removeItem(items: ListItem[], itemId: string, who: Who, now = new Date()): ListItem[] {
+  const target = items.find((i) => i.id === itemId);
+  const next = items.filter((i) => i.id !== itemId && i.parentId !== itemId);
+  return syncParent(next, target?.parentId ?? null, who, now);
+}
+
 /** Comprado algo, pero no todo lo pedido */
 export const isPartial = (item: ListItem): boolean => !item.completedAt && item.purchased !== null && item.amount !== null;
 
