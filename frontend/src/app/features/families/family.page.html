@@ -32,6 +32,27 @@
           <a class="oh-btn oh-btn--text" [routerLink]="['/familias', f.id, 'bitacora']">{{ 'activity.open' | t }}</a>
         </div>
       }
+      @if (editingCurrency()) {
+        <form class="currency-form" (submit)="$event.preventDefault(); saveCurrency()">
+          <label for="family-currency">{{ 'families.currency.label' | t }}</label>
+          <select id="family-currency" class="oh-input" [value]="currencyDraft()" (change)="currencyDraft.set($any($event.target).value)">
+            @for (c of currencies(); track c.code) {
+              <option [value]="c.code">{{ c.code }} · {{ c.name }}</option>
+            }
+          </select>
+          <button class="oh-btn oh-btn--filled" type="submit" [disabled]="currencyDraft() === f.currency || busy() === 'currency'">
+            {{ 'families.detail.save' | t }}
+          </button>
+          <button class="oh-btn oh-btn--text" type="button" (click)="editingCurrency.set(false)">{{ 'families.detail.cancel' | t }}</button>
+        </form>
+      } @else {
+        <p class="oh-hint currency">
+          {{ 'families.currency.current' | t: { currency: currencyName(f.currency) } }}
+          @if (isLeader()) {
+            <button type="button" class="oh-btn oh-btn--text" (click)="startCurrency(f.currency)">{{ 'families.currency.change' | t }}</button>
+          }
+        </p>
+      }
     </div>
   </header>
   @if (message()?.area === 'header') {

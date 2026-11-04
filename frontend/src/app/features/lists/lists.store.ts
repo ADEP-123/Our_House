@@ -5,9 +5,10 @@ import { AuthService } from '../../core/auth/auth.service';
 import { isNetworkError, isRetryable } from '../../core/offline/network';
 import { OfflineDb } from '../../core/offline/offline-db.service';
 import { SyncStatus } from '../../core/offline/sync-status.service';
+import { applyCompleted, applyPurchase } from './item-logic';
 import { FamilyLists, ListDetail, ListInput, ListItem, ListSummary } from './lists.models';
 
-export type ItemChanges = Partial<Pick<ListItem, 'text' | 'note' | 'quantity' | 'category' | 'assigneeId' | 'dueDate' | 'position'>>;
+export type ItemChanges = Partial<Pick<ListItem, 'text' | 'note' | 'amount' | 'unit' | 'category' | 'assigneeId' | 'dueDate' | 'position'>>;
 
 /** Un cambio guardado en el dispositivo, listo para reenviarse tal cual al servidor */
 interface Mutation {
@@ -168,9 +169,11 @@ export class ListsStore {
     const changed = change(cached);
     const items = changed.items;
     const completed = items.filter((i) => i.completedAt).length;
+    const spent = items.reduce((sum, i) => sum + (i.spent ?? 0), 0);
     const updated: ListDetail = {
       ...changed,
       counts: { total: items.length, completed, pending: items.length - completed },
+      spent: items.some((i) => i.spent !== null) ? Math.round(spent * 100) / 100 : null,
       updatedAt: new Date().toISOString(),
     };
     await this.db.set(listKey(listId), updated);
@@ -235,6 +238,8 @@ export class ListsStore {
       purgeAt: null,
       createdBy: me ? { id: me.id, nickname: me.nickname } : null,
       counts: { total: 0, completed: 0, pending: 0 },
+      spent: null,
+      currency: (await this.db.get<FamilyLists>(familyKey(familyId, false)))?.lists[0]?.currency ?? 'USD',
       permissions: { canEdit: true, canCheck: true, canChangePrivacy: true, supervision: false },
       updatedAt: new Date().toISOString(),
       items: [],
@@ -297,7 +302,10 @@ export class ListsStore {
           id,
           text: input.text,
           note: input.note ?? null,
-          quantity: input.quantity ?? null,
+          amount: input.amount ?? null,
+          unit: input.unit ?? null,
+          purchased: null,
+          spent: null,
           category: input.category ?? null,
           assigneeId: input.assigneeId ?? null,
           dueDate: input.dueDate ?? null,
@@ -329,28 +337,34 @@ export class ListsStore {
   }
 
   async setCompleted(listId: string, itemId: string, completed: boolean): Promise<ListItem> {
-    const me = this.auth.user();
     return this.mutate(
       { method: 'PUT', url: `/api/lists/${listId}/items/${itemId}/completed`, body: { completed }, listId },
-      async () => {
-        const updated = await this.updateCached(listId, (l) => ({
-          ...l,
-          items: l.items.map((i) =>
-            i.id === itemId
-              ? {
-                  ...i,
-                  completedAt: completed ? (i.completedAt ?? new Date().toISOString()) : null,
-                  completedBy: completed ? (i.completedBy ?? (me ? { id: me.id, nickname: me.nickname } : null)) : null,
-                }
-              : i,
-          ),
-        }));
-        const item = updated?.items.find((i) => i.id === itemId);
-        if (!item) throw new Error('ITEM_NOT_CACHED');
-        return item;
-      },
+      () => this.changeCachedItem(listId, itemId, (i) => applyCompleted(i, completed, this.me())),
       (res) => this.itemResult(listId, res),
     );
+  }
+
+  /** Compra (se suma a lo ya comprado). El id evita que un reenvío la cuente dos veces. */
+  async purchase(listId: string, itemId: string, purchase: { amount: number | null; spent: number | null }): Promise<ListItem> {
+    const body = { id: crypto.randomUUID(), ...purchase };
+    return this.mutate(
+      { method: 'POST', url: `/api/lists/${listId}/items/${itemId}/purchases`, body, listId },
+      () => this.changeCachedItem(listId, itemId, (i) => applyPurchase(i, purchase.amount, purchase.spent, this.me())),
+      (res) => this.itemResult(listId, res),
+    );
+  }
+
+  private me() {
+    const me = this.auth.user();
+    return me ? { id: me.id, nickname: me.nickname } : null;
+  }
+
+  /** Cambia un ítem en la copia local. Si la lista no está guardada, no hay nada que mostrar sin conexión. */
+  private async changeCachedItem(listId: string, itemId: string, change: (item: ListItem) => ListItem): Promise<ListItem> {
+    const updated = await this.updateCached(listId, (l) => ({ ...l, items: l.items.map((i) => (i.id === itemId ? change(i) : i)) }));
+    const item = updated?.items.find((i) => i.id === itemId);
+    if (!item) throw new Error('ITEM_NOT_CACHED');
+    return item;
   }
 
   deleteItem(listId: string, itemId: string): Promise<void> {

@@ -9,6 +9,7 @@ import { ToastService } from '../../shared/toast.service';
 import { FamiliesService, FamilyMember } from '../families/families.service';
 import { ListFormComponent } from './list-form.component';
 import { ListItemsComponent } from './list-items.component';
+import { formatMoney } from './item-logic';
 import { colorOf, iconOf, LIST_TYPES } from './list-presets';
 import { ListDetail, ListInput } from './lists.models';
 import { ListsStore } from './lists.store';
@@ -84,6 +85,10 @@ export class ListPage implements OnInit {
     } catch (err) {
       if (!silent || !this.list()) this.error.set(this.i18n.error(toApiError(err).code));
     }
+  }
+
+  protected money(value: number): string {
+    return formatMoney(value, this.list()?.currency ?? 'USD', this.i18n.locale());
   }
 
   protected formatDate(iso: string | null): string {
