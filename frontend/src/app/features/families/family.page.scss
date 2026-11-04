@@ -105,10 +105,25 @@ h3 {
   background: var(--oh-secondary-soft);
   color: var(--oh-secondary);
 
-  &.leader {
+  &[data-role='leader'] {
     background: var(--oh-primary-soft);
     color: var(--oh-primary);
   }
+
+  &[data-role='supervised'] {
+    background: color-mix(in srgb, var(--oh-text) 8%, var(--oh-surface));
+    color: var(--oh-text-muted);
+  }
+}
+
+.role-select select {
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 0.875rem;
+}
+
+.role-hint {
+  margin-top: 10px;
 }
 
 .member-actions {
