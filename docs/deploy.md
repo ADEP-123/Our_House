@@ -1,90 +1,69 @@
-# Despliegue en Oracle Cloud (Always Free)
+# Despliegue en Vercel + Neon (gratis, sin tarjeta)
 
-Arquitectura de producción, todo en una VM gratuita de Oracle:
+Arquitectura de producción:
 
 ```
-Navegador / PWA ──HTTPS──► Caddy (contenedor "web")
-                              ├─ /        → archivos de Angular (PWA)
-                              └─ /api/*   → Express (contenedor "backend") ──TLS──► Oracle Autonomous Database
+Navegador / PWA ──HTTPS──► Vercel: proyecto "our-house" (Angular, archivos estáticos)
+                              └─ /api/* ──proxy──► Vercel: proyecto "our-house-api" (Express como función)
+                                                        └──TLS──► Neon (PostgreSQL)
 ```
 
-Caddy saca y renueva solo el certificado HTTPS. La PWA lo necesita, porque el service worker no funciona sin HTTPS.
+- **Dos proyectos de Vercel en el mismo repo:** uno con raíz `frontend/` y otro con raíz `backend/`.
+- **Proxy de `/api`:** el frontend reenvía `/api/*` a la API (ver `frontend/vercel.json`). Así el navegador ve un solo dominio y no hace falta CORS.
+- **Despliegue automático:** Vercel despliega solo desde GitHub. `main` va a producción y cualquier otra rama genera una *preview* con su propia URL.
+- **HTTPS:** viene incluido, así que la PWA se puede instalar sin comprar dominio.
 
-## 1. Cuenta de Oracle Cloud
+> El plan Hobby de Vercel es gratis y solo para uso personal o no comercial. Si algún día la app se vende como producto, hay que pasar a Pro.
 
-1. Crea la cuenta en https://www.oracle.com/cloud/free/. La **región principal (home region) no se puede cambiar**. Elige una cercana y con disponibilidad de Ampere A1 (por ejemplo, US East Ashburn o Brazil East São Paulo).
-2. **Recomendado:** pasa la cuenta a *Pay As You Go* (Billing > Upgrade) y crea un presupuesto con alerta de 1 USD (Billing > Budgets). Los recursos Always Free siguen sin costo, y Oracle deja de reclamar la VM por estar "ociosa", algo que con dos usuarios pasaría.
+## 1. Base de datos en Neon
 
-## 2. Máquina virtual
+1. Entra a https://neon.tech con tu cuenta de GitHub o Google. No pide tarjeta.
+2. Crea un proyecto llamado `our-house`, con Postgres en su última versión. Región: **AWS US West 2 (Oregon)**, la más cercana a California.
+3. En el dashboard ve a **Connect**, activa **Connection pooling** y copia la cadena de conexión. Debe tener `-pooler` en el host y terminar en `?sslmode=require`. Ese valor es `DATABASE_URL`.
 
-1. Compute > Instances > Create instance.
-2. Imagen: **Ubuntu 24.04**. Shape: **VM.Standard.A1.Flex** con 1 OCPU y 6 GB de RAM. Si no hay capacidad, usa VM.Standard.E2.1.Micro.
-3. Sube tu llave SSH pública y deja marcada la opción de IP pública.
-4. En la VCN de la instancia, ve a Security List > Add Ingress Rules y agrega:
-   - Origen `0.0.0.0/0`, TCP, puerto `80`
-   - Origen `0.0.0.0/0`, TCP, puerto `443`
-   - Origen `0.0.0.0/0`, UDP, puerto `443` (HTTP/3, opcional)
+La base se apaga sola cuando no se usa y vuelve a encender en la siguiente consulta. Esa primera consulta tarda un poco más, menos de un segundo.
 
-## 3. Dominio gratuito
+## 2. API en Vercel (`our-house-api`)
 
-1. Entra a https://www.duckdns.org (con GitHub o Google) y crea un subdominio, por ejemplo `ourhouse.duckdns.org`.
-2. En "current ip" pon la IP pública de la VM.
+1. Entra a https://vercel.com con GitHub. Usa el plan **Hobby**, que no pide tarjeta.
+2. Ve a **Add New… > Project** e importa el repo `Our_House`.
+3. En **Project Name** pon `our-house-api`.
+4. En **Root Directory** pon `backend`. Vercel detecta Express solo; no hay que cambiar los comandos de build.
+5. En **Environment Variables** agrega `DATABASE_URL` con la cadena de Neon, para *Production* y *Preview*.
+6. Haz clic en **Deploy**.
+7. Abre `https://our-house-api.vercel.app/api/health`. Debe responder `{"status":"ok","db":"up",...}`.
 
-Si más adelante compran un dominio propio, solo cambia `DOMAIN` en el `.env`.
+> Si el nombre `our-house-api` ya está tomado, Vercel te asignará otra URL. En ese caso actualiza el `destination` en `frontend/vercel.json` con esa URL y haz commit.
 
-## 4. Base de datos (Autonomous Database)
+La región de la función está fijada en `pdx1` (Portland), junto a la base de Neon en Oregon. Eso se define en `backend/vercel.json`.
 
-1. Oracle Database > Autonomous Database > Create.
-2. Tipo de carga **Transaction Processing**, activa **Always Free** y define la contraseña de `ADMIN`.
-3. Network access: **Secure access from allowed IPs and VCNs only**. Agrega la IP pública de la VM y la de tu casa, si vas a desarrollar contra esta base.
-4. **Desmarca "Require mutual TLS (mTLS) authentication"**. Así la conexión no necesita wallet.
-5. Cuando esté creada: Database connection > TLS. Copia la cadena del servicio `*_low`. Ese valor va en `DB_CONNECT_STRING`.
+## 3. PWA en Vercel (`our-house`)
 
-> Si prefieres mantener mTLS: descarga el wallet, descomprímelo en `~/our_house/wallet` en la VM y define `DB_WALLET_DIR=/app/wallet` y `DB_WALLET_PASSWORD` en el `.env`. En ese caso `DB_CONNECT_STRING` es el alias del `tnsnames.ora` (por ejemplo, `ourhouse_low`).
+1. Ve a **Add New… > Project** e importa otra vez el mismo repo.
+2. En **Project Name** pon `our-house`.
+3. En **Root Directory** pon `frontend`. Vercel detecta Angular solo.
+4. Haz clic en **Deploy**.
+5. Abre `https://our-house.vercel.app`. Debe mostrar "Servidor y base de datos conectados". Desde el celular, usa "Agregar a pantalla de inicio" para instalarla.
 
-La base de datos se detiene tras 7 días sin conexiones. El healthcheck del contenedor backend la consulta cada minuto, así que esto no debería pasar mientras la VM esté encendida.
+## 4. Ajustes recomendados (en cada proyecto)
 
-## 5. Preparar la VM
+- En **Settings > Git**, revisa que **Production Branch** sea `main`.
+- En **Settings > Build and Deployment**, activa **Skip deployments when there are no changes to the root directory or its dependencies**. Así, un cambio solo en `backend/` no reconstruye la PWA, y al revés.
 
-```bash
-ssh ubuntu@IP_DE_LA_VM
-git clone https://github.com/ADEP-123/Our_House.git ~/our_house
-bash ~/our_house/infra/scripts/setup-vm.sh
-exit   # vuelve a entrar para usar docker sin sudo
-```
+## Cómo queda el flujo
 
-## 6. Primer arranque
+- **Push a `feat/...` o `fase-...`:** GitHub Actions corre las pruebas y los builds (workflow CI), y Vercel crea una URL de preview.
+- **Merge de la fase a `main`:** Vercel despliega a producción.
 
-```bash
-ssh ubuntu@IP_DE_LA_VM
-cd ~/our_house
-cp .env.example .env
-nano .env          # completa DOMAIN, DB_PASSWORD y DB_CONNECT_STRING
-docker compose up -d --build
-docker compose ps
-curl https://TU_DOMINIO/api/health
-```
-
-Debe responder `{"status":"ok","db":"up",...}`. Si dice `"db":"down"`, revisa la cadena de conexión y que la IP de la VM esté en la lista de acceso de la base.
-
-## 7. Despliegue automático (GitHub Actions)
-
-1. En tu equipo, crea una llave solo para despliegues: `ssh-keygen -t ed25519 -f ourhouse_deploy -N ""`.
-2. Agrega `ourhouse_deploy.pub` al final de `~/.ssh/authorized_keys` en la VM.
-3. En GitHub, ve a Settings > Secrets and variables > Actions y crea:
-   - `OCI_HOST`: IP pública de la VM
-   - `OCI_USER`: `ubuntu`
-   - `OCI_SSH_KEY`: contenido completo del archivo privado `ourhouse_deploy`
-
-A partir de ahí, cada merge a `main` despliega solo (workflow **Deploy**). También se puede lanzar a mano desde la pestaña Actions.
+> Las previews del frontend también reenvían `/api` a la API de producción.
 
 ## Desarrollo local
 
 ```bash
-# API
+# API (necesita DATABASE_URL en backend/.env; puede ser la de Neon o un Postgres local)
 cd backend && cp .env.example .env && npm install && npm run dev
-# PWA (proxy de /api al puerto 3000)
+# PWA (reenvía /api al puerto 3000)
 cd frontend && npm install && npm start
 ```
 
-Sin base de datos configurada, la API arranca igual y `/api/health` responde 503 con `"db":"down"`.
+Sin `DATABASE_URL` la API arranca igual, y `/api/health` responde 503 con `"db":"down"`.
