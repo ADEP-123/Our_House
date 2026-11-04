@@ -100,6 +100,12 @@ DATABASE_URL="postgresql://...neon.tech/neondb?sslmode=require" npm run migrate
 
 Después de cambiar variables, haz **Redeploy** del proyecto `our-house-api` para que las tome.
 
+## 6. Listas (fase 2)
+
+- **Migraciones:** `005_miembro_supervisado`, `006_listas` y `007_bitacora`. Las aplica el workflow **Migraciones** al llegar a `main` (o a mano con `npm run migrate`, como en 5.4). No hay que crear nada en Neon.
+- **Variable opcional** en `our-house-api`: `LIST_ARCHIVE_RETENTION_DAYS`, los días que una lista archivada espera antes de borrarse sola. Si no se define, son 15. El borrado ocurre al abrir las listas del grupo, sin tareas programadas.
+- **Sin conexión:** funciona con la PWA publicada (el service worker no corre en `ng serve`). Las listas que se abrieron con conexión quedan guardadas en el dispositivo; los cambios hechos sin red se envían solos al volver. Cerrar sesión borra esa copia.
+
 ## Desarrollo local
 
 ```bash
