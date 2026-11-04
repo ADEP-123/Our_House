@@ -1,11 +1,11 @@
 import { withConnection } from '../config/database.js';
 
 export const healthRepository = {
-  /** Consulta mínima a Oracle. También mantiene activa la Autonomous DB (se detiene tras 7 días sin uso). */
+  /** Consulta mínima para confirmar que PostgreSQL responde. */
   async ping(): Promise<boolean> {
-    return withConnection(async (conn) => {
-      const result = await conn.execute<[number]>('SELECT 1 FROM DUAL');
-      return result.rows?.[0]?.[0] === 1;
+    return withConnection(async (client) => {
+      const result = await client.query<{ ok: number }>('SELECT 1 AS ok');
+      return result.rows[0]?.ok === 1;
     });
   },
 };

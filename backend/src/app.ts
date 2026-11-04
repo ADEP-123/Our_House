@@ -7,7 +7,7 @@ export function createApp(): express.Express {
   const app = express();
 
   app.disable('x-powered-by');
-  app.set('trust proxy', 1); // detrás de Caddy
+  app.set('trust proxy', 1); // detrás del proxy de Vercel
   app.use(helmet());
   app.use(express.json({ limit: '1mb' }));
 
@@ -17,3 +17,6 @@ export function createApp(): express.Express {
 
   return app;
 }
+
+// Entrada de Vercel: ejecuta este export default como función (Fluid compute)
+export default createApp();

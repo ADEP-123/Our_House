@@ -6,17 +6,16 @@ Aplicación web y PWA para el día a día de la casa: listas de tareas, calendar
 
 - **Frontend:** Angular + TypeScript, instalable como PWA
 - **Backend:** Node + Express + TypeScript, organizado por capas (routes → controllers → services → repositories)
-- **Base de datos:** Oracle Autonomous Database (Always Free)
-- **Infraestructura:** Docker Compose + Caddy (HTTPS automático) en una VM Always Free de Oracle Cloud
+- **Base de datos:** PostgreSQL en Neon (plan gratuito)
+- **Hosting:** Vercel (plan Hobby), con un proyecto para la PWA y otro para la API
 
 ## Estructura
 
 ```
 backend/        API Express (src/config, routes, controllers, services, repositories, middlewares)
 frontend/       PWA Angular
-infra/          Caddyfile y scripts de servidor
 docs/           Documentación (despliegue)
-.github/        CI y despliegue automático
+.github/        CI (pruebas y builds)
 ```
 
 ## Desarrollo
