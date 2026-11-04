@@ -11,6 +11,8 @@ export interface FamilySummary {
   name: string;
   avatarUrl: string | null;
   avatarPreset: string | null;
+  /** Moneda del grupo (ISO 4217) para el gasto de las listas de compras */
+  currency: string;
   role: FamilyRole;
   memberCount: number;
 }
@@ -155,6 +157,10 @@ export class FamiliesService {
 
   rename(id: string, name: string) {
     return this.mutate(firstValueFrom(this.http.patch<{ family: FamilyDetail }>(`/api/families/${id}`, { name })));
+  }
+
+  setCurrency(id: string, currency: string) {
+    return this.mutate(firstValueFrom(this.http.patch<{ family: FamilyDetail }>(`/api/families/${id}`, { currency })));
   }
 
   uploadAvatar(id: string, file: File) {

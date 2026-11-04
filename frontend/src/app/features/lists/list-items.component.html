@@ -13,9 +13,13 @@
     @if (showMore()) {
       <div class="extra">
         @if (isShopping()) {
-          <div class="oh-field">
-            <label for="new-qty">{{ 'lists.items.quantity' | t }}</label>
-            <input id="new-qty" class="oh-input" formControlName="quantity" maxlength="30" [placeholder]="'lists.items.quantityPlaceholder' | t" />
+          <div class="oh-field qty">
+            <label for="new-amount">{{ 'lists.items.quantity' | t }}</label>
+            <div class="qty-row">
+              <input id="new-amount" class="oh-input" type="number" inputmode="decimal" min="0" step="any" formControlName="amount" placeholder="2" />
+              <label class="oh-sr-only" for="new-unit">{{ 'lists.items.unit' | t }}</label>
+              <input id="new-unit" class="oh-input" formControlName="unit" maxlength="20" list="units" [placeholder]="'lists.items.unitPlaceholder' | t" />
+            </div>
           </div>
           <div class="oh-field">
             <label for="new-cat">{{ 'lists.items.category' | t }}</label>
@@ -40,6 +44,11 @@
       </div>
     }
   </form>
+  <datalist id="units">
+    @for (u of units(); track u) {
+      <option [value]="u"></option>
+    }
+  </datalist>
   <datalist id="categories">
     @for (c of categories(); track c) {
       <option [value]="c"></option>
@@ -60,9 +69,13 @@
       </div>
       <div class="extra">
         @if (isShopping()) {
-          <div class="oh-field">
-            <label [for]="'edit-qty-' + item.id">{{ 'lists.items.quantity' | t }}</label>
-            <input [id]="'edit-qty-' + item.id" class="oh-input" formControlName="quantity" maxlength="30" />
+          <div class="oh-field qty">
+            <label [for]="'edit-amount-' + item.id">{{ 'lists.items.quantity' | t }}</label>
+            <div class="qty-row">
+              <input [id]="'edit-amount-' + item.id" class="oh-input" type="number" inputmode="decimal" min="0" step="any" formControlName="amount" />
+              <label class="oh-sr-only" [for]="'edit-unit-' + item.id">{{ 'lists.items.unit' | t }}</label>
+              <input [id]="'edit-unit-' + item.id" class="oh-input" formControlName="unit" maxlength="20" list="units" />
+            </div>
           </div>
           <div class="oh-field">
             <label [for]="'edit-cat-' + item.id">{{ 'lists.items.category' | t }}</label>
@@ -96,12 +109,12 @@
       </div>
     </form>
   } @else {
-    <div class="row" [class.done]="item.completedAt">
+    <div class="row" [class.done]="item.completedAt" [class.partial]="isPartial(item)">
       <button
         type="button"
         class="check"
         role="checkbox"
-        [attr.aria-checked]="!!item.completedAt"
+        [attr.aria-checked]="item.completedAt ? 'true' : isPartial(item) ? 'mixed' : 'false'"
         [attr.aria-label]="(item.completedAt ? 'lists.items.markPending' : 'lists.items.markDone') | t: { text: item.text }"
         [disabled]="!canCheck()"
         (click)="toggle(item)"
@@ -117,8 +130,11 @@
           <span class="text">{{ item.text }}</span>
         }
         <span class="meta">
-          @if (item.quantity) {
-            <span class="tag">{{ item.quantity }}</span>
+          @if (amountLabel(item); as qty) {
+            <span class="tag" [class.partial]="isPartial(item)">{{ qty }}</span>
+          }
+          @if (item.spent !== null) {
+            <span class="tag">{{ money(item.spent) }}</span>
           }
           @if (memberName(item.assigneeId); as who) {
             <span class="tag">👤 {{ who }}</span>
@@ -182,4 +198,14 @@
     <button type="button" class="oh-btn oh-btn--outline" (click)="reset()">{{ 'lists.items.reset' | t }}</button>
     <button type="button" class="oh-btn oh-btn--text danger" (click)="clearCompleted()">{{ 'lists.items.clear' | t }}</button>
   </div>
+}
+
+@if (buying(); as item) {
+  <oh-purchase-dialog
+    [item]="item"
+    [currency]="list().currency"
+    (confirmed)="purchase(item, $event)"
+    (cleared)="clearPurchase(item)"
+    (closed)="buying.set(null)"
+  />
 }

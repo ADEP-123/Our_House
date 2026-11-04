@@ -21,6 +21,9 @@ export interface ListCardRow extends ListRow {
   creator_role: FamilyRole | null;
   total: number;
   completed: number;
+  /** Suma de lo pagado en los ítems (listas de compras) */
+  spent: number | null;
+  currency: string;
   pinned: boolean;
 }
 
@@ -29,7 +32,11 @@ export interface ItemRow {
   list_id: string;
   text: string;
   note: string | null;
-  quantity: string | null;
+  amount: number | null;
+  unit: string | null;
+  purchased: number | null;
+  spent: number | null;
+  last_purchase_id: string | null;
   category: string | null;
   assignee_id: string | null;
   due_date: string | null;
@@ -45,8 +52,11 @@ const CARD_SELECT = `
   SELECT l.*, u.nickname AS creator_nickname, fm.role AS creator_role,
          (SELECT count(*)::int FROM list_items i WHERE i.list_id = l.id) AS total,
          (SELECT count(*)::int FROM list_items i WHERE i.list_id = l.id AND i.completed_at IS NOT NULL) AS completed,
+         (SELECT sum(i.spent) FROM list_items i WHERE i.list_id = l.id) AS spent,
+         f.currency,
          EXISTS (SELECT 1 FROM list_pins p WHERE p.list_id = l.id AND p.user_id = $2) AS pinned
     FROM lists l
+    JOIN families f ON f.id = l.family_id
     LEFT JOIN users u ON u.id = l.created_by
     LEFT JOIN family_members fm ON fm.family_id = l.family_id AND fm.user_id = l.created_by`;
 
@@ -129,8 +139,8 @@ export const listsRepository = {
   /** Copia los ítems de una lista a otra, todos sin marcar y con ids nuevos. */
   copyItems: (fromId: string, toId: string, userId: string, conn: Db) =>
     conn.query(
-      `INSERT INTO list_items (list_id, text, note, quantity, category, assignee_id, due_date, position, created_by)
-       SELECT $2, text, note, quantity, category, assignee_id, due_date, position, $3
+      `INSERT INTO list_items (list_id, text, note, amount, unit, category, assignee_id, due_date, position, created_by)
+       SELECT $2, text, note, amount, unit, category, assignee_id, due_date, position, $3
          FROM list_items WHERE list_id = $1`,
       [fromId, toId, userId],
     ),

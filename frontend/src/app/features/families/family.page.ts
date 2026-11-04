@@ -12,6 +12,8 @@ import { ConfirmService } from '../../shared/confirm.service';
 import { FamiliesService, FamilyDetail, FamilyMember, FamilyRole, InvitationStatus, SentInvitation } from './families.service';
 import { RoleDialogComponent } from './role-dialog.component';
 
+const FALLBACK_CURRENCIES = ['USD', 'EUR', 'MXN', 'COP', 'ARS', 'CLP', 'PEN', 'BRL', 'GBP', 'CAD'];
+
 type Area = 'header' | 'avatar' | 'members' | 'invite' | 'code' | 'leave';
 
 @Component({
@@ -42,6 +44,14 @@ export class FamilyPage implements OnInit {
   protected readonly renaming = signal(false);
   protected readonly showAvatar = signal(false);
   protected readonly confirmExpel = signal<string | null>(null);
+  protected readonly editingCurrency = signal(false);
+  protected readonly currencyDraft = signal('USD');
+  /** Monedas que conoce el navegador, con su nombre en el idioma de la app */
+  protected readonly currencies = computed(() => {
+    const locale = this.i18n.locale();
+    const codes = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('currency') : FALLBACK_CURRENCIES;
+    return codes.map((code) => ({ code, name: this.currencyName(code, locale) }));
+  });
   /** Persona cuyo rol se está cambiando (diálogo abierto) */
   protected readonly editingRole = signal<FamilyMember | null>(null);
   protected readonly confirmLeave = signal(false);
@@ -117,6 +127,24 @@ export class FamilyPage implements OnInit {
 
   pickAvatar(preset: string | null): void {
     void this.act('avatar', 'avatar', async () => this.family.set(await this.store.setAvatarPreset(this.id(), preset)));
+  }
+
+  protected currencyName(code: string, locale = this.i18n.locale()): string {
+    try {
+      return new Intl.DisplayNames([locale], { type: 'currency' }).of(code) ?? code;
+    } catch {
+      return code;
+    }
+  }
+
+  startCurrency(current: string): void {
+    this.currencyDraft.set(current);
+    this.editingCurrency.set(true);
+  }
+
+  async saveCurrency(): Promise<void> {
+    const ok = await this.act('header', 'currency', async () => this.family.set(await this.store.setCurrency(this.id(), this.currencyDraft())));
+    if (ok) this.editingCurrency.set(false);
   }
 
   /** Tras elegir en el diálogo: confirma con las consecuencias y, si es uno mismo, una segunda vez. */

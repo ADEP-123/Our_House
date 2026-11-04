@@ -73,7 +73,8 @@ const optionalText = (max: number, code: string) =>
 
 const itemFields = {
   note: optionalText(500, 'ITEM_NOTE_TOO_LONG'),
-  quantity: optionalText(30, 'ITEM_QUANTITY_TOO_LONG'),
+  amount: z.number('AMOUNT_INVALID').positive('AMOUNT_INVALID').max(1_000_000, 'AMOUNT_INVALID').nullable().optional(),
+  unit: optionalText(20, 'ITEM_UNIT_TOO_LONG'),
   category: optionalText(40, 'ITEM_CATEGORY_TOO_LONG'),
   assigneeId: z.uuid().nullable().optional(),
   dueDate: z.iso.date('DUE_DATE_INVALID').nullable().optional(),
@@ -87,3 +88,15 @@ list.post('/clear-completed', itemsController.deleteCompleted);
 list.patch('/items/:itemId', checkIds, validateBody(z.object({ text: itemText.optional(), ...itemFields })), itemsController.update);
 list.put('/items/:itemId/completed', checkIds, validateBody(z.object({ completed: z.boolean() })), itemsController.setCompleted);
 list.delete('/items/:itemId', checkIds, itemsController.remove);
+list.post(
+  '/items/:itemId/purchases',
+  checkIds,
+  validateBody(
+    z.strictObject({
+      id: z.uuid(),
+      amount: z.number('AMOUNT_INVALID').positive('AMOUNT_INVALID').max(1_000_000, 'AMOUNT_INVALID').nullable().optional(),
+      spent: z.number('SPENT_INVALID').min(0, 'SPENT_INVALID').max(10_000_000, 'SPENT_INVALID').nullable().optional(),
+    }),
+  ),
+  itemsController.purchase,
+);

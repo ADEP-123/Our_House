@@ -20,6 +20,9 @@ export interface ListSummary {
   purgeAt: string | null;
   createdBy: { id: string; nickname: string | null } | null;
   counts: { total: number; completed: number; pending: number };
+  /** Total pagado en la lista (compras) y moneda del grupo */
+  spent: number | null;
+  currency: string;
   permissions: ListPermissions;
   updatedAt: string;
 }
@@ -28,7 +31,13 @@ export interface ListItem {
   id: string;
   text: string;
   note: string | null;
-  quantity: string | null;
+  /** Cantidad pedida (compras) */
+  amount: number | null;
+  unit: string | null;
+  /** Lo comprado hasta ahora: menos que amount = parcial (sigue pendiente) */
+  purchased: number | null;
+  /** Total pagado por este ítem */
+  spent: number | null;
   category: string | null;
   assigneeId: string | null;
   dueDate: string | null;
