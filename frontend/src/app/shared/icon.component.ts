@@ -3,6 +3,7 @@ import { Component, computed, input } from '@angular/core';
 /** Íconos de trazo propios (24x24) para no cargar una librería de íconos completa. */
 const ICONS = {
   home: 'M4 11 12 4l8 7M6 9.5V20h12V9.5M10 20v-5h4v5',
+  user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5',
   logout: 'M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 8l-4 4 4 4M6 12h10',
 } as const;
 
