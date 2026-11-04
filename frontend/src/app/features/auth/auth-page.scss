@@ -1,0 +1,27 @@
+// Estilos comunes de las pantallas de acceso (se incluyen con styleUrl)
+h1 {
+  margin-bottom: 8px;
+}
+
+.lead {
+  color: var(--oh-text-muted);
+  margin-bottom: 28px;
+}
+
+.oh-form {
+  margin-top: 24px;
+}
+
+.links {
+  margin-top: 28px;
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  color: var(--oh-text-muted);
+}
+
+.row-end {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -8px;
+}
