@@ -71,6 +71,26 @@ export const emailTemplates = {
     });
   },
 
+  /** Recordatorio de una tarea que vence pronto (o hoy) */
+  reminder(locale: Locale, p: { task: string; list: string; daysLeft: number; due: string; url: string; settingsUrl: string }): EmailContent {
+    if (locale === 'en') {
+      const when = p.daysLeft === 0 ? 'today' : p.daysLeft === 1 ? 'tomorrow' : `in ${p.daysLeft} days`;
+      return render(`Reminder: “${p.task}” is due ${when}`, {
+        heading: `“${p.task}” is due ${when}`,
+        paragraphs: [`It's still pending in the list “${p.list}”.`, `Due: ${p.due}.`],
+        action: { label: 'Open list', url: p.url },
+        footnote: settingsNote(locale, p.settingsUrl),
+      });
+    }
+    const when = p.daysLeft === 0 ? 'hoy' : p.daysLeft === 1 ? 'mañana' : `en ${p.daysLeft} días`;
+    return render(`Recordatorio: «${p.task}» vence ${when}`, {
+      heading: `«${p.task}» vence ${when}`,
+      paragraphs: [`Sigue pendiente en la lista «${p.list}».`, `Fecha límite: ${p.due}.`],
+      action: { label: 'Abrir lista', url: p.url },
+      footnote: settingsNote(locale, p.settingsUrl),
+    });
+  },
+
   /** Alguien te asignó una tarea */
   assigned(locale: Locale, p: { author: string; task: string; list: string; due: string | null; url: string; settingsUrl: string }): EmailContent {
     if (locale === 'en') {

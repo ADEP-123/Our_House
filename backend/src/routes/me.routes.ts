@@ -46,6 +46,10 @@ meRoutes.patch(
       .strictObject({
         newLists: z.boolean(),
         assignments: z.boolean(),
+        reminders: z.boolean(),
+        reminderHour: z.int('REMINDER_HOUR_INVALID').min(0, 'REMINDER_HOUR_INVALID').max(23, 'REMINDER_HOUR_INVALID'),
+        reminderStartDays: z.int('REMINDER_DAYS_INVALID').min(0, 'REMINDER_DAYS_INVALID').max(60, 'REMINDER_DAYS_INVALID'),
+        reminderEveryDays: z.int('REMINDER_EVERY_INVALID').min(1, 'REMINDER_EVERY_INVALID').max(30, 'REMINDER_EVERY_INVALID'),
       })
       .partial()
       .refine((v) => Object.keys(v).length > 0, 'SETTINGS_EMPTY'),
