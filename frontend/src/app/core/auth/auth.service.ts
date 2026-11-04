@@ -3,6 +3,8 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { I18n, Locale } from '../i18n/i18n.service';
+import { OfflineDb } from '../offline/offline-db.service';
+import { isNetworkError } from '../offline/network';
 import type { Theme } from '../theme/themes';
 
 export interface User {
@@ -18,6 +20,17 @@ export interface User {
   timezone: string;
 }
 
+const USER_KEY = 'oh_user';
+
+function readCachedUser(): User | null {
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    return raw ? (JSON.parse(raw) as User) : null;
+  } catch {
+    return null;
+  }
+}
+
 export const browserTimezone = (): string => {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -31,6 +44,7 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly i18n = inject(I18n);
+  private readonly offlineDb = inject(OfflineDb);
 
   /** undefined = aún no se sabe; null = sin sesión */
   private readonly current = signal<User | null | undefined>(undefined);
@@ -40,6 +54,13 @@ export class AuthService {
   setUser(user: User | null): void {
     this.current.set(user);
     if (user) this.i18n.setLocale(user.locale);
+    // Copia local para abrir la app sin conexión
+    try {
+      if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
+      else localStorage.removeItem(USER_KEY);
+    } catch {
+      // sin almacenamiento local: sin modo offline
+    }
   }
 
   /** Consulta la sesión una vez; las siguientes llamadas usan lo que ya se sabe. */
@@ -48,8 +69,11 @@ export class AuthService {
     try {
       const { user } = await firstValueFrom(this.http.get<{ user: User }>('/api/auth/me'));
       this.setUser(user);
-    } catch {
-      this.current.set(null);
+    } catch (err) {
+      // Sin conexión: se usa la última sesión conocida; la API la vuelve a validar al reconectar
+      const cached = isNetworkError(err) ? readCachedUser() : null;
+      if (cached) this.current.set(cached);
+      else this.setUser(null);
     }
     return this.current()!;
   }
@@ -110,7 +134,14 @@ export class AuthService {
 
   /** Limpia el estado local y lleva al inicio de sesión. */
   endSession(returnUrl?: string): void {
-    this.current.set(null);
+    this.setUser(null);
+    try {
+      localStorage.removeItem('oh_families');
+    } catch {
+      // nada que borrar
+    }
+    // No deja listas ni cambios pendientes de esta cuenta en el dispositivo
+    void this.offlineDb.clear();
     void this.router.navigate(['/ingresar'], { queryParams: returnUrl ? { volver: returnUrl } : {} });
   }
 }

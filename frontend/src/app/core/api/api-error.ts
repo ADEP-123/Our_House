@@ -1,4 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { isNetworkError } from '../offline/network';
 
 export interface ApiError {
   status: number;
@@ -11,7 +12,7 @@ export interface ApiError {
 
 export function toApiError(err: unknown): ApiError {
   if (err instanceof HttpErrorResponse) {
-    if (err.status === 0) return { status: 0, code: 'NETWORK', fields: {}, details: {} };
+    if (isNetworkError(err)) return { status: 0, code: 'NETWORK', fields: {}, details: {} };
     const body = (typeof err.error === 'object' && err.error) || {};
     const { error, fields, ...details } = body as { error?: string; fields?: Record<string, string> };
     return { status: err.status, code: error ?? 'INTERNAL', fields: fields ?? {}, details };
