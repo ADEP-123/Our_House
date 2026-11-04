@@ -18,6 +18,11 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     res.status(400).json({ error: 'VALIDATION', fields });
     return;
   }
+  // Límite de tamaño de express.json/express.raw (ej. avatar de más de 2 MB)
+  if ((err as { type?: string }).type === 'entity.too.large') {
+    res.status(413).json({ error: 'FILE_TOO_LARGE' });
+    return;
+  }
   if (err instanceof SyntaxError && 'body' in err) {
     res.status(400).json({ error: 'INVALID_JSON' });
     return;

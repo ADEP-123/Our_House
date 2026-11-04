@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { authController } from '../controllers/auth.controller.js';
+import { profileController } from '../controllers/profile.controller.js';
 import { passwordSchema } from '../lib/password.js';
 import { emailSchema, localeSchema, nicknameSchema, timezoneSchema, tokenSchema } from '../lib/schemas.js';
 import { requireAuth } from '../middlewares/auth.js';
@@ -40,3 +41,5 @@ authRoutes.post(
   authController.resetPassword,
 );
 authRoutes.get('/me', requireAuth, authController.me);
+// Enlace del correo de cambio de dirección: no exige sesión, el token prueba la propiedad del correo
+authRoutes.post('/confirm-email-change', validateBody(z.object({ token: tokenSchema })), profileController.confirmEmailChange);
