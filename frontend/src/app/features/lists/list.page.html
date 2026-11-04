@@ -65,7 +65,12 @@
         <p class="oh-alert is-error" role="alert">{{ err }}</p>
       }
 
-      <p class="summary">{{ 'lists.summary' | t: { done: l.counts.completed, total: l.counts.total } }}</p>
+      <p class="summary">
+        {{ 'lists.summary' | t: { done: l.counts.completed, total: l.counts.total } }}
+        <span class="oh-hint">· {{ 'lists.items.updatedAgo' | t }}</span>
+      </p>
+
+      <oh-list-items [list]="l" (listChange)="list.set($event)" [members]="members()" />
     }
   </div>
 } @else if (error(); as err) {

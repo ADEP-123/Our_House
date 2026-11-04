@@ -1,0 +1,185 @@
+@if (canEdit()) {
+  <form class="add" [formGroup]="addForm" (ngSubmit)="add()" novalidate>
+    <div class="add-row">
+      <label class="oh-sr-only" for="new-item">{{ 'lists.items.addPlaceholder' | t }}</label>
+      <input id="new-item" class="oh-input" formControlName="text" maxlength="200" autocomplete="off" [placeholder]="'lists.items.addPlaceholder' | t" />
+      <button class="oh-btn oh-btn--filled" type="submit" [disabled]="addForm.invalid">{{ 'lists.items.add' | t }}</button>
+    </div>
+    @if (isShopping() || isTodo()) {
+      <button type="button" class="oh-btn oh-btn--text more" [attr.aria-expanded]="showMore()" (click)="showMore.set(!showMore())">
+        {{ (showMore() ? 'lists.items.less' : 'lists.items.more') | t }}
+      </button>
+    }
+    @if (showMore()) {
+      <div class="extra">
+        @if (isShopping()) {
+          <div class="oh-field">
+            <label for="new-qty">{{ 'lists.items.quantity' | t }}</label>
+            <input id="new-qty" class="oh-input" formControlName="quantity" maxlength="30" [placeholder]="'lists.items.quantityPlaceholder' | t" />
+          </div>
+          <div class="oh-field">
+            <label for="new-cat">{{ 'lists.items.category' | t }}</label>
+            <input id="new-cat" class="oh-input" formControlName="category" maxlength="40" list="categories" [placeholder]="'lists.items.categoryPlaceholder' | t" />
+          </div>
+        }
+        @if (isTodo()) {
+          <div class="oh-field">
+            <label for="new-assignee">{{ 'lists.items.assignee' | t }}</label>
+            <select id="new-assignee" class="oh-input" formControlName="assigneeId">
+              <option value="">{{ 'lists.items.nobody' | t }}</option>
+              @for (m of members(); track m.userId) {
+                <option [value]="m.userId">{{ m.nickname }}</option>
+              }
+            </select>
+          </div>
+          <div class="oh-field">
+            <label for="new-due">{{ 'lists.items.dueDate' | t }}</label>
+            <input id="new-due" class="oh-input" type="date" formControlName="dueDate" />
+          </div>
+        }
+      </div>
+    }
+  </form>
+  <datalist id="categories">
+    @for (c of categories(); track c) {
+      <option [value]="c"></option>
+    }
+  </datalist>
+}
+
+@if (error(); as err) {
+  <p class="oh-alert is-error" role="alert">{{ err }}</p>
+}
+
+<ng-template #itemTpl let-item let-draggable="draggable">
+  @if (editingId() === item.id) {
+    <form class="edit" [formGroup]="editForm" (ngSubmit)="saveEdit(item)" novalidate>
+      <div class="oh-field">
+        <label [for]="'edit-text-' + item.id" class="oh-sr-only">{{ 'lists.items.addPlaceholder' | t }}</label>
+        <input [id]="'edit-text-' + item.id" class="oh-input" formControlName="text" maxlength="200" />
+      </div>
+      <div class="extra">
+        @if (isShopping()) {
+          <div class="oh-field">
+            <label [for]="'edit-qty-' + item.id">{{ 'lists.items.quantity' | t }}</label>
+            <input [id]="'edit-qty-' + item.id" class="oh-input" formControlName="quantity" maxlength="30" />
+          </div>
+          <div class="oh-field">
+            <label [for]="'edit-cat-' + item.id">{{ 'lists.items.category' | t }}</label>
+            <input [id]="'edit-cat-' + item.id" class="oh-input" formControlName="category" maxlength="40" list="categories" />
+          </div>
+        }
+        @if (isTodo()) {
+          <div class="oh-field">
+            <label [for]="'edit-assignee-' + item.id">{{ 'lists.items.assignee' | t }}</label>
+            <select [id]="'edit-assignee-' + item.id" class="oh-input" formControlName="assigneeId">
+              <option value="">{{ 'lists.items.nobody' | t }}</option>
+              @for (m of members(); track m.userId) {
+                <option [value]="m.userId">{{ m.nickname }}</option>
+              }
+            </select>
+          </div>
+          <div class="oh-field">
+            <label [for]="'edit-due-' + item.id">{{ 'lists.items.dueDate' | t }}</label>
+            <input [id]="'edit-due-' + item.id" class="oh-input" type="date" formControlName="dueDate" />
+          </div>
+        }
+        <div class="oh-field wide">
+          <label [for]="'edit-note-' + item.id">{{ 'lists.items.note' | t }}</label>
+          <input [id]="'edit-note-' + item.id" class="oh-input" formControlName="note" maxlength="500" />
+        </div>
+      </div>
+      <div class="edit-actions">
+        <button class="oh-btn oh-btn--filled" type="submit" [disabled]="editForm.invalid">{{ 'lists.items.save' | t }}</button>
+        <button class="oh-btn oh-btn--text" type="button" (click)="editingId.set(null)">{{ 'lists.items.cancel' | t }}</button>
+        <button class="oh-btn oh-btn--text danger" type="button" (click)="remove(item)">{{ 'lists.items.delete' | t }}</button>
+      </div>
+    </form>
+  } @else {
+    <div class="row" [class.done]="item.completedAt">
+      <button
+        type="button"
+        class="check"
+        role="checkbox"
+        [attr.aria-checked]="!!item.completedAt"
+        [attr.aria-label]="(item.completedAt ? 'lists.items.markPending' : 'lists.items.markDone') | t: { text: item.text }"
+        [disabled]="!canCheck()"
+        (click)="toggle(item)"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+      </button>
+      <div class="body">
+        @if (canEdit()) {
+          <button type="button" class="text editable" [attr.aria-label]="'lists.items.edit' | t: { text: item.text }" (click)="startEdit(item)">
+            {{ item.text }}
+          </button>
+        } @else {
+          <span class="text">{{ item.text }}</span>
+        }
+        <span class="meta">
+          @if (item.quantity) {
+            <span class="tag">{{ item.quantity }}</span>
+          }
+          @if (memberName(item.assigneeId); as who) {
+            <span class="tag">👤 {{ who }}</span>
+          }
+          @if (dueLabel(item); as due) {
+            <span class="tag" [class.overdue]="due.overdue">📅 {{ due.text }}</span>
+          }
+          @if (item.note) {
+            <span class="note">{{ item.note }}</span>
+          }
+        </span>
+        @if (item.completedAt) {
+          <span class="by">{{ 'lists.items.by' | t: { name: item.completedBy?.nickname ?? '?', when: when(item.completedAt) } }}</span>
+        }
+      </div>
+      @if (draggable) {
+        <span class="handle" cdkDragHandle [attr.aria-label]="'lists.items.drag' | t" role="img">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01" /></svg>
+        </span>
+      }
+    </div>
+  }
+</ng-template>
+
+@if (pendingCount() === 0 && completed().length === 0) {
+  <p class="empty">{{ (canEdit() ? 'lists.items.empty' : 'lists.items.emptyReadOnly') | t }}</p>
+}
+
+@for (group of groups(); track group.key) {
+  @if (group.items.length) {
+    <section class="group">
+      @if (isShopping() && groups().length > 1) {
+        <h3>{{ group.label ?? ('lists.items.noCategory' | t) }}</h3>
+      }
+      <ul class="items" cdkDropList [cdkDropListData]="group.items" [cdkDropListDisabled]="!canEdit()" (cdkDropListDropped)="drop($event)">
+        @for (item of group.items; track item.id) {
+          <li cdkDrag [cdkDragDisabled]="!canEdit() || editingId() === item.id" class="item">
+            <ng-container *ngTemplateOutlet="itemTpl; context: { $implicit: item, draggable: canEdit() }" />
+          </li>
+        }
+      </ul>
+    </section>
+  }
+}
+
+@if (completed().length) {
+  <section class="group completed">
+    <h3>{{ 'lists.items.completedTitle' | t: { n: completed().length } }}</h3>
+    <ul class="items">
+      @for (item of completed(); track item.id) {
+        <li class="item">
+          <ng-container *ngTemplateOutlet="itemTpl; context: { $implicit: item, draggable: false }" />
+        </li>
+      }
+    </ul>
+  </section>
+}
+
+@if (canEdit() && completed().length) {
+  <div class="bulk">
+    <button type="button" class="oh-btn oh-btn--outline" (click)="reset()">{{ 'lists.items.reset' | t }}</button>
+    <button type="button" class="oh-btn oh-btn--text danger" (click)="clearCompleted()">{{ 'lists.items.clear' | t }}</button>
+  </div>
+}

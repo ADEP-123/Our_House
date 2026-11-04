@@ -1,19 +1,20 @@
-import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, input, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { toApiError } from '../../core/api/api-error';
 import { I18n } from '../../core/i18n/i18n.service';
 import { TPipe } from '../../core/i18n/t.pipe';
 import { ConfirmService } from '../../shared/confirm.service';
 import { ToastService } from '../../shared/toast.service';
-import { FamiliesService } from '../families/families.service';
+import { FamiliesService, FamilyMember } from '../families/families.service';
 import { ListFormComponent } from './list-form.component';
+import { ListItemsComponent } from './list-items.component';
 import { colorOf, iconOf, LIST_TYPES } from './list-presets';
 import { ListDetail, ListInput } from './lists.models';
 import { ListsStore } from './lists.store';
 
 @Component({
   selector: 'oh-list-page',
-  imports: [RouterLink, TPipe, ListFormComponent],
+  imports: [RouterLink, TPipe, ListFormComponent, ListItemsComponent],
   templateUrl: './list.page.html',
   styleUrl: './list.page.scss',
 })
@@ -34,23 +35,47 @@ export class ListPage implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly editing = signal(false);
   protected readonly busy = signal(false);
+  protected readonly members = signal<FamilyMember[]>([]);
 
   protected readonly color = computed(() => colorOf(this.list()?.color ?? 'blue'));
   protected readonly icon = computed(() => iconOf(this.list()?.icon ?? 'check'));
   protected readonly typeLabel = computed(() => LIST_TYPES.find((t) => t.id === this.list()?.type)?.label ?? 'lists.types.other');
   protected readonly myRole = computed(() => this.families.families()?.find((f) => f.id === this.list()?.familyId)?.role);
 
+  constructor() {
+    // Mientras la pantalla está abierta, trae los cambios de los demás cada 15 segundos
+    // y al volver a la app. No pisa cambios propios que aún se están enviando.
+    const refresh = () => {
+      if (document.visibilityState === 'visible' && this.store.pending() === 0 && !this.editing()) void this.reload(true);
+    };
+    const timer = setInterval(refresh, 15_000);
+    document.addEventListener('visibilitychange', refresh);
+    inject(DestroyRef).onDestroy(() => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', refresh);
+    });
+  }
+
   async ngOnInit(): Promise<void> {
     if (this.families.families() === null) void this.families.load().catch(() => undefined);
     await this.reload();
+    const familyId = this.list()?.familyId;
+    if (familyId) {
+      // Nombres para "responsable" y para elegir a quién asignar
+      this.families
+        .detail(familyId)
+        .then((f) => this.members.set(f.members))
+        .catch(() => undefined);
+    }
   }
 
-  protected async reload(): Promise<void> {
+  /** silent: actualización automática; un error no reemplaza la pantalla */
+  protected async reload(silent = false): Promise<void> {
     try {
       this.list.set(await this.store.detail(this.id(), !!this.supervision()));
       this.error.set(null);
     } catch (err) {
-      this.error.set(this.i18n.error(toApiError(err).code));
+      if (!silent || !this.list()) this.error.set(this.i18n.error(toApiError(err).code));
     }
   }
 
