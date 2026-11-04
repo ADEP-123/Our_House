@@ -129,10 +129,31 @@
   overflow-wrap: anywhere;
 }
 
+// El texto abre la edición (responsable, fecha, cantidad...): se ve como algo que se puede tocar
 button.text {
   border: 0;
+  border-radius: 6px;
   background: none;
-  cursor: text;
+  cursor: pointer;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: transparent;
+  text-underline-offset: 4px;
+  transition: text-decoration-color 120ms ease, color 120ms ease;
+
+  &:hover {
+    color: var(--list-color, var(--oh-primary));
+    text-decoration-color: currentColor;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--list-color, var(--oh-primary));
+    outline-offset: 2px;
+  }
+}
+
+.handle:active {
+  cursor: grabbing;
 }
 
 .done .text {
