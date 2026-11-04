@@ -10,6 +10,7 @@ import { ConfirmService } from '../../shared/confirm.service';
 import { ToastService } from '../../shared/toast.service';
 import { FamilyMember } from '../families/families.service';
 import { applyPurchase, applyToggle, formatAmount, formatMoney, isPartial, removeItem, syncParent, unitsFor } from './item-logic';
+import { dueLabel } from './due-label';
 import { ListDetail, ListItem } from './lists.models';
 import { PurchaseDialogComponent, PurchaseInput } from './purchase-dialog.component';
 import { ItemChanges, ListsStore, NewItem } from './lists.store';
@@ -67,6 +68,7 @@ export class ListItemsComponent implements OnDestroy {
     category: ['', Validators.maxLength(40)],
     assigneeId: [''],
     dueDate: [''],
+    dueTime: [''],
   });
   protected readonly editForm = this.fb.group({
     text: ['', [Validators.required, Validators.maxLength(200)]],
@@ -76,6 +78,7 @@ export class ListItemsComponent implements OnDestroy {
     category: ['', Validators.maxLength(40)],
     assigneeId: [''],
     dueDate: [''],
+    dueTime: [''],
   });
 
   private readonly visibleItems = computed(() => this.list().items.filter((i) => !this.hidden().has(i.id)));
@@ -147,16 +150,8 @@ export class ListItemsComponent implements OnDestroy {
     return `${date.toLocaleDateString(locale, { day: 'numeric', month: 'short' })} ${time}`;
   }
 
-  /** dueDate viene como 'AAAA-MM-DD': se interpreta como fecha local, sin zona horaria */
-  protected dueLabel(item: ListItem): { text: string; overdue: boolean } | null {
-    if (!item.dueDate) return null;
-    const [y, m, d] = item.dueDate.split('-').map(Number);
-    const due = new Date(y!, m! - 1, d!);
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const overdue = !item.completedAt && due < start;
-    const date = due.toLocaleDateString(this.i18n.locale(), { day: 'numeric', month: 'short' });
-    return { text: this.i18n.t(overdue ? 'lists.items.overdue' : 'lists.items.due', { date }), overdue };
+  protected dueLabel(item: ListItem) {
+    return dueLabel(item, this.i18n);
   }
 
   protected subtasksOf(id: string): ListItem[] {
@@ -222,8 +217,8 @@ export class ListItemsComponent implements OnDestroy {
     const v = this.addForm.getRawValue();
     const item: NewItem = { text: v.text.trim() };
     if (this.isShopping()) Object.assign(item, this.shoppingFields(v));
-    if (this.isTodo()) Object.assign(item, { assigneeId: v.assigneeId || null, dueDate: v.dueDate || null });
-    this.addForm.reset({ text: '', amount: '', unit: '', category: v.category, assigneeId: '', dueDate: '' });
+    if (this.isTodo()) Object.assign(item, this.todoFields(v));
+    this.addForm.reset({ text: '', amount: '', unit: '', category: v.category, assigneeId: '', dueDate: '', dueTime: '' });
     this.error.set(null);
     await this.create(item);
   }
@@ -256,6 +251,12 @@ export class ListItemsComponent implements OnDestroy {
   private shoppingFields(v: { amount: string | number | null; unit: string; category: string }): ItemChanges {
     const amount = this.amountOf(v.amount);
     return { amount, unit: amount !== null ? v.unit.trim() || null : null, category: v.category.trim() || null };
+  }
+
+  /** La hora solo cuenta si hay fecha */
+  private todoFields(v: { assigneeId: string; dueDate: string; dueTime: string }): ItemChanges {
+    const dueDate = v.dueDate || null;
+    return { assigneeId: v.assigneeId || null, dueDate, dueTime: dueDate ? v.dueTime || null : null };
   }
 
   private me() {
@@ -324,6 +325,7 @@ export class ListItemsComponent implements OnDestroy {
       category: item.category ?? '',
       assigneeId: item.assigneeId ?? '',
       dueDate: item.dueDate ?? '',
+      dueTime: item.dueTime ?? '',
     });
     this.editingId.set(item.id);
   }
@@ -333,9 +335,9 @@ export class ListItemsComponent implements OnDestroy {
     const v = this.editForm.getRawValue();
     const changes: ItemChanges = { text: v.text.trim(), note: v.note.trim() || null };
     if (this.isShopping()) Object.assign(changes, this.shoppingFields(v));
-    if (this.isTodo()) Object.assign(changes, { assigneeId: v.assigneeId || null, dueDate: v.dueDate || null });
+    if (this.isTodo()) Object.assign(changes, this.todoFields(v));
     this.editingId.set(null);
-    this.patchItem(item.id, changes);
+    this.patchItem(item.id, { ...changes, dueAt: changes.dueDate && changes.dueTime ? new Date(`${changes.dueDate}T${changes.dueTime}`).toISOString() : null });
     try {
       this.patchItem(item.id, await this.store.updateItem(this.list().id, item.id, changes));
     } catch (err) {

@@ -162,6 +162,11 @@ button.text {
     font-weight: 600;
   }
 
+  &.today {
+    background: color-mix(in srgb, #e8a33d 22%, var(--oh-surface));
+    font-weight: 600;
+  }
+
   &.overdue {
     background: var(--oh-error-soft);
     color: var(--oh-error);

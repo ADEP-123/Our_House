@@ -40,6 +40,10 @@
             <label for="new-due">{{ 'lists.items.dueDate' | t }}</label>
             <input id="new-due" class="oh-input" type="date" formControlName="dueDate" />
           </div>
+          <div class="oh-field">
+            <label for="new-time">{{ 'lists.items.dueTime' | t }}</label>
+            <input id="new-time" class="oh-input" type="time" formControlName="dueTime" />
+          </div>
         }
       </div>
     }
@@ -96,6 +100,10 @@
             <label [for]="'edit-due-' + item.id">{{ 'lists.items.dueDate' | t }}</label>
             <input [id]="'edit-due-' + item.id" class="oh-input" type="date" formControlName="dueDate" />
           </div>
+          <div class="oh-field">
+            <label [for]="'edit-time-' + item.id">{{ 'lists.items.dueTime' | t }}</label>
+            <input [id]="'edit-time-' + item.id" class="oh-input" type="time" formControlName="dueTime" />
+          </div>
         }
         <div class="oh-field wide">
           <label [for]="'edit-note-' + item.id">{{ 'lists.items.note' | t }}</label>
@@ -143,7 +151,7 @@
             <span class="tag">👤 {{ who }}</span>
           }
           @if (dueLabel(item); as due) {
-            <span class="tag" [class.overdue]="due.overdue">📅 {{ due.text }}</span>
+            <span class="tag" [class.overdue]="due.kind === 'overdue'" [class.today]="due.kind === 'today'">📅 {{ due.text }}</span>
           }
           @if (progress(item); as p) {
             <span class="tag" [attr.aria-label]="'lists.subtasks.progress' | t: p">☑ {{ p.done }}/{{ p.total }}</span>
