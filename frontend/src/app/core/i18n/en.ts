@@ -121,6 +121,22 @@ export const en: Dictionary = {
     manage: 'View group',
   },
   profile: {
+    calendar: {
+      title: 'Google Calendar',
+      body: 'Connect your Google account and your dated tasks will show up on an “Our House” calendar, with an alert before they are due. When you complete them, their title becomes “✓ task”.',
+      warning: 'Google will show an “unverified app” warning: that is expected for this family app. Tap “Advanced” and then continue.',
+      connect: 'Connect Google Calendar',
+      connectedAs: 'Connected as {email}. Your dated tasks go to the “{calendar}” calendar.',
+      how: 'It includes tasks assigned to you and the ones you created with no assignee. If you change the date or complete them, the event is updated.',
+      disconnect: 'Disconnect',
+      disconnectTitle: 'Disconnect Google Calendar?',
+      disconnectBody: 'Tasks will stop syncing. The “Our House” calendar stays in your Google account; you can delete it there.',
+      disconnected: 'Google Calendar disconnected.',
+      connected: 'Done! Google Calendar is connected.',
+      cancelled: 'Not connected: you cancelled the permission on Google.',
+      failed: "Google Calendar couldn't be connected. Try again.",
+      unavailable: 'The Google Calendar connection is not set up on the server yet.',
+    },
     notifications: {
       title: 'Notifications',
       body: 'Emails that let you know what others do in your groups.',
@@ -371,6 +387,12 @@ export const en: Dictionary = {
       custom: 'Customize for this task',
       off: 'No reminders',
     },
+    calendarPrompt: {
+      body: 'You can bring your dated tasks to Google Calendar and get the alert on your phone.',
+      setup: 'Set up Google Calendar',
+      later: 'Not now',
+      never: "Don't show again",
+    },
     purchase: {
       already: 'You already bought {done} of {of}.',
       howMuch: 'How much did you buy?',
@@ -500,6 +522,7 @@ export const en: Dictionary = {
     },
   },
   errors: {
+    GOOGLE_NOT_CONFIGURED: 'The Google connection is not set up on the server',
     REMINDER_EVERY_INVALID: 'Frequency must be between 1 and 30 days',
     REMINDER_DAYS_INVALID: 'Days before must be between 0 and 60',
     REMINDER_HOUR_INVALID: 'Choose an hour between 0 and 23',

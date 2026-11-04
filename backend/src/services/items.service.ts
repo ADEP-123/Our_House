@@ -1,10 +1,12 @@
 import { randomUUID } from 'node:crypto';
+import { db } from '../config/database.js';
 import { badRequest, conflict, forbidden, notFound } from '../lib/http-error.js';
 import { familiesRepository } from '../repositories/families.repository.js';
 import { itemsRepository, type ItemFields } from '../repositories/items.repository.js';
 import { usersRepository } from '../repositories/users.repository.js';
 import { listRef, logActivity } from './activity.service.js';
 import { getAccess, listsService, requireEdit, toItemView, type ListAccess } from './lists.service.js';
+import { calendarService } from './calendar.service.js';
 import { notificationsService } from './notifications.service.js';
 
 /** El responsable de una tarea tiene que ser del grupo. */
@@ -40,6 +42,10 @@ async function withDueZone(userId: string, data: ItemFields, current?: { due_dat
   return { ...data, dueTz: user?.timezone ?? 'UTC' };
 }
 
+async function childIds(itemId: string): Promise<string[]> {
+  return (await db().query<{ id: string }>('SELECT id FROM list_items WHERE parent_id = $1', [itemId])).rows.map((r) => r.id);
+}
+
 /** Después de cambiar una subtarea, la tarea se completa o vuelve a pendiente según corresponda. */
 async function syncParent(access: ListAccess, userId: string, parentId: string | null): Promise<void> {
   if (!parentId) return;
@@ -68,6 +74,9 @@ export const itemsService = {
       await log(access, userId, 'item.created', item!, item!.parent_id ? { subtaskOf: data.parentId } : undefined);
       await syncParent(access, userId, item!.parent_id);
       notificationsService.assigned(item!, access.list, userId, item!.assignee_id);
+      if (item!.due_date) calendarService.syncItems([item!.id]);
+      // Una subtarea nueva puede reabrir su tarea (el título pierde el ✓)
+      if (item!.parent_id) calendarService.syncItems([item!.parent_id]);
     }
     return toItemView(item!);
   },
@@ -101,6 +110,7 @@ export const itemsService = {
       await log(access, userId, 'item.moved', after);
     }
     if (after.assignee_id !== before.assignee_id) notificationsService.assigned(after, access.list, userId, after.assignee_id);
+    if (before.due_date || after.due_date) calendarService.syncItems([itemId]);
     return toItemView(after);
   },
 
@@ -117,6 +127,8 @@ export const itemsService = {
       await log(access, userId, completed ? 'item.completed' : 'item.uncompleted', before, cascaded ? { subtasks: cascaded } : undefined);
     }
     await syncParent(access, userId, before.parent_id);
+    // El evento de la tarea, de su tarea principal y de sus subtareas (✓ en el título)
+    calendarService.syncItems([itemId, before.parent_id, ...(cascaded ? await childIds(itemId) : [])]);
     return toItemView((await itemsRepository.find(itemId))!);
   },
 
@@ -162,9 +174,11 @@ export const itemsService = {
     const item = await itemsRepository.find(itemId);
     if (!item) return;
     if (item.list_id !== listId) throw notFound('ITEM_NOT_FOUND');
+    const children = await childIds(itemId);
     await itemsRepository.delete(itemId, listId);
     await log(access, userId, 'item.deleted', item);
     await syncParent(access, userId, item.parent_id);
+    calendarService.syncItems([itemId, item.parent_id, ...children]);
   },
 
   async uncheckAll(listId: string, userId: string) {
@@ -172,6 +186,7 @@ export const itemsService = {
     requireEdit(access);
     const count = await itemsRepository.uncheckAll(listId);
     await logActivity(access.list.family_id, userId, 'list.reset', { ...listRef(access.list), details: { count } });
+    calendarService.syncList(listId);
     return listsService.detail(listId, userId);
   },
 
@@ -180,6 +195,7 @@ export const itemsService = {
     requireEdit(access);
     const count = await itemsRepository.deleteCompleted(listId);
     await logActivity(access.list.family_id, userId, 'list.cleared_completed', { ...listRef(access.list), details: { count } });
+    calendarService.syncList(listId);
     return listsService.detail(listId, userId);
   },
 };

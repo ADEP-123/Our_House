@@ -21,6 +21,8 @@ export interface User {
   notifications: UserNotifications;
   /** Recordatorios de tareas con fecha: valores por defecto */
   reminders: ReminderDefaults;
+  /** Ya no mostrar el aviso de conectar Google Calendar */
+  calendarPromptDismissed: boolean;
 }
 
 export interface UserNotifications {
