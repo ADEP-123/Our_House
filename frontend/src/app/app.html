@@ -1,0 +1,14 @@
+<main class="shell">
+  <section class="card">
+    <h1>Our House</h1>
+    <p class="subtitle">Tareas, calendario, entrenamiento y finanzas en un solo lugar.</p>
+
+    @let current = state();
+    <p class="status" [class]="current ?? 'checking'" role="status">
+      <span class="dot" aria-hidden="true"></span>
+      {{ current ? labels[current] : 'Comprobando el servidor…' }}
+    </p>
+  </section>
+</main>
+
+<router-outlet />
