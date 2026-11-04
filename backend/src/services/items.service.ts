@@ -89,6 +89,9 @@ export const itemsService = {
       assigneeId: 'assignee_id',
       dueDate: 'due_date',
       dueTime: 'due_time',
+      reminderStartDays: 'reminder_start_days',
+      reminderEveryDays: 'reminder_every_days',
+      remindersOff: 'reminders_off',
     } as const;
     const fields = (Object.keys(columns) as (keyof typeof columns)[]).filter((k) => before[columns[k]] !== after[columns[k]]);
     if (fields.length) {

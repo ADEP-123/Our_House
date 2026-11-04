@@ -106,6 +106,7 @@ export function toItemView(item: ItemRow) {
     dueDate: item.due_date,
     dueTime: item.due_time?.slice(0, 5) ?? null,
     dueAt: item.due_at,
+    reminders: { startDays: item.reminder_start_days, everyDays: item.reminder_every_days, off: item.reminders_off },
     position: item.position,
     completedAt: item.completed_at,
     completedBy: item.completed_by ? { id: item.completed_by, nickname: item.completed_by_nickname } : null,

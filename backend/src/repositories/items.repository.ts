@@ -12,6 +12,9 @@ const COLUMNS = {
   dueDate: 'due_date',
   dueTime: 'due_time',
   dueTz: 'due_tz',
+  reminderStartDays: 'reminder_start_days',
+  reminderEveryDays: 'reminder_every_days',
+  remindersOff: 'reminders_off',
   position: 'position',
   parentId: 'parent_id',
 } as const;
@@ -28,6 +31,10 @@ export type ItemFields = {
   dueTime?: string | null;
   /** Zona horaria en que se interpreta la hora (la de quien la pone) */
   dueTz?: string | null;
+  /** Recordatorios de esta tarea: null = los del perfil de quien la recibe */
+  reminderStartDays?: number | null;
+  reminderEveryDays?: number | null;
+  remindersOff?: boolean;
   position?: number;
   /** Solo al crear: la tarea de la que es subtarea */
   parentId?: string | null;

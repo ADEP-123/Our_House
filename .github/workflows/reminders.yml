@@ -1,0 +1,32 @@
+name: Recordatorios
+
+# Cada hora le pide a la API que envíe los recordatorios de tareas que tocan.
+# Necesita en GitHub (Settings > Secrets and variables > Actions):
+#   - secret CRON_SECRET: el mismo valor que la variable CRON_SECRET del proyecto our-house-api en Vercel
+#   - variable API_URL: la URL de la API, ej. https://our-house-api.vercel.app
+on:
+  schedule:
+    # Minuto 7 de cada hora (GitHub puede atrasarlo unos minutos; la API envía cada recordatorio una sola vez al día)
+    - cron: '7 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: recordatorios
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Enviar recordatorios pendientes
+        env:
+          API_URL: ${{ vars.API_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$API_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::warning::Faltan API_URL o CRON_SECRET (ver docs/deploy.md, sección 7). No se envió nada."
+            exit 0
+          fi
+          curl --fail-with-body -sS -X POST "$API_URL/api/cron/reminders" \
+            -H "Authorization: Bearer $CRON_SECRET" --max-time 60

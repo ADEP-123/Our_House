@@ -29,7 +29,7 @@ export class ProfileService {
   }
 
   /** Preferencias de notificaciones: se guardan al cambiar cada interruptor */
-  setSettings(changes: Partial<UserNotifications>) {
+  setSettings(changes: Partial<UserNotifications> & { reminderHour?: number; reminderStartDays?: number; reminderEveryDays?: number }) {
     return this.apply(firstValueFrom(this.http.patch<{ user: User }>('/api/me/settings', changes)));
   }
 

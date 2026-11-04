@@ -17,6 +17,10 @@ export interface UserRow {
   theme: unknown | null;
   email_new_lists: boolean;
   email_assignments: boolean;
+  email_reminders: boolean;
+  reminder_hour: number;
+  reminder_start_days: number;
+  reminder_every_days: number;
   created_at: Date;
 }
 
@@ -24,6 +28,10 @@ export interface UserRow {
 export const USER_SETTINGS = {
   newLists: 'email_new_lists',
   assignments: 'email_assignments',
+  reminders: 'email_reminders',
+  reminderHour: 'reminder_hour',
+  reminderStartDays: 'reminder_start_days',
+  reminderEveryDays: 'reminder_every_days',
 } as const;
 export type UserSettings = Partial<Record<keyof typeof USER_SETTINGS, unknown>>;
 

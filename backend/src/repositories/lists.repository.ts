@@ -46,6 +46,9 @@ export interface ItemRow {
   due_tz: string | null;
   /** Momento exacto del vencimiento cuando hay hora */
   due_at: Date | null;
+  reminder_start_days: number | null;
+  reminder_every_days: number | null;
+  reminders_off: boolean;
   position: number;
   completed_at: Date | null;
   completed_by: string | null;
