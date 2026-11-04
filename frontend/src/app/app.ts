@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { ConfirmDialogComponent } from './shared/confirm-dialog.component';
 import { ToastComponent } from './shared/toast.component';
+import { AppUpdateService } from './core/offline/app-update.service';
 import { ThemeService } from './core/theme/theme.service';
 
 @Component({
@@ -12,4 +13,8 @@ import { ThemeService } from './core/theme/theme.service';
 export class App {
   // Aplica la paleta del usuario desde el arranque
   private readonly theme = inject(ThemeService);
+
+  constructor() {
+    inject(AppUpdateService).start();
+  }
 }
