@@ -1,32 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '../src/config/database.js';
-import { captureMail, createUser, resetDb } from './helpers.js';
-
-type User = Awaited<ReturnType<typeof createUser>>;
-
-/** Grupo con ana (líder) y el resto como miembros; opcionalmente algunos supervisados. */
-export async function setupFamily(nicknames: string[], supervised: string[] = []) {
-  const mail = captureMail();
-  const users: Record<string, User> = {};
-  for (const n of nicknames) users[n] = await createUser(n, mail);
-  const leader = users[nicknames[0]!]!;
-  const familyId = (await leader.agent.post('/api/families').send({ name: 'Casa' }).expect(201)).body.family.id as string;
-  const code = (await leader.agent.get(`/api/families/${familyId}`)).body.family.inviteCode;
-  for (const n of nicknames.slice(1)) await users[n]!.agent.post('/api/families/join').send({ code }).expect(200);
-  for (const n of supervised) {
-    await leader.agent.patch(`/api/families/${familyId}/members/${users[n]!.user.id}`).send({ role: 'supervised' }).expect(200);
-  }
-  return { familyId, users };
-}
-
-export async function createList(user: User, familyId: string, body: Record<string, unknown> = {}) {
-  const res = await user.agent
-    .post(`/api/families/${familyId}/lists`)
-    .send({ name: 'Compras', type: 'shopping', ...body })
-    .expect(201);
-  return res.body.list as { id: string; permissions: Record<string, boolean> };
-}
+import { createList, createUser, resetDb, setupFamily, type User } from './helpers.js';
 
 const names = async (user: User, familyId: string, archived = false) =>
   ((await user.agent.get(`/api/families/${familyId}/lists${archived ? '?archived=true' : ''}`).expect(200)).body.lists as {
