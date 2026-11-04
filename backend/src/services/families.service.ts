@@ -40,7 +40,10 @@ export async function removeFromFamily(familyId: string, userId: string, conn: D
   }
   await familiesRepository.removeMember(familyId, userId, conn);
   if (!remaining.some((m) => m.role === 'leader')) {
-    await familiesRepository.setRole(familyId, remaining[0]!.user_id, 'leader', conn);
+    // Primero el miembro normal más antiguo; si solo quedan supervisados, el más antiguo de ellos
+    // (remaining ya viene ordenado por fecha de ingreso)
+    const heir = remaining.find((m) => m.role === 'member') ?? remaining[0]!;
+    await familiesRepository.setRole(familyId, heir.user_id, 'leader', conn);
   }
   return null;
 }
@@ -127,14 +130,14 @@ export const familiesService = {
     return { id: family.id, name: family.name };
   },
 
-  /** Nombrar o quitar líderes. Siempre debe quedar al menos uno. */
+  /** Cambiar el rol (líder, miembro o supervisado). Siempre debe quedar al menos un líder. */
   async setRole(familyId: string, actorId: string, targetId: string, role: FamilyRole) {
     await requireLeader(familyId, actorId);
     await withTransaction(async (conn) => {
       const members = await familiesRepository.lockMembers(familyId, conn);
       const target = members.find((m) => m.user_id === targetId);
       if (!target) throw notFound('MEMBER_NOT_FOUND');
-      if (role === 'member' && target.role === 'leader' && members.filter((m) => m.role === 'leader').length === 1) {
+      if (role !== 'leader' && target.role === 'leader' && members.filter((m) => m.role === 'leader').length === 1) {
         throw conflict('LAST_LEADER');
       }
       await familiesRepository.setRole(familyId, targetId, role, conn);
