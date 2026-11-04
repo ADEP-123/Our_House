@@ -13,7 +13,7 @@ interface HealthResponse {
 export class HealthService {
   private readonly http = inject(HttpClient);
 
-  /** 'up' = API y Oracle bien, 'degraded' = API sin base de datos, 'offline' = API inaccesible. */
+  /** 'up' = API y base de datos bien, 'degraded' = API sin base de datos, 'offline' = API inaccesible. */
   check(): Observable<ApiState> {
     return this.http.get<HealthResponse>('/api/health').pipe(
       map((): ApiState => 'up'),

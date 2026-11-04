@@ -4,9 +4,13 @@ dist/
 .angular/
 coverage/
 
+# Vercel (configuración local del CLI y builds)
+.vercel/
+
 # Secretos
 .env
-wallet/
+.env.*
+!.env.example
 
 # Sistema y editores
 .DS_Store

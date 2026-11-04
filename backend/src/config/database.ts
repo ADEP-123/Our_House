@@ -1,41 +1,36 @@
-import oracledb from 'oracledb';
+import pg from 'pg';
+import { attachDatabasePool } from '@vercel/functions';
 import { env } from './env.js';
 
-let pool: oracledb.Pool | undefined;
+let pool: pg.Pool | undefined;
 
-/** Crea el pool de conexiones (modo thin, sin Oracle Client instalado). */
-export async function initPool(): Promise<void> {
-  const { user, password, connectString, walletDir, walletPassword, poolMax } = env.db;
-  if (!user || !password || !connectString) {
-    throw new Error('Faltan DB_USER, DB_PASSWORD o DB_CONNECT_STRING');
-  }
+/** Crea el pool la primera vez que se necesita, así la API arranca aunque falte DATABASE_URL. */
+function getPool(): pg.Pool {
+  if (pool) return pool;
+  if (!env.db.url) throw new Error('Falta DATABASE_URL');
 
-  pool = await oracledb.createPool({
-    user,
-    password,
-    connectString,
-    // Solo aplica con wallet (mTLS); con TLS simple quedan undefined
-    configDir: walletDir,
-    walletLocation: walletDir,
-    walletPassword,
-    poolMin: 0,
-    poolMax,
-    poolIncrement: 1,
+  pool = new pg.Pool({
+    connectionString: env.db.url,
+    max: env.db.poolMax,
+    idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 10_000,
   });
+  // En Vercel cierra las conexiones ociosas antes de suspender la función; fuera de Vercel no hace nada
+  attachDatabasePool(pool);
+  return pool;
 }
 
-/** Presta una conexión del pool y la devuelve siempre, aunque falle la consulta. */
-export async function withConnection<T>(work: (conn: oracledb.Connection) => Promise<T>): Promise<T> {
-  if (!pool) throw new Error('El pool de Oracle no está inicializado');
-  const conn = await pool.getConnection();
+/** Presta un cliente del pool y lo devuelve siempre, aunque falle la consulta. */
+export async function withConnection<T>(work: (client: pg.PoolClient) => Promise<T>): Promise<T> {
+  const client = await getPool().connect();
   try {
-    return await work(conn);
+    return await work(client);
   } finally {
-    await conn.close();
+    client.release();
   }
 }
 
 export async function closePool(): Promise<void> {
-  await pool?.close(10);
+  await pool?.end();
   pool = undefined;
 }
