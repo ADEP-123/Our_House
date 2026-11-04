@@ -4,6 +4,9 @@ import { AuthLayoutComponent } from './features/auth/auth-layout.component';
 
 // Rutas en español: son las que aparecen en los enlaces de los correos
 export const routes: Routes = [
+  // La raíz va a /inicio; sin sesión, el authGuard lleva a /ingresar.
+  // Debe ir primero: si no, '/' coincide con el marco de acceso vacío de abajo.
+  { path: '', pathMatch: 'full', redirectTo: 'inicio' },
   {
     path: '',
     component: AuthLayoutComponent,
@@ -58,7 +61,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/appearance/appearance.page').then((m) => m.AppearancePage),
       },
       { path: 'perfil', loadComponent: () => import('./features/profile/profile.page').then((m) => m.ProfilePage) },
-      { path: '', pathMatch: 'full', redirectTo: 'inicio' },
     ],
   },
   { path: '**', redirectTo: 'inicio' },
