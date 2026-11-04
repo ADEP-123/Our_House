@@ -5,6 +5,7 @@ import { detectImage, MAX_AVATAR_BYTES } from '../lib/avatars.js';
 import { badRequest, conflict, forbidden, HttpError, notFound } from '../lib/http-error.js';
 import { familiesRepository, type FamilyRole, type FamilyRow } from '../repositories/families.repository.js';
 import { invitationsRepository } from '../repositories/invitations.repository.js';
+import { listsRepository } from '../repositories/lists.repository.js';
 import { storageService } from './storage.service.js';
 
 // Sin 0/O ni 1/I/L para que se pueda dictar en voz alta sin confusiones
@@ -39,6 +40,8 @@ export async function removeFromFamily(familyId: string, userId: string, conn: D
     return family?.avatar_url ?? null;
   }
   await familiesRepository.removeMember(familyId, userId, conn);
+  // Sus listas privadas no las podría ver nadie más: se eliminan. Las del grupo se quedan.
+  await listsRepository.deletePrivateOf(familyId, userId, conn);
   if (!remaining.some((m) => m.role === 'leader')) {
     // Primero el miembro normal más antiguo; si solo quedan supervisados, el más antiguo de ellos
     // (remaining ya viene ordenado por fecha de ingreso)

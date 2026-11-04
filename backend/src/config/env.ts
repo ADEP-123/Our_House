@@ -23,6 +23,8 @@ export const env = {
     url: optional('DATABASE_URL'),
     poolMax: Number(optional('DB_POOL_MAX') ?? 5),
   },
+  /** Días que una lista archivada espera antes de borrarse definitivamente */
+  listArchiveRetentionDays: Math.max(1, Number(optional('LIST_ARCHIVE_RETENTION_DAYS') ?? 15)),
   mail: {
     // Gmail SMTP con contraseña de aplicación. Sin estas variables los correos se escriben en la consola.
     user: optional('SMTP_USER'),
