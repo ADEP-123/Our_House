@@ -1,0 +1,32 @@
+<div class="shell">
+  <header class="topbar">
+    <span class="brand">Our House</span>
+    <button type="button" class="icon-btn" (click)="logout()" [attr.aria-label]="'shell.logout' | t">
+      <oh-icon name="logout" />
+    </button>
+  </header>
+
+  <nav class="rail" [attr.aria-label]="'shell.nav' | t">
+    <span class="rail-brand" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M3 12 12 4l9 8" /></svg>
+    </span>
+    <ul>
+      @for (item of nav; track item.path) {
+        <li>
+          <a [routerLink]="item.path" routerLinkActive="active" ariaCurrentWhenActive="page">
+            <span class="pill"><oh-icon [name]="item.icon" /></span>
+            <span class="label">{{ item.label | t }}</span>
+          </a>
+        </li>
+      }
+    </ul>
+    <button type="button" class="rail-logout" (click)="logout()">
+      <span class="pill"><oh-icon name="logout" /></span>
+      <span class="label">{{ 'shell.logout' | t }}</span>
+    </button>
+  </nav>
+
+  <main class="main">
+    <router-outlet />
+  </main>
+</div>
