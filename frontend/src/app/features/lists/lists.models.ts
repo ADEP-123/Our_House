@@ -42,7 +42,12 @@ export interface ListItem {
   spent: number | null;
   category: string | null;
   assigneeId: string | null;
+  /** 'AAAA-MM-DD' */
   dueDate: string | null;
+  /** 'HH:MM' en la zona de quien la puso; null = todo el día */
+  dueTime: string | null;
+  /** Momento exacto del vencimiento (solo con hora) */
+  dueAt: string | null;
   position: number;
   completedAt: string | null;
   completedBy: { id: string; nickname: string | null } | null;
@@ -64,4 +69,11 @@ export interface ListInput {
   color: string;
   icon: string;
   isPrivate: boolean;
+}
+
+/** Tarea asignada a mí (vista "Mis tareas") */
+export interface MyTask extends ListItem {
+  list: { id: string; name: string; color: string; icon: string };
+  family: { id: string; name: string };
+  parentText: string | null;
 }

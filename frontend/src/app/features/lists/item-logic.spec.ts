@@ -1,4 +1,4 @@
-import { applyCompleted, applyPurchase, applyToggle, isPartial, remaining, removeItem } from './item-logic';
+import { applyCompleted, applyPurchase, applyToggle, dueInfo, isPartial, remaining, removeItem } from './item-logic';
 import { ListItem } from './lists.models';
 
 const leche: ListItem = {
@@ -13,6 +13,8 @@ const leche: ListItem = {
   category: null,
   assigneeId: null,
   dueDate: null,
+  dueTime: null,
+  dueAt: null,
   position: 1,
   completedAt: null,
   completedBy: null,
@@ -78,5 +80,26 @@ describe('reglas de subtareas', () => {
     expect(removeItem([task('t'), task('a', 't'), task('x')], 't', ana).map((i) => i.id)).toEqual(['x']);
     const items = removeItem([task('t'), task('a', 't', true), task('b', 't')], 'b', ana);
     expect(items.find((i) => i.id === 't')!.completedAt).not.toBeNull();
+  });
+});
+
+describe('fechas límite', () => {
+  const now = new Date(2026, 10, 3, 12, 0); // 3 nov 2026, 12:00 local
+  const due = (dueDate: string | null, dueAt: string | null = null, completedAt: string | null = null) => ({ dueDate, dueAt, completedAt });
+
+  it('sin hora vence al terminar el día', () => {
+    expect(dueInfo(due('2026-11-03'), now)!.kind).toBe('today');
+    expect(dueInfo(due('2026-11-04'), now)!.kind).toBe('tomorrow');
+    expect(dueInfo(due('2026-11-02'), now)!.kind).toBe('overdue');
+    expect(dueInfo(due('2026-11-20'), now)!.kind).toBe('later');
+    expect(dueInfo(due(null), now)).toBeNull();
+  });
+
+  it('con hora vence en ese momento; completada nunca está vencida', () => {
+    const morning = new Date(2026, 10, 3, 9, 0).toISOString();
+    const evening = new Date(2026, 10, 3, 18, 0).toISOString();
+    expect(dueInfo(due('2026-11-03', morning), now)!.kind).toBe('overdue');
+    expect(dueInfo(due('2026-11-03', evening), now)).toMatchObject({ kind: 'today', timed: true });
+    expect(dueInfo(due('2026-11-03', morning, morning), now)!.kind).toBe('today');
   });
 });

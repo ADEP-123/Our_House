@@ -1,5 +1,5 @@
 import { db, type Db } from '../config/database.js';
-import type { ItemRow } from './lists.repository.js';
+import { ITEM_SELECT, type ItemRow } from './lists.repository.js';
 
 /** Campos que se pueden escribir al crear o editar un ítem, con su columna. */
 const COLUMNS = {
@@ -10,6 +10,8 @@ const COLUMNS = {
   category: 'category',
   assigneeId: 'assignee_id',
   dueDate: 'due_date',
+  dueTime: 'due_time',
+  dueTz: 'due_tz',
   position: 'position',
   parentId: 'parent_id',
 } as const;
@@ -22,15 +24,16 @@ export type ItemFields = {
   category?: string | null;
   assigneeId?: string | null;
   dueDate?: string | null;
+  /** 'HH:MM' o null */
+  dueTime?: string | null;
+  /** Zona horaria en que se interpreta la hora (la de quien la pone) */
+  dueTz?: string | null;
   position?: number;
   /** Solo al crear: la tarea de la que es subtarea */
   parentId?: string | null;
 };
 
 const present = (f: ItemFields) => (Object.keys(COLUMNS) as (keyof ItemFields)[]).filter((k) => f[k] !== undefined);
-
-const ITEM_SELECT = `SELECT i.*, u.nickname AS completed_by_nickname
-                       FROM list_items i LEFT JOIN users u ON u.id = i.completed_by`;
 
 /** Cualquier cambio en los ítems cuenta como actividad de la lista (orden de las tarjetas). */
 const touchList = (listId: string, conn: Db) => conn.query('UPDATE lists SET updated_at = now() WHERE id = $1', [listId]);
@@ -127,6 +130,26 @@ export const itemsRepository = {
     await conn.query(`UPDATE list_items SET ${SYNC_COMPLETION} WHERE id = $1`, [itemId, userId]);
     await touchList(listId, conn);
     return true;
+  },
+
+  /** Tareas pendientes asignadas a la persona en listas que puede ver (no archivadas), de todos sus grupos */
+  async assignedTo(userId: string, conn: Db = db()) {
+    const { rows } = await conn.query<
+      ItemRow & { list_name: string; list_color: string; list_icon: string; family_id: string; family_name: string; parent_text: string | null }
+    >(
+      `SELECT x.*, l.name AS list_name, l.color AS list_color, l.icon AS list_icon,
+              f.id AS family_id, f.name AS family_name, p.text AS parent_text
+         FROM (${ITEM_SELECT}) x
+         JOIN lists l ON l.id = x.list_id
+         JOIN families f ON f.id = l.family_id
+         JOIN family_members m ON m.family_id = f.id AND m.user_id = $1
+         LEFT JOIN list_items p ON p.id = x.parent_id
+        WHERE x.assignee_id = $1 AND x.completed_at IS NULL AND l.type = 'todo' AND l.archived_at IS NULL
+          AND (NOT l.is_private OR l.created_by = $1)
+        ORDER BY x.due_date NULLS LAST, x.due_time NULLS LAST, x.created_at`,
+      [userId],
+    );
+    return rows;
   },
 
   // ---------- Subtareas ----------

@@ -92,3 +92,24 @@ export const unitsFor = (locale: string): string[] =>
   locale.startsWith('en')
     ? ['pcs', 'kg', 'g', 'lb', 'oz', 'L', 'ml', 'pack', 'dozen', 'can', 'bottle', 'box']
     : ['unid.', 'kg', 'g', 'L', 'ml', 'paquete', 'docena', 'lata', 'botella', 'caja'];
+
+// ---------- Fechas límite ----------
+
+export type DueKind = 'overdue' | 'today' | 'tomorrow' | 'later';
+
+/**
+ * Cuándo vence: con hora, el momento exacto (mostrado en la hora local de quien mira);
+ * sin hora, el día entero (vence al terminar ese día).
+ */
+export function dueInfo(item: Pick<ListItem, 'dueDate' | 'dueAt' | 'completedAt'>, now = new Date()): { kind: DueKind; at: Date; timed: boolean } | null {
+  if (!item.dueDate) return null;
+  const [y, m, d] = item.dueDate.split('-').map(Number);
+  const timed = !!item.dueAt;
+  const at = timed ? new Date(item.dueAt!) : new Date(y!, m! - 1, d!);
+  const day = new Date(at.getFullYear(), at.getMonth(), at.getDate());
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffDays = Math.round((day.getTime() - today.getTime()) / 86_400_000);
+  const passed = timed ? at.getTime() < now.getTime() : diffDays < 0;
+  const kind: DueKind = !item.completedAt && passed ? 'overdue' : diffDays === 0 ? 'today' : diffDays === 1 ? 'tomorrow' : 'later';
+  return { kind, at, timed };
+}

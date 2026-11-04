@@ -6,9 +6,9 @@ import { isNetworkError, isRetryable } from '../../core/offline/network';
 import { OfflineDb } from '../../core/offline/offline-db.service';
 import { SyncStatus } from '../../core/offline/sync-status.service';
 import { applyPurchase, applyToggle, removeItem, syncParent } from './item-logic';
-import { FamilyLists, ListDetail, ListInput, ListItem, ListSummary } from './lists.models';
+import { FamilyLists, ListDetail, ListInput, ListItem, ListSummary, MyTask } from './lists.models';
 
-export type ItemChanges = Partial<Pick<ListItem, 'text' | 'note' | 'amount' | 'unit' | 'category' | 'assigneeId' | 'dueDate' | 'position'>>;
+export type ItemChanges = Partial<Pick<ListItem, 'text' | 'note' | 'amount' | 'unit' | 'category' | 'assigneeId' | 'dueDate' | 'dueTime' | 'position'>>;
 export type NewItem = ItemChanges & { text: string; parentId?: string | null };
 
 /** Un cambio guardado en el dispositivo, listo para reenviarse tal cual al servidor */
@@ -20,6 +20,7 @@ interface Mutation {
 }
 
 const QUEUE_KEY = 'queue';
+const MY_TASKS_KEY = 'my-tasks';
 const listKey = (id: string) => `list:${id}`;
 const familyKey = (familyId: string, archived: boolean) => `lists:${familyId}:${archived ? 'archived' : 'active'}`;
 
@@ -285,6 +286,28 @@ export class ListsStore {
     return (await firstValueFrom(this.http.post<{ list: ListDetail }>(`/api/lists/${listId}/duplicate`, body))).list;
   }
 
+  // ---------- Mis tareas ----------
+
+  /** Lo asignado a mí en todos mis grupos; sin conexión, la última copia (con los cambios pendientes). */
+  async myTasks(): Promise<MyTask[]> {
+    await this.flush();
+    if (this.queue.length) {
+      const cached = await this.db.get<MyTask[]>(MY_TASKS_KEY);
+      if (cached) return cached;
+    }
+    return this.read(MY_TASKS_KEY, async () => (await firstValueFrom(this.http.get<{ tasks: MyTask[] }>('/api/me/tasks'))).tasks);
+  }
+
+  private async updateCachedTasks(itemId: string, completed: boolean): Promise<void> {
+    const cached = await this.db.get<MyTask[]>(MY_TASKS_KEY);
+    if (!cached) return;
+    const now = new Date().toISOString();
+    await this.db.set(
+      MY_TASKS_KEY,
+      cached.map((t) => (t.id === itemId ? { ...t, completedAt: completed ? now : null } : t)),
+    );
+  }
+
   // ---------- Ítems (funcionan sin conexión) ----------
 
   private async itemResult(listId: string, res: unknown): Promise<ListItem> {
@@ -312,6 +335,9 @@ export class ListsStore {
           category: input.category ?? null,
           assigneeId: input.assigneeId ?? null,
           dueDate: input.dueDate ?? null,
+          dueTime: input.dueDate ? (input.dueTime ?? null) : null,
+          // El momento exacto lo calcula el servidor; sin conexión se aproxima con la hora local
+          dueAt: input.dueDate && input.dueTime ? new Date(`${input.dueDate}T${input.dueTime}`).toISOString() : null,
           position: input.position ?? last + 1,
           completedAt: null,
           completedBy: null,
@@ -344,9 +370,9 @@ export class ListsStore {
       { method: 'PUT', url: `/api/lists/${listId}/items/${itemId}/completed`, body: { completed }, listId },
       async () => {
         const updated = await this.updateCached(listId, (l) => ({ ...l, items: applyToggle(l.items, itemId, completed, this.me()) }));
-        const item = updated?.items.find((i) => i.id === itemId);
-        if (!item) throw new Error('ITEM_NOT_CACHED');
-        return item;
+        await this.updateCachedTasks(itemId, completed);
+        // Desde "Mis tareas" la lista puede no estar guardada: igual queda en la cola
+        return updated?.items.find((i) => i.id === itemId) ?? ({ id: itemId, completedAt: completed ? new Date().toISOString() : null } as ListItem);
       },
       async (res) => {
         // El servidor también cambió la tarea o sus subtareas: la copia local aplica las mismas reglas
