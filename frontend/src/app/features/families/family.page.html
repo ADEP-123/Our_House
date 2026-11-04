@@ -84,14 +84,9 @@
                     {{ 'families.detail.cancel' | t }}
                   </button>
                 } @else {
-                  <label class="role-select">
-                    <span class="oh-sr-only">{{ 'families.detail.roleOf' | t: { name: m.nickname } }}</span>
-                    <select class="oh-input" [value]="m.role" (change)="setRole(m, $any($event.target).value)" [disabled]="busy() === m.userId">
-                      @for (role of roles; track role) {
-                        <option [value]="role">{{ roleKey(role) | t }}</option>
-                      }
-                    </select>
-                  </label>
+                  <button type="button" class="oh-btn oh-btn--outline" (click)="editingRole.set(m)" [disabled]="busy() === m.userId">
+                    {{ 'families.roleDialog.open' | t }}
+                  </button>
                   <button type="button" class="oh-btn oh-btn--text danger" (click)="confirmExpel.set(m.userId)">
                     {{ 'families.detail.expel' | t }}
                   </button>
@@ -99,14 +94,17 @@
               </div>
             } @else if (isLeader() && m.userId === me() && leaderCount() > 1) {
               <div class="member-actions">
-                <button type="button" class="oh-btn oh-btn--text" (click)="setRole(m, 'member')" [disabled]="busy() === m.userId">
-                  {{ 'families.detail.removeLeader' | t }}
+                <button type="button" class="oh-btn oh-btn--outline" (click)="editingRole.set(m)" [disabled]="busy() === m.userId">
+                  {{ 'families.roleDialog.open' | t }}
                 </button>
               </div>
             }
           </li>
         }
       </ul>
+      @if (editingRole(); as m) {
+        <oh-role-dialog [name]="m.nickname" [current]="m.role" (saved)="changeRole(m, $event)" (closed)="editingRole.set(null)" />
+      }
       @if (isLeader()) {
         <p class="oh-hint role-hint">{{ 'families.detail.supervisedHint' | t }}</p>
       }
