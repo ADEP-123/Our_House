@@ -1,0 +1,30 @@
+# DOMAIN viene del .env (ej. ourhouse.duckdns.org). Con un dominio real Caddy
+# obtiene y renueva el certificado HTTPS solo. Para probar en local: DOMAIN=:80
+{$DOMAIN} {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy backend:3000
+	}
+
+	handle {
+		root * /srv
+
+		# Archivos con hash en el nombre (main-ABC123.js): caché larga
+		@hashed path_regexp -[A-Z0-9]+[.](js|css)$
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+
+		# Todo lo demás (index, rutas, service worker) se revalida para que lleguen las actualizaciones
+		@notHashed not path_regexp -[A-Z0-9]+[.](js|css)$
+		header @notHashed Cache-Control "no-cache"
+
+		header {
+			X-Content-Type-Options nosniff
+			Referrer-Policy strict-origin-when-cross-origin
+			-Server
+		}
+
+		try_files {path} /index.html
+		file_server
+	}
+}
