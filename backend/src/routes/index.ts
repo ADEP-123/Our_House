@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authRoutes } from './auth.routes.js';
+import { familiesRoutes, invitationsRoutes } from './families.routes.js';
 import { healthRoutes } from './health.routes.js';
 import { meRoutes } from './me.routes.js';
 
@@ -9,3 +10,5 @@ export const apiRouter = Router();
 apiRouter.use('/health', healthRoutes);
 apiRouter.use('/auth', authRoutes);
 apiRouter.use('/me', meRoutes);
+apiRouter.use('/families', familiesRoutes);
+apiRouter.use('/invitations', invitationsRoutes);
