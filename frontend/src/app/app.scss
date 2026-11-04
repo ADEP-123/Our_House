@@ -1,0 +1,54 @@
+.shell {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: 24px;
+}
+
+.card {
+  width: min(100%, 440px);
+  padding: 32px 28px;
+  border-radius: var(--oh-radius);
+  background: var(--oh-surface-container);
+  box-shadow: var(--oh-elevation-1);
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--oh-primary);
+}
+
+.subtitle {
+  margin: 0 0 24px;
+  color: var(--oh-on-surface-variant);
+  line-height: 1.5;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 0.95rem;
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--oh-on-surface-variant);
+  }
+
+  &.up .dot {
+    background: var(--oh-success);
+  }
+
+  &.degraded .dot {
+    background: #c77c02;
+  }
+
+  &.offline .dot {
+    background: var(--oh-error);
+  }
+}

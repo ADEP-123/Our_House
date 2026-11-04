@@ -1,0 +1,32 @@
+/*
+ * Tokens de color en variables CSS: la paleta editable de una fase futura
+ * solo tendrá que reescribir estas variables.
+ */
+:root {
+  --oh-primary: #3f5f90;
+  --oh-on-primary: #ffffff;
+  --oh-surface: #f8f9fc;
+  --oh-surface-container: #ffffff;
+  --oh-on-surface: #1a1c20;
+  --oh-on-surface-variant: #5b5f68;
+  --oh-success: #2e7d4f;
+  --oh-error: #b3261e;
+  --oh-radius: 16px;
+  --oh-elevation-1: 0 1px 2px rgb(0 0 0 / 0.08), 0 1px 3px 1px rgb(0 0 0 / 0.05);
+
+  color-scheme: light;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--oh-on-surface);
+  background: var(--oh-surface);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+}
