@@ -48,6 +48,8 @@ export interface ListItem {
   dueTime: string | null;
   /** Momento exacto del vencimiento (solo con hora) */
   dueAt: string | null;
+  /** Recordatorios por correo: null = los del perfil de quien recibe la tarea */
+  reminders: { startDays: number | null; everyDays: number | null; off: boolean };
   position: number;
   completedAt: string | null;
   completedBy: { id: string; nickname: string | null } | null;

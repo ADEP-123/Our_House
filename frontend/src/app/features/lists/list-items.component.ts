@@ -15,6 +15,9 @@ import { ListDetail, ListItem } from './lists.models';
 import { PurchaseDialogComponent, PurchaseInput } from './purchase-dialog.component';
 import { ItemChanges, ListsStore, NewItem } from './lists.store';
 
+/** default = lo que diga el perfil de quien recibe la tarea */
+type ReminderMode = 'default' | 'custom' | 'off';
+
 interface Group {
   key: string;
   label: string | null;
@@ -22,6 +25,8 @@ interface Group {
 }
 
 const UNDO_MS = 5000;
+
+const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, Math.round(Number(n) || 0)));
 
 /** Checklist de una lista: agregar, marcar, editar, reordenar, borrar con deshacer, reiniciar y limpiar. */
 @Component({
@@ -52,6 +57,8 @@ export class ListItemsComponent implements OnDestroy {
   /** Ítem de compras cuyo diálogo "¿Cuánto compraste?" está abierto */
   protected readonly buying = signal<ListItem | null>(null);
   protected readonly units = computed(() => unitsFor(this.i18n.locale()));
+  /** Recordatorios por defecto (perfil) para proponer al personalizar */
+  protected readonly defaults = computed(() => ({ startDays: 3, everyDays: 1, ...this.auth.user()?.reminders }));
   protected readonly isPartial = isPartial;
   /** Tarea en la que se está escribiendo una subtarea */
   protected readonly addingSubtaskTo = signal<string | null>(null);
@@ -69,6 +76,9 @@ export class ListItemsComponent implements OnDestroy {
     assigneeId: [''],
     dueDate: [''],
     dueTime: [''],
+    reminderMode: ['default' as ReminderMode],
+    reminderStart: [3],
+    reminderEvery: [1],
   });
   protected readonly editForm = this.fb.group({
     text: ['', [Validators.required, Validators.maxLength(200)]],
@@ -79,6 +89,9 @@ export class ListItemsComponent implements OnDestroy {
     assigneeId: [''],
     dueDate: [''],
     dueTime: [''],
+    reminderMode: ['default' as ReminderMode],
+    reminderStart: [3],
+    reminderEvery: [1],
   });
 
   private readonly visibleItems = computed(() => this.list().items.filter((i) => !this.hidden().has(i.id)));
@@ -218,7 +231,18 @@ export class ListItemsComponent implements OnDestroy {
     const item: NewItem = { text: v.text.trim() };
     if (this.isShopping()) Object.assign(item, this.shoppingFields(v));
     if (this.isTodo()) Object.assign(item, this.todoFields(v));
-    this.addForm.reset({ text: '', amount: '', unit: '', category: v.category, assigneeId: '', dueDate: '', dueTime: '' });
+    this.addForm.reset({
+      text: '',
+      amount: '',
+      unit: '',
+      category: v.category,
+      assigneeId: '',
+      dueDate: '',
+      dueTime: '',
+      reminderMode: 'default',
+      reminderStart: this.defaults().startDays,
+      reminderEvery: this.defaults().everyDays,
+    });
     this.error.set(null);
     await this.create(item);
   }
@@ -253,10 +277,25 @@ export class ListItemsComponent implements OnDestroy {
     return { amount, unit: amount !== null ? v.unit.trim() || null : null, category: v.category.trim() || null };
   }
 
-  /** La hora solo cuenta si hay fecha */
-  private todoFields(v: { assigneeId: string; dueDate: string; dueTime: string }): ItemChanges {
+  /** La hora solo cuenta si hay fecha; los recordatorios, "como en el perfil", personalizados o apagados */
+  private todoFields(v: {
+    assigneeId: string;
+    dueDate: string;
+    dueTime: string;
+    reminderMode: ReminderMode;
+    reminderStart: number;
+    reminderEvery: number;
+  }): ItemChanges {
     const dueDate = v.dueDate || null;
-    return { assigneeId: v.assigneeId || null, dueDate, dueTime: dueDate ? v.dueTime || null : null };
+    const custom = v.reminderMode === 'custom';
+    return {
+      assigneeId: v.assigneeId || null,
+      dueDate,
+      dueTime: dueDate ? v.dueTime || null : null,
+      remindersOff: v.reminderMode === 'off',
+      reminderStartDays: custom ? clamp(v.reminderStart, 0, 60) : null,
+      reminderEveryDays: custom ? clamp(v.reminderEvery, 1, 30) : null,
+    };
   }
 
   private me() {
@@ -326,6 +365,9 @@ export class ListItemsComponent implements OnDestroy {
       assigneeId: item.assigneeId ?? '',
       dueDate: item.dueDate ?? '',
       dueTime: item.dueTime ?? '',
+      reminderMode: item.reminders?.off ? 'off' : item.reminders?.startDays !== null && item.reminders?.startDays !== undefined ? 'custom' : 'default',
+      reminderStart: item.reminders?.startDays ?? this.defaults().startDays,
+      reminderEvery: item.reminders?.everyDays ?? this.defaults().everyDays,
     });
     this.editingId.set(item.id);
   }

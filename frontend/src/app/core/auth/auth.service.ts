@@ -19,11 +19,20 @@ export interface User {
   locale: Locale;
   timezone: string;
   notifications: UserNotifications;
+  /** Recordatorios de tareas con fecha: valores por defecto */
+  reminders: ReminderDefaults;
 }
 
 export interface UserNotifications {
   newLists: boolean;
   assignments: boolean;
+  reminders: boolean;
+}
+
+export interface ReminderDefaults {
+  hour: number;
+  startDays: number;
+  everyDays: number;
 }
 
 const USER_KEY = 'oh_user';

@@ -8,7 +8,11 @@ import { SyncStatus } from '../../core/offline/sync-status.service';
 import { applyPurchase, applyToggle, removeItem, syncParent } from './item-logic';
 import { FamilyLists, ListDetail, ListInput, ListItem, ListSummary, MyTask } from './lists.models';
 
-export type ItemChanges = Partial<Pick<ListItem, 'text' | 'note' | 'amount' | 'unit' | 'category' | 'assigneeId' | 'dueDate' | 'dueTime' | 'position'>>;
+export type ItemChanges = Partial<Pick<ListItem, 'text' | 'note' | 'amount' | 'unit' | 'category' | 'assigneeId' | 'dueDate' | 'dueTime' | 'position'>> & {
+  reminderStartDays?: number | null;
+  reminderEveryDays?: number | null;
+  remindersOff?: boolean;
+};
 export type NewItem = ItemChanges & { text: string; parentId?: string | null };
 
 /** Un cambio guardado en el dispositivo, listo para reenviarse tal cual al servidor */
@@ -338,6 +342,7 @@ export class ListsStore {
           dueTime: input.dueDate ? (input.dueTime ?? null) : null,
           // El momento exacto lo calcula el servidor; sin conexión se aproxima con la hora local
           dueAt: input.dueDate && input.dueTime ? new Date(`${input.dueDate}T${input.dueTime}`).toISOString() : null,
+          reminders: { startDays: input.reminderStartDays ?? null, everyDays: input.reminderEveryDays ?? null, off: input.remindersOff ?? false },
           position: input.position ?? last + 1,
           completedAt: null,
           completedBy: null,
