@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { badRequest, conflict, forbidden, notFound } from '../lib/http-error.js';
 import { familiesRepository } from '../repositories/families.repository.js';
 import { itemsRepository, type ItemFields } from '../repositories/items.repository.js';
+import { listRef, logActivity } from './activity.service.js';
 import { getAccess, listsService, requireEdit, toItemView, type ListAccess } from './lists.service.js';
 
 /** El responsable de una tarea tiene que ser del grupo. */
@@ -16,6 +17,15 @@ async function getItem(access: ListAccess, itemId: string) {
   return item;
 }
 
+function log(access: ListAccess, userId: string, action: string, item: { id: string; text: string }, details?: Record<string, unknown>) {
+  return logActivity(access.list.family_id, userId, action, {
+    ...listRef(access.list),
+    itemId: item.id,
+    itemText: item.text,
+    details: details ?? null,
+  });
+}
+
 export const itemsService = {
   async create(listId: string, userId: string, data: ItemFields & { id?: string; text: string }) {
     const access = await getAccess(listId, userId);
@@ -26,24 +36,36 @@ export const itemsService = {
     const item = await itemsRepository.find(id);
     // Reenvío del mismo ítem (cola sin conexión): válido solo si es de esta lista
     if (!created && item?.list_id !== listId) throw conflict('ITEM_ID_TAKEN');
+    if (created) await log(access, userId, 'item.created', item!);
     return toItemView(item!);
   },
 
   async update(listId: string, itemId: string, userId: string, data: ItemFields) {
     const access = await getAccess(listId, userId);
     requireEdit(access);
-    await getItem(access, itemId);
+    const before = await getItem(access, itemId);
     await checkAssignee(access, data.assigneeId);
     await itemsRepository.update(itemId, listId, data);
-    return toItemView((await itemsRepository.find(itemId))!);
+    const after = (await itemsRepository.find(itemId))!;
+
+    const columns = { text: 'text', note: 'note', quantity: 'quantity', category: 'category', assigneeId: 'assignee_id', dueDate: 'due_date' } as const;
+    const fields = (Object.keys(columns) as (keyof typeof columns)[]).filter((k) => before[columns[k]] !== after[columns[k]]);
+    if (fields.length) {
+      const details = { fields, ...(fields.includes('text') ? { previousText: before.text } : {}) };
+      await log(access, userId, 'item.updated', after, details);
+    } else if (before.position !== after.position) {
+      await log(access, userId, 'item.moved', after);
+    }
+    return toItemView(after);
   },
 
   /** Marcar y desmarcar: cualquiera que vea la lista (no en modo supervisión) mientras no esté archivada. */
   async setCompleted(listId: string, itemId: string, userId: string, completed: boolean) {
     const access = await getAccess(listId, userId);
     if (!access.canCheck) throw forbidden(access.list.archived_at ? 'LIST_ARCHIVED' : 'LIST_READ_ONLY');
-    await getItem(access, itemId);
+    const before = await getItem(access, itemId);
     await itemsRepository.setCompleted(itemId, listId, completed, userId);
+    if (!!before.completed_at !== completed) await log(access, userId, completed ? 'item.completed' : 'item.uncompleted', before);
     return toItemView((await itemsRepository.find(itemId))!);
   },
 
@@ -55,19 +77,22 @@ export const itemsService = {
     if (!item) return;
     if (item.list_id !== listId) throw notFound('ITEM_NOT_FOUND');
     await itemsRepository.delete(itemId, listId);
+    await log(access, userId, 'item.deleted', item);
   },
 
   async uncheckAll(listId: string, userId: string) {
     const access = await getAccess(listId, userId);
     requireEdit(access);
-    await itemsRepository.uncheckAll(listId);
+    const count = await itemsRepository.uncheckAll(listId);
+    await logActivity(access.list.family_id, userId, 'list.reset', { ...listRef(access.list), details: { count } });
     return listsService.detail(listId, userId);
   },
 
   async deleteCompleted(listId: string, userId: string) {
     const access = await getAccess(listId, userId);
     requireEdit(access);
-    await itemsRepository.deleteCompleted(listId);
+    const count = await itemsRepository.deleteCompleted(listId);
+    await logActivity(access.list.family_id, userId, 'list.cleared_completed', { ...listRef(access.list), details: { count } });
     return listsService.detail(listId, userId);
   },
 };
