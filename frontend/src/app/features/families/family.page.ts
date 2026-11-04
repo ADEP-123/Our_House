@@ -29,6 +29,7 @@ export class FamilyPage implements OnInit {
   private readonly fb = inject(FormBuilder).nonNullable;
 
   protected readonly familyPresets = FAMILY_AVATAR_PRESETS;
+  protected readonly roles: FamilyRole[] = ['leader', 'member', 'supervised'];
   protected readonly family = signal<FamilyDetail | null>(null);
   protected readonly invitations = signal<SentInvitation[]>([]);
   protected readonly isLeader = computed(() => this.family()?.role === 'leader');

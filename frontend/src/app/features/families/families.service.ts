@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-export type FamilyRole = 'leader' | 'member';
+export type FamilyRole = 'leader' | 'member' | 'supervised';
 export type InvitationStatus = 'pending' | 'accepted' | 'rejected' | 'expired' | 'cancelled';
 
 export interface FamilySummary {

@@ -50,7 +50,7 @@ family.post('/leave', familiesController.leave);
 family.patch(
   '/members/:userId',
   checkIds,
-  validateBody(z.object({ role: z.enum(['leader', 'member']) })),
+  validateBody(z.object({ role: z.enum(['leader', 'member', 'supervised']) })),
   familiesController.setRole,
 );
 family.delete('/members/:userId', checkIds, familiesController.expel);
