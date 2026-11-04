@@ -7,11 +7,8 @@ export const env = {
   port: Number(optional('PORT') ?? 3000),
   nodeEnv: optional('NODE_ENV') ?? 'development',
   db: {
-    user: optional('DB_USER'),
-    password: optional('DB_PASSWORD'),
-    connectString: optional('DB_CONNECT_STRING'),
-    walletDir: optional('DB_WALLET_DIR'),
-    walletPassword: optional('DB_WALLET_PASSWORD'),
-    poolMax: Number(optional('DB_POOL_MAX') ?? 4),
+    // Cadena "pooled" de Neon: postgresql://usuario:clave@ep-xxx-pooler.region.aws.neon.tech/neondb?sslmode=require
+    url: optional('DATABASE_URL'),
+    poolMax: Number(optional('DB_POOL_MAX') ?? 5),
   },
 } as const;
