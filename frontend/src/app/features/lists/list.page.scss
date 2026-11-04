@@ -1,0 +1,67 @@
+.back {
+  display: inline-block;
+  margin-bottom: 20px;
+  text-decoration: none;
+  font-size: 0.9375rem;
+}
+
+.page {
+  display: grid;
+  gap: 16px;
+  max-width: 760px;
+}
+
+.banner {
+  display: grid;
+  gap: 10px;
+}
+
+.banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  font-size: 1.75rem;
+  background: color-mix(in srgb, var(--list-color) 18%, var(--oh-surface));
+}
+
+.title {
+  min-width: 0;
+
+  h1 {
+    overflow-wrap: anywhere;
+  }
+}
+
+.meta {
+  font-size: 0.9375rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.danger {
+  color: var(--oh-error);
+}
+
+.summary {
+  font-weight: 600;
+  color: var(--oh-text-muted);
+}

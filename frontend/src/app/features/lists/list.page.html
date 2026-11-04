@@ -1,0 +1,75 @@
+<a class="back" routerLink="/listas">← {{ 'lists.detail.back' | t }}</a>
+
+@if (list(); as l) {
+  <div class="page" [style.--list-color]="color()">
+    @if (l.permissions.supervision) {
+      <p class="oh-alert banner" role="note">🔎 {{ 'lists.supervised.banner' | t: { name: l.createdBy?.nickname ?? '' } }}</p>
+    }
+    @if (l.archivedAt) {
+      <div class="oh-alert is-error banner archived">
+        <p>{{ 'lists.detail.archivedBanner' | t: { date: formatDate(l.purgeAt) } }}</p>
+        <div class="banner-actions">
+          <button type="button" class="oh-btn oh-btn--filled" (click)="restore()" [disabled]="busy()">{{ 'lists.detail.restore' | t }}</button>
+          <button type="button" class="oh-btn oh-btn--text danger" (click)="deleteForever()" [disabled]="busy()">
+            {{ 'lists.detail.deleteForever' | t }}
+          </button>
+        </div>
+      </div>
+    }
+
+    @if (editing()) {
+      <div class="oh-panel">
+        <oh-list-form
+          [initial]="{ name: l.name, type: l.type, color: l.color, icon: l.icon, isPrivate: l.isPrivate, canChangePrivacy: l.permissions.canChangePrivacy }"
+          [supervised]="myRole() === 'supervised'"
+          [busy]="busy()"
+          [error]="error()"
+          (saved)="save($event)"
+          (cancelled)="editing.set(false)"
+        />
+      </div>
+    } @else {
+      <header class="head">
+        <span class="icon" aria-hidden="true">{{ icon() }}</span>
+        <div class="title">
+          <h1>{{ l.name }}</h1>
+          <p class="oh-muted meta">
+            {{ typeLabel() | t }}
+            @if (l.createdBy?.nickname; as nick) {
+              · {{ 'lists.detail.created' | t: { name: nick } }}
+            }
+            @if (l.isPrivate) {
+              · 🔒 {{ 'lists.private' | t }}
+            }
+          </p>
+        </div>
+      </header>
+
+      @if (!l.permissions.supervision && !l.archivedAt) {
+        <div class="actions">
+          <button type="button" class="oh-btn oh-btn--tonal" (click)="togglePin()" [disabled]="busy()">
+            📌 {{ (l.pinned ? 'lists.detail.unpin' : 'lists.detail.pin') | t }}
+          </button>
+          <button type="button" class="oh-btn oh-btn--outline" (click)="duplicate()" [disabled]="busy()">{{ 'lists.detail.duplicate' | t }}</button>
+          @if (l.permissions.canEdit) {
+            <button type="button" class="oh-btn oh-btn--outline" (click)="editing.set(true)">{{ 'lists.detail.edit' | t }}</button>
+            <button type="button" class="oh-btn oh-btn--text danger" (click)="archive()" [disabled]="busy()">{{ 'lists.detail.archive' | t }}</button>
+          }
+        </div>
+        @if (!l.permissions.canEdit) {
+          <p class="oh-hint">{{ 'lists.detail.readOnly' | t }}</p>
+        }
+      }
+
+      @if (error(); as err) {
+        <p class="oh-alert is-error" role="alert">{{ err }}</p>
+      }
+
+      <p class="summary">{{ 'lists.summary' | t: { done: l.counts.completed, total: l.counts.total } }}</p>
+    }
+  </div>
+} @else if (error(); as err) {
+  <p class="oh-alert is-error" role="alert">{{ err }}</p>
+} @else {
+  <p class="oh-muted" role="status">{{ 'common.loading' | t }}</p>
+}
