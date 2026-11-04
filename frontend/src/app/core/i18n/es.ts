@@ -107,6 +107,15 @@ export const es = {
     manage: 'Ver grupo',
   },
   profile: {
+    notifications: {
+      title: 'Notificaciones',
+      body: 'Correos que te avisan de lo que hacen los demás en tus grupos.',
+      newLists: 'Listas nuevas del grupo',
+      newListsHint: 'Cuando alguien crea una lista del grupo o comparte una que era privada.',
+      assignments: 'Tareas asignadas',
+      assignmentsHint: 'Cuando alguien te asigna una tarea.',
+      saved: 'Preferencia guardada.',
+    },
     title: 'Tu perfil',
     photo: {
       title: 'Foto',

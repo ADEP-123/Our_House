@@ -34,6 +34,21 @@ meRoutes.patch(
   profileController.update,
 );
 
+// Preferencias de notificaciones (y más adelante recordatorios y calendario)
+meRoutes.patch(
+  '/settings',
+  validateBody(
+    z
+      .strictObject({
+        newLists: z.boolean(),
+        assignments: z.boolean(),
+      })
+      .partial()
+      .refine((v) => Object.keys(v).length > 0, 'SETTINGS_EMPTY'),
+  ),
+  profileController.setSettings,
+);
+
 meRoutes.put(
   '/password',
   validateBody(z.object({ currentPassword: z.string().min(1).max(128), newPassword: passwordSchema })),

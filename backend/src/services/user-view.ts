@@ -13,6 +13,10 @@ export function toUserView(user: UserRow) {
     theme: user.theme,
     locale: user.locale,
     timezone: user.timezone,
+    notifications: {
+      newLists: user.email_new_lists,
+      assignments: user.email_assignments,
+    },
   };
 }
 

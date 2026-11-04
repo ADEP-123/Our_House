@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { AuthService, User } from '../../core/auth/auth.service';
+import { AuthService, User, UserNotifications } from '../../core/auth/auth.service';
 import { Locale } from '../../core/i18n/i18n.service';
 
 export interface ProfileChanges {
@@ -26,6 +26,11 @@ export class ProfileService {
 
   update(changes: ProfileChanges) {
     return this.apply(firstValueFrom(this.http.patch<{ user: User }>('/api/me', changes)));
+  }
+
+  /** Preferencias de notificaciones: se guardan al cambiar cada interruptor */
+  setSettings(changes: Partial<UserNotifications>) {
+    return this.apply(firstValueFrom(this.http.patch<{ user: User }>('/api/me/settings', changes)));
   }
 
   uploadAvatar(file: File) {

@@ -15,8 +15,17 @@ export interface UserRow {
   avatar_url: string | null;
   avatar_preset: string | null;
   theme: unknown | null;
+  email_new_lists: boolean;
+  email_assignments: boolean;
   created_at: Date;
 }
+
+/** Preferencias que se guardan tal cual en una columna de users */
+export const USER_SETTINGS = {
+  newLists: 'email_new_lists',
+  assignments: 'email_assignments',
+} as const;
+export type UserSettings = Partial<Record<keyof typeof USER_SETTINGS, unknown>>;
 
 const one = async (sql: string, params: unknown[], conn: Db = db()): Promise<UserRow | null> =>
   (await conn.query<UserRow>(sql, params)).rows[0] ?? null;
@@ -92,6 +101,15 @@ export const usersRepository = {
 
   async setTheme(id: string, theme: unknown | null) {
     return (await one('UPDATE users SET theme = $2, updated_at = now() WHERE id = $1 RETURNING *', [id, theme]))!;
+  },
+
+  async setSettings(id: string, settings: UserSettings) {
+    const entries = Object.entries(settings).filter(([, v]) => v !== undefined) as [keyof typeof USER_SETTINGS, unknown][];
+    const sets = entries.map(([key], i) => `${USER_SETTINGS[key]} = $${i + 2}`);
+    return (await one(
+      `UPDATE users SET ${[...sets, 'updated_at = now()'].join(', ')} WHERE id = $1 RETURNING *`,
+      [id, ...entries.map(([, v]) => v)],
+    ))!;
   },
 
   updateEmail: (id: string, email: string, conn: Db) =>

@@ -108,6 +108,15 @@ export const en: Dictionary = {
     manage: 'View group',
   },
   profile: {
+    notifications: {
+      title: 'Notifications',
+      body: 'Emails that let you know what others do in your groups.',
+      newLists: 'New group lists',
+      newListsHint: 'When someone creates a group list or shares one that was private.',
+      assignments: 'Assigned tasks',
+      assignmentsHint: 'When someone assigns you a task.',
+      saved: 'Preference saved.',
+    },
     title: 'Your profile',
     photo: {
       title: 'Photo',

@@ -8,7 +8,7 @@ import { hashPassword, verifyPassword } from '../lib/password.js';
 import { addMs, DAY, hashToken, newToken } from '../lib/tokens.js';
 import { emailTokensRepository } from '../repositories/email-tokens.repository.js';
 import { sessionsRepository } from '../repositories/sessions.repository.js';
-import { usersRepository, type UserRow } from '../repositories/users.repository.js';
+import { usersRepository, type UserRow, type UserSettings } from '../repositories/users.repository.js';
 import { familiesRepository } from '../repositories/families.repository.js';
 import { removeFromFamily } from './families.service.js';
 import { storageService } from './storage.service.js';
@@ -110,6 +110,10 @@ export const profileService = {
     const updated = await usersRepository.setAvatar(userId, { url: null, preset });
     await storageService.remove(user.avatar_url);
     return toUserView(updated);
+  },
+
+  async setSettings(userId: string, settings: UserSettings): Promise<UserView> {
+    return toUserView(await usersRepository.setSettings(userId, settings));
   },
 
   /** theme = null vuelve al tema claro por defecto. */

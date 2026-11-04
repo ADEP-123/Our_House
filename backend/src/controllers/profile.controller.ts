@@ -31,6 +31,10 @@ export const profileController = {
     res.json({ user: await profileService.setAvatarPreset(currentUserId(req), req.body.preset) });
   },
 
+  async setSettings(req: Request, res: Response): Promise<void> {
+    res.json({ user: await profileService.setSettings(currentUserId(req), req.body) });
+  },
+
   async setTheme(req: Request, res: Response): Promise<void> {
     res.json({ user: await profileService.setTheme(currentUserId(req), req.body.theme) });
   },

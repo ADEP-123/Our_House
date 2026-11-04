@@ -4,6 +4,7 @@ import { familiesRepository } from '../repositories/families.repository.js';
 import { itemsRepository, type ItemFields } from '../repositories/items.repository.js';
 import { listRef, logActivity } from './activity.service.js';
 import { getAccess, listsService, requireEdit, toItemView, type ListAccess } from './lists.service.js';
+import { notificationsService } from './notifications.service.js';
 
 /** El responsable de una tarea tiene que ser del grupo. */
 async function checkAssignee(access: ListAccess, assigneeId: string | null | undefined): Promise<void> {
@@ -36,7 +37,10 @@ export const itemsService = {
     const item = await itemsRepository.find(id);
     // Reenvío del mismo ítem (cola sin conexión): válido solo si es de esta lista
     if (!created && item?.list_id !== listId) throw conflict('ITEM_ID_TAKEN');
-    if (created) await log(access, userId, 'item.created', item!);
+    if (created) {
+      await log(access, userId, 'item.created', item!);
+      notificationsService.assigned(item!, access.list, userId, item!.assignee_id);
+    }
     return toItemView(item!);
   },
 
@@ -56,6 +60,7 @@ export const itemsService = {
     } else if (before.position !== after.position) {
       await log(access, userId, 'item.moved', after);
     }
+    if (after.assignee_id !== before.assignee_id) notificationsService.assigned(after, access.list, userId, after.assignee_id);
     return toItemView(after);
   },
 
