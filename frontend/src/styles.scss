@@ -16,15 +16,6 @@
   --oh-success: #2e7d4f;
   --oh-error: #b3261e;
 
-  --oh-text-muted: color-mix(in srgb, var(--oh-text) 64%, var(--oh-surface));
-  --oh-border: color-mix(in srgb, var(--oh-text) 14%, var(--oh-surface));
-  --oh-border-strong: color-mix(in srgb, var(--oh-text) 32%, var(--oh-surface));
-  --oh-primary-soft: color-mix(in srgb, var(--oh-primary) 12%, var(--oh-surface));
-  --oh-secondary-soft: color-mix(in srgb, var(--oh-secondary) 16%, var(--oh-surface));
-  --oh-error-soft: color-mix(in srgb, var(--oh-error) 10%, var(--oh-surface));
-  --oh-success-soft: color-mix(in srgb, var(--oh-success) 12%, var(--oh-surface));
-  --oh-focus: color-mix(in srgb, var(--oh-primary) 55%, transparent);
-
   --oh-radius-sm: 10px;
   --oh-radius: 14px;
   --oh-radius-lg: 24px;
@@ -37,6 +28,22 @@
   color: var(--oh-text);
   background: var(--oh-background);
   -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Colores derivados. Se declaran también en .oh-theme-scope para que una vista previa
+ * con otra paleta (variables propias) recalcule sus bordes y textos secundarios.
+ */
+:root,
+.oh-theme-scope {
+  --oh-text-muted: color-mix(in srgb, var(--oh-text) 64%, var(--oh-surface));
+  --oh-border: color-mix(in srgb, var(--oh-text) 14%, var(--oh-surface));
+  --oh-border-strong: color-mix(in srgb, var(--oh-text) 32%, var(--oh-surface));
+  --oh-primary-soft: color-mix(in srgb, var(--oh-primary) 12%, var(--oh-surface));
+  --oh-secondary-soft: color-mix(in srgb, var(--oh-secondary) 16%, var(--oh-surface));
+  --oh-error-soft: color-mix(in srgb, var(--oh-error) 10%, var(--oh-surface));
+  --oh-success-soft: color-mix(in srgb, var(--oh-success) 12%, var(--oh-surface));
+  --oh-focus: color-mix(in srgb, var(--oh-primary) 55%, transparent);
 }
 
 *,

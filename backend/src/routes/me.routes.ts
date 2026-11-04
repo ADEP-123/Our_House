@@ -59,4 +59,21 @@ meRoutes.put(
   profileController.setAvatarPreset,
 );
 
+const hex = z.string().regex(/^#[0-9a-f]{6}$/i, 'COLOR_INVALID').transform((v) => v.toLowerCase());
+const themeSchema = z.object({
+  preset: z.enum(['claro', 'oscuro', 'bosque', 'oceano', 'lavanda', 'custom']),
+  colors: z.strictObject({
+    primary: hex,
+    onPrimary: hex,
+    secondary: hex,
+    background: hex,
+    surface: hex,
+    text: hex,
+    success: hex,
+    error: hex,
+  }),
+});
+
+meRoutes.put('/theme', validateBody(z.object({ theme: themeSchema.nullable() })), profileController.setTheme);
+
 meRoutes.delete('/', validateBody(z.object({ password: z.string().min(1).max(128) })), profileController.deleteAccount);

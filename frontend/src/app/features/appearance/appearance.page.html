@@ -1,0 +1,109 @@
+<h1>{{ 'appearance.title' | t }}</h1>
+<p class="lead">{{ 'appearance.lead' | t }}</p>
+
+<div class="layout">
+  <div class="controls">
+    <section>
+      <h2>{{ 'appearance.presetsTitle' | t }}</h2>
+      <div class="presets" role="radiogroup" [attr.aria-label]="'appearance.presetsTitle' | t">
+        @for (id of presetIds; track id) {
+          <button
+            type="button"
+            role="radio"
+            class="preset"
+            [attr.aria-checked]="draft().preset === id"
+            (click)="choosePreset(id)"
+          >
+            <span class="swatch" [style.background]="presets[id].background" aria-hidden="true">
+              <span [style.background]="presets[id].primary"></span>
+              <span [style.background]="presets[id].secondary"></span>
+              <span [style.background]="presets[id].surface"></span>
+            </span>
+            <span class="preset-name">{{ presetLabel(id) | t }}</span>
+          </button>
+        }
+      </div>
+    </section>
+
+    <section>
+      <h2>{{ 'appearance.colorsTitle' | t }}</h2>
+      @if (draft().preset === 'custom') {
+        <p class="oh-hint">{{ 'appearance.customHint' | t }}</p>
+      }
+      <div class="colors">
+        @for (token of tokens; track token) {
+          <div class="color">
+            <input
+              type="color"
+              [id]="'color-' + token"
+              [value]="draft().colors[token]"
+              (input)="setColor(token, $any($event.target).value)"
+            />
+            <label [for]="'color-' + token">{{ tokenLabel(token) | t }}</label>
+            <input
+              class="oh-input hex"
+              [value]="draft().colors[token]"
+              (change)="setColor(token, $any($event.target).value)"
+              [attr.aria-label]="(tokenLabel(token) | t) + ' (hex)'"
+              maxlength="7"
+              spellcheck="false"
+            />
+          </div>
+        }
+      </div>
+    </section>
+  </div>
+
+  <aside class="preview-col">
+    <h2>{{ 'appearance.previewTitle' | t }}</h2>
+    <!-- Vista previa en vivo: solo esta caja usa el borrador -->
+    <div class="preview oh-theme-scope" [style]="previewStyle()">
+      <div class="p-surface">
+        <p class="p-title">{{ 'appearance.preview.title' | t }}</p>
+        <p class="p-text">{{ 'appearance.preview.text' | t }}</p>
+        <div class="p-row">
+          <span class="p-btn">{{ 'appearance.preview.button' | t }}</span>
+          <span class="p-link">{{ 'appearance.preview.link' | t }}</span>
+        </div>
+        <div class="p-row">
+          <span class="p-chip p-secondary">{{ 'appearance.preview.secondary' | t }}</span>
+          <span class="p-ok">✓ {{ 'appearance.preview.success' | t }}</span>
+          <span class="p-err">{{ 'appearance.preview.error' | t }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="contrast" aria-live="polite">
+      @if (issues().length) {
+        <div class="oh-alert is-error">
+          <p class="c-title">{{ 'appearance.contrastWarning' | t }}</p>
+          <ul>
+            @for (issue of issues(); track issue.label) {
+              <li>{{ issue.label | t }}: {{ issue.ratio.toFixed(1) }}:1 ({{ 'appearance.minimum' | t: { min: minContrast } }})</li>
+            }
+          </ul>
+        </div>
+      } @else {
+        <p class="oh-ok">✓ {{ 'appearance.contrastOk' | t }}</p>
+      }
+    </div>
+
+    <div aria-live="polite">
+      @if (message(); as msg) {
+        <p class="oh-alert" [class.is-error]="isError()" [class.is-success]="!isError()">{{ msg }}</p>
+      }
+    </div>
+
+    <div class="actions">
+      <button type="button" class="oh-btn oh-btn--filled" (click)="save()" [disabled]="!dirty() || busy()">
+        {{ 'appearance.save' | t }}
+      </button>
+      @if (dirty()) {
+        <button type="button" class="oh-btn oh-btn--text" (click)="discard()">{{ 'appearance.discard' | t }}</button>
+      }
+      @if (!isDefault()) {
+        <button type="button" class="oh-btn oh-btn--outline" (click)="resetDraft()">{{ 'appearance.reset' | t }}</button>
+      }
+    </div>
+  </aside>
+</div>

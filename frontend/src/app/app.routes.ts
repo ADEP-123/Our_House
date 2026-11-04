@@ -45,6 +45,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/shell/shell.component').then((m) => m.ShellComponent),
     children: [
       { path: 'inicio', loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage) },
+      {
+        path: 'apariencia',
+        loadComponent: () => import('./features/appearance/appearance.page').then((m) => m.AppearancePage),
+      },
       { path: 'perfil', loadComponent: () => import('./features/profile/profile.page').then((m) => m.ProfilePage) },
       { path: '', pathMatch: 'full', redirectTo: 'inicio' },
     ],

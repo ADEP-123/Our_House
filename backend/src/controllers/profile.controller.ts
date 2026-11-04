@@ -31,6 +31,10 @@ export const profileController = {
     res.json({ user: await profileService.setAvatarPreset(currentUserId(req), req.body.preset) });
   },
 
+  async setTheme(req: Request, res: Response): Promise<void> {
+    res.json({ user: await profileService.setTheme(currentUserId(req), req.body.theme) });
+  },
+
   async deleteAccount(req: Request, res: Response): Promise<void> {
     await profileService.deleteAccount(currentUserId(req), req.body.password);
     clearAuthCookies(res);
