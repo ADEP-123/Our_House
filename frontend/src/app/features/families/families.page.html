@@ -1,0 +1,109 @@
+<h1>{{ 'families.title' | t }}</h1>
+<p class="lead">{{ 'families.lead' | t }}</p>
+
+@if (store.received().length) {
+  <section class="block">
+    <h2>{{ 'families.received.title' | t }}</h2>
+    <ul class="list">
+      @for (inv of store.received(); track inv.id) {
+        <li class="row invite">
+          <oh-avatar [name]="inv.family.name" [url]="inv.family.avatarUrl" [presetId]="inv.family.avatarPreset" [presets]="familyPresets" [size]="48" />
+          <div class="info">
+            <p class="name">{{ inv.family.name }}</p>
+            <p class="meta">
+              {{ 'families.received.from' | t: { name: inv.invitedBy ?? '' } }} ·
+              {{ 'families.received.expires' | t: { date: formatDate(inv.expiresAt) } }}
+            </p>
+          </div>
+          <div class="row-actions">
+            <button type="button" class="oh-btn oh-btn--filled" (click)="respond(inv.id, true)" [disabled]="busy() === inv.id">
+              {{ 'families.received.accept' | t }}
+            </button>
+            <button type="button" class="oh-btn oh-btn--text" (click)="respond(inv.id, false)" [disabled]="busy() === inv.id">
+              {{ 'families.received.reject' | t }}
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
+  </section>
+}
+@if (message()?.where === 'received') {
+  <p class="oh-alert is-error" role="alert">{{ message()!.text }}</p>
+}
+
+<section class="block">
+  @if (store.families(); as families) {
+    @if (families.length) {
+      <ul class="list">
+        @for (family of families; track family.id) {
+          <li class="row">
+            <oh-avatar [name]="family.name" [url]="family.avatarUrl" [presetId]="family.avatarPreset" [presets]="familyPresets" [size]="48" />
+            <div class="info">
+              <p class="name">
+                <a [routerLink]="['/familias', family.id]">{{ family.name }}</a>
+              </p>
+              <p class="meta">
+                {{ roleKey(family.role) | t }} ·
+                {{ family.memberCount === 1 ? ('families.oneMember' | t) : ('families.members' | t: { n: family.memberCount }) }}
+              </p>
+            </div>
+            <div class="row-actions">
+              @if (store.active()?.id === family.id) {
+                <span class="active-badge">✓ {{ 'families.active' | t }}</span>
+              } @else {
+                <button type="button" class="oh-btn oh-btn--text" (click)="store.setActive(family.id)">
+                  {{ 'families.makeActive' | t }}
+                </button>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="empty">{{ 'families.empty' | t }}</p>
+    }
+  } @else {
+    <p class="oh-muted" role="status">{{ 'common.loading' | t }}</p>
+  }
+</section>
+
+<div class="forms">
+  <form class="oh-panel oh-form" [formGroup]="createForm" (ngSubmit)="create()" novalidate>
+    <h2>{{ 'families.create.title' | t }}</h2>
+    <div class="oh-field">
+      <label for="family-name">{{ 'families.create.name' | t }}</label>
+      <input id="family-name" class="oh-input" formControlName="name" [placeholder]="'families.create.placeholder' | t" maxlength="60" />
+    </div>
+    @if (message()?.where === 'create') {
+      <p class="oh-alert is-error" role="alert">{{ message()!.text }}</p>
+    }
+    <button class="oh-btn oh-btn--filled" type="submit" [disabled]="createForm.invalid || busy() === 'create'">
+      {{ 'families.create.submit' | t }}
+    </button>
+  </form>
+
+  <form class="oh-panel oh-form" [formGroup]="joinForm" (ngSubmit)="join()" novalidate>
+    <h2>{{ 'families.join.title' | t }}</h2>
+    <div class="oh-field">
+      <label for="join-code">{{ 'families.join.code' | t }}</label>
+      <input
+        id="join-code"
+        class="oh-input code"
+        formControlName="code"
+        autocapitalize="characters"
+        autocomplete="off"
+        spellcheck="false"
+        maxlength="12"
+        aria-describedby="join-hint"
+      />
+      <span id="join-hint" class="oh-hint">{{ 'families.join.hint' | t }}</span>
+    </div>
+    @if (message()?.where === 'join') {
+      <p class="oh-alert is-error" role="alert">{{ message()!.text }}</p>
+    }
+    <button class="oh-btn oh-btn--tonal" type="submit" [disabled]="joinForm.invalid || busy() === 'join'">
+      {{ 'families.join.submit' | t }}
+    </button>
+  </form>
+</div>

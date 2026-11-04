@@ -9,6 +9,8 @@ import { addMs, DAY, hashToken, newToken } from '../lib/tokens.js';
 import { emailTokensRepository } from '../repositories/email-tokens.repository.js';
 import { sessionsRepository } from '../repositories/sessions.repository.js';
 import { usersRepository, type UserRow } from '../repositories/users.repository.js';
+import { familiesRepository } from '../repositories/families.repository.js';
+import { removeFromFamily } from './families.service.js';
 import { storageService } from './storage.service.js';
 import { toUserView, type UserView } from './user-view.js';
 
@@ -118,7 +120,16 @@ export const profileService = {
   async deleteAccount(userId: string, password: string): Promise<void> {
     const user = await getUser(userId);
     await requirePassword(user, password);
-    await withTransaction((conn) => usersRepository.delete(userId, conn));
-    await storageService.remove(user.avatar_url);
+    // Sale de cada grupo con la misma regla que "salir del grupo": el liderazgo pasa al miembro
+    // más antiguo y los grupos que quedan vacíos se eliminan
+    const orphanAvatars = await withTransaction(async (conn) => {
+      const avatars: (string | null)[] = [];
+      for (const familyId of await familiesRepository.familyIdsOf(userId, conn)) {
+        avatars.push(await removeFromFamily(familyId, userId, conn));
+      }
+      await usersRepository.delete(userId, conn);
+      return avatars;
+    });
+    await Promise.all([user.avatar_url, ...orphanAvatars].map((url) => storageService.remove(url)));
   },
 };
