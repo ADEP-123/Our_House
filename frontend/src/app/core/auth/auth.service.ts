@@ -3,6 +3,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { I18n, Locale } from '../i18n/i18n.service';
+import type { Theme } from '../theme/themes';
 
 export interface User {
   id: string;
@@ -12,6 +13,7 @@ export interface User {
   lastName: string | null;
   avatarUrl: string | null;
   avatarPreset: string | null;
+  theme: Theme | null;
   locale: Locale;
   timezone: string;
 }
