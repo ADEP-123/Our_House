@@ -78,6 +78,11 @@ const itemFields = {
   category: optionalText(40, 'ITEM_CATEGORY_TOO_LONG'),
   assigneeId: z.uuid().nullable().optional(),
   dueDate: z.iso.date('DUE_DATE_INVALID').nullable().optional(),
+  dueTime: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'DUE_TIME_INVALID')
+    .nullable()
+    .optional(),
   position: z.number().finite().optional(),
 };
 const itemText = z.string().trim().min(1, 'ITEM_TEXT_REQUIRED').max(200, 'ITEM_TEXT_TOO_LONG');

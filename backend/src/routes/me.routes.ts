@@ -1,5 +1,6 @@
 import express, { Router } from 'express';
 import { z } from 'zod';
+import { itemsController } from '../controllers/items.controller.js';
 import { profileController } from '../controllers/profile.controller.js';
 import { MAX_AVATAR_BYTES, USER_AVATAR_PRESETS } from '../lib/avatars.js';
 import { passwordSchema } from '../lib/password.js';
@@ -33,6 +34,9 @@ meRoutes.patch(
   ),
   profileController.update,
 );
+
+// Mis tareas: lo asignado a mí en todos mis grupos
+meRoutes.get('/tasks', itemsController.assignedToMe);
 
 // Preferencias de notificaciones (y más adelante recordatorios y calendario)
 meRoutes.patch(

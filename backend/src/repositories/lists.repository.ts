@@ -41,6 +41,11 @@ export interface ItemRow {
   parent_id: string | null;
   assignee_id: string | null;
   due_date: string | null;
+  /** 'HH:MM:SS' o null (todo el día) */
+  due_time: string | null;
+  due_tz: string | null;
+  /** Momento exacto del vencimiento cuando hay hora */
+  due_at: Date | null;
   position: number;
   completed_at: Date | null;
   completed_by: string | null;
@@ -48,6 +53,12 @@ export interface ItemRow {
   created_at: Date;
   updated_at: Date;
 }
+
+/** Ítem con quién lo completó y el momento exacto del vencimiento (si tiene hora) */
+export const ITEM_SELECT = `
+  SELECT i.*, u.nickname AS completed_by_nickname,
+         CASE WHEN i.due_time IS NOT NULL THEN (i.due_date + i.due_time) AT TIME ZONE COALESCE(i.due_tz, 'UTC') END AS due_at
+    FROM list_items i LEFT JOIN users u ON u.id = i.completed_by`;
 
 const CARD_SELECT = `
   SELECT l.*, u.nickname AS creator_nickname, fm.role AS creator_role,
@@ -141,8 +152,8 @@ export const listsRepository = {
   copyItems: (fromId: string, toId: string, userId: string, conn: Db) =>
     conn.query(
       `WITH src AS (SELECT *, gen_random_uuid() AS new_id FROM list_items WHERE list_id = $1)
-       INSERT INTO list_items (id, list_id, parent_id, text, note, amount, unit, category, assignee_id, due_date, position, created_by)
-       SELECT s.new_id, $2, p.new_id, s.text, s.note, s.amount, s.unit, s.category, s.assignee_id, s.due_date, s.position, $3
+       INSERT INTO list_items (id, list_id, parent_id, text, note, amount, unit, category, assignee_id, due_date, due_time, due_tz, position, created_by)
+       SELECT s.new_id, $2, p.new_id, s.text, s.note, s.amount, s.unit, s.category, s.assignee_id, s.due_date, s.due_time, s.due_tz, s.position, $3
          FROM src s LEFT JOIN src p ON p.id = s.parent_id`,
       [fromId, toId, userId],
     ),
@@ -153,8 +164,7 @@ export const listsRepository = {
 
   async items(listId: string, conn: Db = db()): Promise<ItemRow[]> {
     const { rows } = await conn.query<ItemRow>(
-      `SELECT i.*, u.nickname AS completed_by_nickname
-         FROM list_items i LEFT JOIN users u ON u.id = i.completed_by
+      `${ITEM_SELECT}
         WHERE i.list_id = $1
         ORDER BY i.position`,
       [listId],

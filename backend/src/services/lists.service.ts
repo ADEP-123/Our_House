@@ -104,6 +104,8 @@ export function toItemView(item: ItemRow) {
     category: item.category,
     assigneeId: item.assignee_id,
     dueDate: item.due_date,
+    dueTime: item.due_time?.slice(0, 5) ?? null,
+    dueAt: item.due_at,
     position: item.position,
     completedAt: item.completed_at,
     completedBy: item.completed_by ? { id: item.completed_by, nickname: item.completed_by_nickname } : null,

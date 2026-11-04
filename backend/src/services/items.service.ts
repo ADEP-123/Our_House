@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { badRequest, conflict, forbidden, notFound } from '../lib/http-error.js';
 import { familiesRepository } from '../repositories/families.repository.js';
 import { itemsRepository, type ItemFields } from '../repositories/items.repository.js';
+import { usersRepository } from '../repositories/users.repository.js';
 import { listRef, logActivity } from './activity.service.js';
 import { getAccess, listsService, requireEdit, toItemView, type ListAccess } from './lists.service.js';
 import { notificationsService } from './notifications.service.js';
@@ -27,6 +28,18 @@ function log(access: ListAccess, userId: string, action: string, item: { id: str
   });
 }
 
+/**
+ * La hora límite se interpreta en la zona horaria de quien la pone (su perfil).
+ * Quitar la fecha quita también la hora.
+ */
+async function withDueZone(userId: string, data: ItemFields, current?: { due_date: string | null }): Promise<ItemFields> {
+  if (data.dueDate === null) return { ...data, dueTime: null, dueTz: null };
+  if (data.dueDate === undefined && data.dueTime === undefined) return data;
+  if (data.dueTime && !(data.dueDate ?? current?.due_date)) throw badRequest('DUE_TIME_NEEDS_DATE');
+  const user = await usersRepository.findById(userId);
+  return { ...data, dueTz: user?.timezone ?? 'UTC' };
+}
+
 /** Después de cambiar una subtarea, la tarea se completa o vuelve a pendiente según corresponda. */
 async function syncParent(access: ListAccess, userId: string, parentId: string | null): Promise<void> {
   if (!parentId) return;
@@ -47,7 +60,7 @@ export const itemsService = {
       if (parent.parent_id) throw badRequest('SUBTASK_TOO_DEEP');
     }
     const id = data.id ?? randomUUID();
-    const created = await itemsRepository.create(listId, id, userId, data);
+    const created = await itemsRepository.create(listId, id, userId, { ...(await withDueZone(userId, data)), text: data.text });
     const item = await itemsRepository.find(id);
     // Reenvío del mismo ítem (cola sin conexión): válido solo si es de esta lista
     if (!created && item?.list_id !== listId) throw conflict('ITEM_ID_TAKEN');
@@ -64,7 +77,7 @@ export const itemsService = {
     requireEdit(access);
     const before = await getItem(access, itemId);
     await checkAssignee(access, data.assigneeId);
-    await itemsRepository.update(itemId, listId, userId, data);
+    await itemsRepository.update(itemId, listId, userId, await withDueZone(userId, data, before));
     const after = (await itemsRepository.find(itemId))!;
 
     const columns = {
@@ -75,6 +88,7 @@ export const itemsService = {
       category: 'category',
       assigneeId: 'assignee_id',
       dueDate: 'due_date',
+      dueTime: 'due_time',
     } as const;
     const fields = (Object.keys(columns) as (keyof typeof columns)[]).filter((k) => before[columns[k]] !== after[columns[k]]);
     if (fields.length) {
@@ -125,6 +139,17 @@ export const itemsService = {
       });
     }
     return toItemView(after);
+  },
+
+  /** "Mis tareas": lo asignado a la persona en todos sus grupos */
+  async assignedTo(userId: string) {
+    const rows = await itemsRepository.assignedTo(userId);
+    return rows.map((r) => ({
+      ...toItemView(r),
+      list: { id: r.list_id, name: r.list_name, color: r.list_color, icon: r.list_icon },
+      family: { id: r.family_id, name: r.family_name },
+      parentText: r.parent_text,
+    }));
   },
 
   /** Borrar es idempotente: si ya no existe responde igual (reintentos sin conexión). */
