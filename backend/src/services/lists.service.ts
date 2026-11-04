@@ -4,6 +4,8 @@ import { env } from '../config/env.js';
 import { conflict, forbidden, notFound } from '../lib/http-error.js';
 import { familiesRepository, type FamilyRole } from '../repositories/families.repository.js';
 import { listsRepository, type ItemRow, type ListCardRow } from '../repositories/lists.repository.js';
+import { listRef, logActivity } from './activity.service.js';
+import { activityRepository } from '../repositories/activity.repository.js';
 import { requireMember } from './families.service.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -126,7 +128,11 @@ export const listsService = {
 
   /** Borrado definitivo de las archivadas vencidas. Se ejecuta al consultar las listas del grupo. */
   async purgeExpired(familyId: string) {
-    return listsRepository.purgeArchived(familyId, env.listArchiveRetentionDays);
+    const purged = await listsRepository.purgeArchived(familyId, env.listArchiveRetentionDays);
+    for (const list of purged) {
+      await logActivity(familyId, null, 'list.purged', { ...listRef(list), details: { days: env.listArchiveRetentionDays } });
+    }
+    return purged;
   },
 
   async create(
@@ -141,12 +147,20 @@ export const listsService = {
       // Mismo id reenviado (cola sin conexión): devuelve la existente si es de este usuario y grupo
       const existing = await listsRepository.findCard(id, userId);
       if (!existing || existing.family_id !== familyId || existing.created_by !== userId) throw conflict('LIST_ID_TAKEN');
+    } else {
+      const card = (await listsRepository.findCard(id, userId))!;
+      await logActivity(familyId, userId, 'list.created', { ...listRef(card), details: { type: card.type } });
     }
     return listsService.detail(id, userId);
   },
 
   async detail(listId: string, userId: string, supervision = false) {
     const access = await getAccess(listId, userId, supervision);
+    if (access.supervision) {
+      // Queda en la bitácora; con la actualización cada 15 s se registra como máximo cada 30 minutos
+      const seen = await activityRepository.recentExists(access.list.family_id, userId, 'list.viewed_private', listId, 30);
+      if (!seen) await logActivity(access.list.family_id, userId, 'list.viewed_private', listRef(access.list));
+    }
     const items = await listsRepository.items(listId);
     return { ...toListView(access.list, access), items: items.map(toItemView) };
   },
@@ -158,13 +172,28 @@ export const listsService = {
       throw forbidden('ONLY_CREATOR_CHANGES_PRIVACY');
     }
     await listsRepository.update(listId, data);
+
+    const before = access.list;
+    const changes: Record<string, { from: string; to: string }> = {};
+    for (const key of ['name', 'color', 'icon'] as const) {
+      if (data[key] !== undefined && data[key] !== before[key]) changes[key] = { from: before[key], to: data[key]! };
+    }
+    const ref = listRef({ ...before, name: data.name ?? before.name });
+    if (Object.keys(changes).length) await logActivity(before.family_id, userId, 'list.updated', { ...ref, details: { changes } });
+    if (data.isPrivate !== undefined && data.isPrivate !== before.is_private) {
+      // Visible para los líderes: el nombre era (o pasa a ser) del grupo
+      await logActivity(before.family_id, userId, 'list.privacy_changed', { ...ref, privateOwnerId: null, details: { isPrivate: data.isPrivate } });
+    }
     return listsService.detail(listId, userId);
   },
 
   async setArchived(listId: string, userId: string, archived: boolean) {
     const access = await getAccess(listId, userId);
     requireManage(access, userId);
-    if (!!access.list.archived_at !== archived) await listsRepository.setArchived(listId, archived);
+    if (!!access.list.archived_at !== archived) {
+      await listsRepository.setArchived(listId, archived);
+      await logActivity(access.list.family_id, userId, archived ? 'list.archived' : 'list.restored', listRef(access.list));
+    }
     return listsService.detail(listId, userId);
   },
 
@@ -174,6 +203,7 @@ export const listsService = {
     requireManage(access, userId);
     if (!access.list.archived_at) throw conflict('LIST_NOT_ARCHIVED');
     await listsRepository.delete(listId);
+    await logActivity(access.list.family_id, userId, 'list.deleted', listRef(access.list));
   },
 
   async setPinned(listId: string, userId: string, pinned: boolean) {
@@ -202,7 +232,16 @@ export const listsService = {
         },
         conn,
       );
-      if (created) await listsRepository.copyItems(source.id, id, userId, conn);
+      if (!created) return;
+      await listsRepository.copyItems(source.id, id, userId, conn);
+      const isPrivate = source.is_private && source.created_by === userId;
+      await logActivity(
+        source.family_id,
+        userId,
+        'list.duplicated',
+        { listId: id, listName: data.name, privateOwnerId: isPrivate ? userId : null, details: { sourceName: source.name } },
+        conn,
+      );
     });
     return listsService.detail(id, userId);
   },

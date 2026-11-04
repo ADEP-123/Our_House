@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { activityController } from '../controllers/activity.controller.js';
 import { itemsController } from '../controllers/items.controller.js';
 import { listsController } from '../controllers/lists.controller.js';
 import { LIST_COLORS, LIST_ICONS, LIST_TYPES } from '../lib/lists.js';
@@ -29,6 +30,12 @@ familyListsRoutes.post(
   ),
   listsController.create,
 );
+
+/** /api/families/:familyId/activity — bitácora, solo líderes */
+export const familyActivityRoutes = Router({ mergeParams: true });
+familyActivityRoutes.use(requireAuth, checkIds);
+familyActivityRoutes.get('/', activityController.list);
+familyActivityRoutes.get('/filters', activityController.filters);
 
 /** /api/lists/:listId */
 export const listsRoutes = Router();
