@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { toApiError } from '../../core/api/api-error';
 import { I18n } from '../../core/i18n/i18n.service';
 import { TPipe } from '../../core/i18n/t.pipe';
+import { SyncStatus } from '../../core/offline/sync-status.service';
 import { ConfirmService } from '../../shared/confirm.service';
 import { FamiliesService } from '../families/families.service';
 import { ListCardComponent } from './list-card.component';
@@ -23,6 +24,7 @@ export class ListsPage implements OnInit {
   private readonly router = inject(Router);
   private readonly confirm = inject(ConfirmService);
   private readonly i18n = inject(I18n);
+  private readonly sync = inject(SyncStatus);
 
   protected readonly types = LIST_TYPES;
   protected readonly family = this.families.active;
@@ -50,8 +52,13 @@ export class ListsPage implements OnInit {
     // Resúmenes al día: cada 15 segundos y al volver a la app
     const refresh = () => {
       const family = this.family();
-      if (family && document.visibilityState === 'visible' && !this.creating()) void this.load(family.id, this.archived());
+      const idle = !this.creating() && this.sync.queued() === 0;
+      if (family && document.visibilityState === 'visible' && idle) void this.load(family.id, this.archived());
     };
+    // Al terminar de enviar los cambios hechos sin conexión, se trae la versión del servidor
+    effect(() => {
+      if (this.store.synced() > 0) untracked(() => refresh());
+    });
     const timer = setInterval(refresh, 15_000);
     document.addEventListener('visibilitychange', refresh);
     inject(DestroyRef).onDestroy(() => {

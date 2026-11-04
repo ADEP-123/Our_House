@@ -1,8 +1,9 @@
-import { Component, DestroyRef, OnInit, computed, inject, input, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { toApiError } from '../../core/api/api-error';
 import { I18n } from '../../core/i18n/i18n.service';
 import { TPipe } from '../../core/i18n/t.pipe';
+import { SyncStatus } from '../../core/offline/sync-status.service';
 import { ConfirmService } from '../../shared/confirm.service';
 import { ToastService } from '../../shared/toast.service';
 import { FamiliesService, FamilyMember } from '../families/families.service';
@@ -29,6 +30,7 @@ export class ListPage implements OnInit {
   private readonly router = inject(Router);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
+  private readonly sync = inject(SyncStatus);
   protected readonly i18n = inject(I18n);
 
   protected readonly list = signal<ListDetail | null>(null);
@@ -46,8 +48,13 @@ export class ListPage implements OnInit {
     // Mientras la pantalla está abierta, trae los cambios de los demás cada 15 segundos
     // y al volver a la app. No pisa cambios propios que aún se están enviando.
     const refresh = () => {
-      if (document.visibilityState === 'visible' && this.store.pending() === 0 && !this.editing()) void this.reload(true);
+      const idle = this.store.pending() === 0 && this.sync.queued() === 0 && !this.editing();
+      if (document.visibilityState === 'visible' && idle) void this.reload(true);
     };
+    // Al terminar de enviar los cambios hechos sin conexión, se trae la versión del servidor
+    effect(() => {
+      if (this.store.synced() > 0) untracked(() => refresh());
+    });
     const timer = setInterval(refresh, 15_000);
     document.addEventListener('visibilitychange', refresh);
     inject(DestroyRef).onDestroy(() => {
