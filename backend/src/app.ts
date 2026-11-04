@@ -1,3 +1,4 @@
+import cookieParser from 'cookie-parser';
 import express from 'express';
 import helmet from 'helmet';
 import { apiRouter } from './routes/index.js';
@@ -10,6 +11,7 @@ export function createApp(): express.Express {
   app.set('trust proxy', 1); // detrás del proxy de Vercel
   app.use(helmet());
   app.use(express.json({ limit: '1mb' }));
+  app.use(cookieParser());
 
   app.use('/api', apiRouter);
   app.use('/api', notFound);

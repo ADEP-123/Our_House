@@ -20,6 +20,13 @@ function getPool(): pg.Pool {
   return pool;
 }
 
+/** Cliente o pool: los repositorios aceptan cualquiera de los dos para poder usarse dentro de transacciones. */
+export type Db = pg.Pool | pg.PoolClient;
+
+export function db(): Db {
+  return getPool();
+}
+
 /** Presta un cliente del pool y lo devuelve siempre, aunque falle la consulta. */
 export async function withConnection<T>(work: (client: pg.PoolClient) => Promise<T>): Promise<T> {
   const client = await getPool().connect();
@@ -28,6 +35,21 @@ export async function withConnection<T>(work: (client: pg.PoolClient) => Promise
   } finally {
     client.release();
   }
+}
+
+/** Ejecuta varias operaciones como una sola: si algo falla, no se guarda nada. */
+export async function withTransaction<T>(work: (client: pg.PoolClient) => Promise<T>): Promise<T> {
+  return withConnection(async (client) => {
+    await client.query('BEGIN');
+    try {
+      const result = await work(client);
+      await client.query('COMMIT');
+      return result;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    }
+  });
 }
 
 export async function closePool(): Promise<void> {

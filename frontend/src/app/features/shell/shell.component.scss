@@ -1,0 +1,164 @@
+.shell {
+  min-height: 100dvh;
+}
+
+/* ---------- Móvil: barra superior + navegación inferior ---------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  padding: 0 8px 0 20px;
+  background: var(--oh-background);
+  border-bottom: 1px solid var(--oh-border);
+}
+
+.brand {
+  font-weight: 800;
+  font-size: 1.2rem;
+  letter-spacing: -0.02em;
+  color: var(--oh-primary);
+}
+
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--oh-text-muted);
+  cursor: pointer;
+}
+
+.rail {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 2;
+  background: var(--oh-surface);
+  border-top: 1px solid var(--oh-border);
+  padding-bottom: env(safe-area-inset-bottom);
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: space-around;
+  }
+
+  li {
+    flex: 1;
+  }
+}
+
+.rail-brand,
+.rail-logout {
+  display: none;
+}
+
+.rail a,
+.rail-logout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px 12px;
+  color: var(--oh-text-muted);
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pill {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 32px;
+  border-radius: 999px;
+  transition: background-color 150ms ease;
+}
+
+.rail a.active {
+  color: var(--oh-text);
+
+  .pill {
+    background: var(--oh-primary-soft);
+    color: var(--oh-primary);
+  }
+}
+
+.main {
+  padding: 24px 20px calc(96px + env(safe-area-inset-bottom));
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* ---------- Escritorio: riel lateral ---------- */
+@media (min-width: 840px) {
+  .topbar {
+    display: none;
+  }
+
+  .rail {
+    inset: 0 auto 0 0;
+    width: 96px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0;
+    border-top: 0;
+    border-right: 1px solid var(--oh-border);
+
+    ul {
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+    }
+  }
+
+  .rail-brand {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 28px;
+    border-radius: 16px;
+    background: var(--oh-primary);
+    color: var(--oh-on-primary);
+
+    svg {
+      width: 26px;
+      height: 26px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+  }
+
+  .rail-logout {
+    display: flex;
+    margin-top: auto;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .main {
+    margin-left: 96px;
+    padding: 40px 48px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .main {
+    margin-left: max(96px, calc((100vw - 960px) / 2));
+  }
+}

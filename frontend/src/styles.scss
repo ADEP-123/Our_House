@@ -1,23 +1,42 @@
+// Figtree alojada en la app (funciona sin conexión en la PWA)
+@use '@fontsource-variable/figtree';
+
 /*
- * Tokens de color en variables CSS: la paleta editable de una fase futura
- * solo tendrá que reescribir estas variables.
+ * Los 8 colores editables por el usuario viven en variables --oh-*.
+ * El resto (bordes, textos secundarios, fondos suaves) se deriva de ellos con color-mix,
+ * así cualquier paleta queda coherente sin pedir más colores.
  */
 :root {
   --oh-primary: #3f5f90;
   --oh-on-primary: #ffffff;
-  --oh-surface: #f8f9fc;
-  --oh-surface-container: #ffffff;
-  --oh-on-surface: #1a1c20;
-  --oh-on-surface-variant: #5b5f68;
+  --oh-secondary: #5e8c6a;
+  --oh-background: #f5f7fa;
+  --oh-surface: #ffffff;
+  --oh-text: #1b2230;
   --oh-success: #2e7d4f;
   --oh-error: #b3261e;
-  --oh-radius: 16px;
-  --oh-elevation-1: 0 1px 2px rgb(0 0 0 / 0.08), 0 1px 3px 1px rgb(0 0 0 / 0.05);
+
+  --oh-text-muted: color-mix(in srgb, var(--oh-text) 64%, var(--oh-surface));
+  --oh-border: color-mix(in srgb, var(--oh-text) 14%, var(--oh-surface));
+  --oh-border-strong: color-mix(in srgb, var(--oh-text) 32%, var(--oh-surface));
+  --oh-primary-soft: color-mix(in srgb, var(--oh-primary) 12%, var(--oh-surface));
+  --oh-secondary-soft: color-mix(in srgb, var(--oh-secondary) 16%, var(--oh-surface));
+  --oh-error-soft: color-mix(in srgb, var(--oh-error) 10%, var(--oh-surface));
+  --oh-success-soft: color-mix(in srgb, var(--oh-success) 12%, var(--oh-surface));
+  --oh-focus: color-mix(in srgb, var(--oh-primary) 55%, transparent);
+
+  --oh-radius-sm: 10px;
+  --oh-radius: 14px;
+  --oh-radius-lg: 24px;
+  --oh-font: 'Figtree Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
   color-scheme: light;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  color: var(--oh-on-surface);
-  background: var(--oh-surface);
+  font-family: var(--oh-font);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--oh-text);
+  background: var(--oh-background);
+  -webkit-font-smoothing: antialiased;
 }
 
 *,
@@ -29,4 +48,194 @@
 body {
   margin: 0;
   min-height: 100dvh;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: 1.25rem;
+  font-weight: 650;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--oh-primary);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+
+:focus-visible {
+  outline: 3px solid var(--oh-focus);
+  outline-offset: 2px;
+}
+
+/* ---------- Botones ---------- */
+.oh-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.oh-btn--filled {
+  background: var(--oh-primary);
+  color: var(--oh-on-primary);
+
+  &:hover:not(:disabled) {
+    box-shadow: inset 0 0 0 100px color-mix(in srgb, var(--oh-on-primary) 10%, transparent);
+  }
+}
+
+.oh-btn--tonal {
+  background: var(--oh-primary-soft);
+  color: var(--oh-primary);
+}
+
+.oh-btn--outline {
+  background: transparent;
+  border-color: var(--oh-border-strong);
+  color: var(--oh-text);
+}
+
+.oh-btn--text {
+  background: transparent;
+  color: var(--oh-primary);
+  padding: 0 12px;
+}
+
+.oh-btn--danger {
+  background: var(--oh-error);
+  color: #fff;
+}
+
+.oh-btn--block {
+  width: 100%;
+}
+
+/* ---------- Campos ---------- */
+.oh-form {
+  display: grid;
+  gap: 18px;
+}
+
+.oh-field {
+  display: grid;
+  gap: 6px;
+
+  > label {
+    font-weight: 600;
+    font-size: 0.9375rem;
+  }
+}
+
+.oh-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--oh-border-strong);
+  border-radius: var(--oh-radius-sm);
+  background: var(--oh-surface);
+  color: var(--oh-text);
+  font: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: var(--oh-primary);
+    box-shadow: 0 0 0 3px var(--oh-focus);
+  }
+
+  &[aria-invalid='true'] {
+    border-color: var(--oh-error);
+  }
+}
+
+.oh-hint {
+  font-size: 0.875rem;
+  color: var(--oh-text-muted);
+}
+
+.oh-error {
+  font-size: 0.875rem;
+  color: var(--oh-error);
+  font-weight: 500;
+}
+
+.oh-ok {
+  font-size: 0.875rem;
+  color: var(--oh-success);
+  font-weight: 500;
+}
+
+/* ---------- Avisos ---------- */
+.oh-alert {
+  padding: 12px 14px;
+  border-radius: var(--oh-radius-sm);
+  font-size: 0.9375rem;
+  background: var(--oh-primary-soft);
+
+  &.is-error {
+    background: var(--oh-error-soft);
+    color: var(--oh-error);
+  }
+
+  &.is-success {
+    background: var(--oh-success-soft);
+    color: var(--oh-success);
+  }
+}
+
+/* ---------- Superficies ---------- */
+.oh-panel {
+  background: var(--oh-surface);
+  border: 1px solid var(--oh-border);
+  border-radius: var(--oh-radius-lg);
+  padding: 24px;
+}
+
+.oh-muted {
+  color: var(--oh-text-muted);
+}
+
+.oh-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
 }

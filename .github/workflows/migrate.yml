@@ -1,0 +1,31 @@
+name: Migraciones
+
+# Aplica las migraciones pendientes a Neon cuando llegan a main, o a mano desde Actions
+on:
+  push:
+    branches: [main]
+    paths: ['backend/migrations/**']
+  workflow_dispatch:
+
+concurrency:
+  group: migraciones-produccion
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run migrate
+        env:
+          # Secret del repo: cadena de Neon SIN "-pooler" (conexión directa para DDL)
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
