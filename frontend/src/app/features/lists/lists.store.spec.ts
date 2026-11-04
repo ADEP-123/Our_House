@@ -21,6 +21,8 @@ const item = (id: string, extra: Partial<ListItem> = {}): ListItem => ({
   category: null,
   assigneeId: null,
   dueDate: null,
+  dueTime: null,
+  dueAt: null,
   position: 1,
   completedAt: null,
   completedBy: null,
