@@ -29,6 +29,7 @@
           <button type="button" class="oh-btn oh-btn--text" [attr.aria-expanded]="showAvatar()" (click)="showAvatar.set(!showAvatar())">
             {{ 'families.detail.avatar' | t }}
           </button>
+          <a class="oh-btn oh-btn--text" [routerLink]="['/familias', f.id, 'bitacora']">{{ 'activity.open' | t }}</a>
         </div>
       }
     </div>
@@ -70,7 +71,7 @@
               </p>
               <p class="meta">&#64;{{ m.nickname }}</p>
             </div>
-            <span class="chip" [class.leader]="m.role === 'leader'">{{ roleKey(m.role) | t }}</span>
+            <span class="chip" [attr.data-role]="m.role">{{ roleKey(m.role) | t }}</span>
 
             @if (isLeader() && m.userId !== me()) {
               <div class="member-actions">
@@ -83,14 +84,14 @@
                     {{ 'families.detail.cancel' | t }}
                   </button>
                 } @else {
-                  <button
-                    type="button"
-                    class="oh-btn oh-btn--text"
-                    (click)="setRole(m, m.role === 'leader' ? 'member' : 'leader')"
-                    [disabled]="busy() === m.userId"
-                  >
-                    {{ (m.role === 'leader' ? 'families.detail.removeLeader' : 'families.detail.makeLeader') | t }}
-                  </button>
+                  <label class="role-select">
+                    <span class="oh-sr-only">{{ 'families.detail.roleOf' | t: { name: m.nickname } }}</span>
+                    <select class="oh-input" [value]="m.role" (change)="setRole(m, $any($event.target).value)" [disabled]="busy() === m.userId">
+                      @for (role of roles; track role) {
+                        <option [value]="role">{{ roleKey(role) | t }}</option>
+                      }
+                    </select>
+                  </label>
                   <button type="button" class="oh-btn oh-btn--text danger" (click)="confirmExpel.set(m.userId)">
                     {{ 'families.detail.expel' | t }}
                   </button>
@@ -106,6 +107,9 @@
           </li>
         }
       </ul>
+      @if (isLeader()) {
+        <p class="oh-hint role-hint">{{ 'families.detail.supervisedHint' | t }}</p>
+      }
       @if (message()?.area === 'members') {
         <p class="oh-alert is-error" role="alert">{{ message()!.text }}</p>
       }

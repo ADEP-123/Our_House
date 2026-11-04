@@ -48,6 +48,8 @@ export const routes: Routes = [
     loadComponent: () => import('./features/shell/shell.component').then((m) => m.ShellComponent),
     children: [
       { path: 'inicio', loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage) },
+      { path: 'listas', loadComponent: () => import('./features/lists/lists.page').then((m) => m.ListsPage) },
+      { path: 'listas/:id', loadComponent: () => import('./features/lists/list.page').then((m) => m.ListPage) },
       {
         path: 'familias',
         loadComponent: () => import('./features/families/families.page').then((m) => m.FamiliesPage),
@@ -55,6 +57,10 @@ export const routes: Routes = [
       {
         path: 'familias/:id',
         loadComponent: () => import('./features/families/family.page').then((m) => m.FamilyPage),
+      },
+      {
+        path: 'familias/:id/bitacora',
+        loadComponent: () => import('./features/activity/activity.page').then((m) => m.ActivityPage),
       },
       {
         path: 'apariencia',

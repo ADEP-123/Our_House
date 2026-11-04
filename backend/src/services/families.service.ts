@@ -5,6 +5,7 @@ import { detectImage, MAX_AVATAR_BYTES } from '../lib/avatars.js';
 import { badRequest, conflict, forbidden, HttpError, notFound } from '../lib/http-error.js';
 import { familiesRepository, type FamilyRole, type FamilyRow } from '../repositories/families.repository.js';
 import { invitationsRepository } from '../repositories/invitations.repository.js';
+import { listsRepository } from '../repositories/lists.repository.js';
 import { storageService } from './storage.service.js';
 
 // Sin 0/O ni 1/I/L para que se pueda dictar en voz alta sin confusiones
@@ -39,8 +40,13 @@ export async function removeFromFamily(familyId: string, userId: string, conn: D
     return family?.avatar_url ?? null;
   }
   await familiesRepository.removeMember(familyId, userId, conn);
+  // Sus listas privadas no las podría ver nadie más: se eliminan. Las del grupo se quedan.
+  await listsRepository.deletePrivateOf(familyId, userId, conn);
   if (!remaining.some((m) => m.role === 'leader')) {
-    await familiesRepository.setRole(familyId, remaining[0]!.user_id, 'leader', conn);
+    // Primero el miembro normal más antiguo; si solo quedan supervisados, el más antiguo de ellos
+    // (remaining ya viene ordenado por fecha de ingreso)
+    const heir = remaining.find((m) => m.role === 'member') ?? remaining[0]!;
+    await familiesRepository.setRole(familyId, heir.user_id, 'leader', conn);
   }
   return null;
 }
@@ -127,14 +133,14 @@ export const familiesService = {
     return { id: family.id, name: family.name };
   },
 
-  /** Nombrar o quitar líderes. Siempre debe quedar al menos uno. */
+  /** Cambiar el rol (líder, miembro o supervisado). Siempre debe quedar al menos un líder. */
   async setRole(familyId: string, actorId: string, targetId: string, role: FamilyRole) {
     await requireLeader(familyId, actorId);
     await withTransaction(async (conn) => {
       const members = await familiesRepository.lockMembers(familyId, conn);
       const target = members.find((m) => m.user_id === targetId);
       if (!target) throw notFound('MEMBER_NOT_FOUND');
-      if (role === 'member' && target.role === 'leader' && members.filter((m) => m.role === 'leader').length === 1) {
+      if (role !== 'leader' && target.role === 'leader' && members.filter((m) => m.role === 'leader').length === 1) {
         throw conflict('LAST_LEADER');
       }
       await familiesRepository.setRole(familyId, targetId, role, conn);

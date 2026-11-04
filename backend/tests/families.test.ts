@@ -213,3 +213,45 @@ describe('invitaciones', () => {
     await api().get('/api/invitations').expect(401);
   });
 });
+
+describe('miembro supervisado', () => {
+  beforeEach(resetDb);
+  afterEach(() => vi.restoreAllMocks());
+
+  async function familyWith(nicknames: string[]) {
+    const mail = captureMail();
+    const users = [];
+    for (const n of nicknames) users.push(await createUser(n, mail));
+    const id = await createFamily(users[0]!.agent);
+    const code = (await users[0]!.agent.get(`/api/families/${id}`)).body.family.inviteCode;
+    for (const u of users.slice(1)) await u.agent.post('/api/families/join').send({ code }).expect(200);
+    return { id, users };
+  }
+
+  it('solo un líder asigna el rol supervisado; el último líder no puede pasar a supervisado', async () => {
+    const { id, users } = await familyWith(['ana', 'beto', 'nico']);
+    const [ana, beto, nico] = users;
+    await beto!.agent.patch(`/api/families/${id}/members/${nico!.user.id}`).send({ role: 'supervised' }).expect(403);
+    await ana!.agent.patch(`/api/families/${id}/members/${nico!.user.id}`).send({ role: 'supervised' }).expect(200);
+    expect(await membersOf(ana!.agent, id)).toEqual(['ana:leader', 'beto:member', 'nico:supervised']);
+    await ana!.agent.patch(`/api/families/${id}/members/${ana!.user.id}`).send({ role: 'supervised' }).expect(409, { error: 'LAST_LEADER' });
+    await ana!.agent.patch(`/api/families/${id}/members/${nico!.user.id}`).send({ role: 'jefe' }).expect(400);
+  });
+
+  it('en la sucesión gana el miembro normal más antiguo aunque un supervisado haya entrado antes', async () => {
+    const { id, users } = await familyWith(['ana', 'nico', 'beto']);
+    const [ana, nico, beto] = users;
+    await ana!.agent.patch(`/api/families/${id}/members/${nico!.user.id}`).send({ role: 'supervised' }).expect(200);
+    await ana!.agent.post(`/api/families/${id}/leave`).expect(204);
+    expect(await membersOf(beto!.agent, id)).toEqual(['beto:leader', 'nico:supervised']);
+  });
+
+  it('si solo quedan supervisados, el más antiguo pasa a líder', async () => {
+    const { id, users } = await familyWith(['ana', 'nico', 'luz']);
+    const [ana, nico, luz] = users;
+    await ana!.agent.patch(`/api/families/${id}/members/${nico!.user.id}`).send({ role: 'supervised' }).expect(200);
+    await ana!.agent.patch(`/api/families/${id}/members/${luz!.user.id}`).send({ role: 'supervised' }).expect(200);
+    await ana!.agent.post(`/api/families/${id}/leave`).expect(204);
+    expect(await membersOf(luz!.agent, id)).toEqual(['luz:supervised', 'nico:leader']);
+  });
+});

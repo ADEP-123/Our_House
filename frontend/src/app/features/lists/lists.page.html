@@ -1,0 +1,102 @@
+<header class="head">
+  <div>
+    <h1>{{ 'lists.title' | t }}</h1>
+    @if (family(); as f) {
+      @if ((families.families()?.length ?? 0) > 1) {
+        <label class="family-select">
+          <span class="oh-sr-only">{{ 'home.switchGroup' | t }}</span>
+          <select class="oh-input" [value]="f.id" (change)="families.setActive($any($event.target).value)">
+            @for (fam of families.families(); track fam.id) {
+              <option [value]="fam.id">{{ fam.name }}</option>
+            }
+          </select>
+        </label>
+      } @else {
+        <p class="oh-muted">{{ 'lists.of' | t: { family: f.name } }}</p>
+      }
+    }
+  </div>
+  <div class="head-actions">
+    @if (family()?.role === 'leader') {
+      <a class="oh-btn oh-btn--text" [routerLink]="['/familias', family()!.id, 'bitacora']">{{ 'activity.title' | t }}</a>
+    }
+    @if (family() && !archived() && !creating()) {
+      <button type="button" class="oh-btn oh-btn--filled" (click)="creating.set(true)">+ {{ 'lists.newList' | t }}</button>
+    }
+  </div>
+</header>
+
+@if (families.families() !== null && !family()) {
+  <section class="empty">
+    <p>{{ 'lists.noFamily' | t }}</p>
+    <a class="oh-btn oh-btn--filled" routerLink="/familias">{{ 'lists.goFamilies' | t }}</a>
+  </section>
+} @else {
+  @if (creating()) {
+    <div class="oh-panel form-panel">
+      <oh-list-form
+        [supervised]="family()?.role === 'supervised'"
+        [busy]="busy()"
+        [error]="error()"
+        (saved)="create($event)"
+        (cancelled)="creating.set(false)"
+      />
+    </div>
+  }
+
+  <div class="toolbar">
+    <div class="chips" role="group" [attr.aria-label]="'lists.form.type' | t">
+      <button type="button" class="chip" [attr.aria-pressed]="filter() === 'all'" (click)="filter.set('all')">
+        {{ 'lists.filterAll' | t }}
+      </button>
+      @for (type of types; track type.id) {
+        <button type="button" class="chip" [attr.aria-pressed]="filter() === type.id" (click)="filter.set(type.id)">
+          {{ type.label | t }}
+        </button>
+      }
+    </div>
+    <div class="switch" role="group">
+      <button type="button" [attr.aria-pressed]="!archived()" (click)="archived.set(false)">{{ 'lists.active' | t }}</button>
+      <button type="button" [attr.aria-pressed]="archived()" (click)="archived.set(true)">{{ 'lists.archived' | t }}</button>
+    </div>
+  </div>
+
+  @if (archived() && data(); as d) {
+    <p class="oh-hint archived-note">{{ 'lists.archivedNote' | t: { days: d.retentionDays } }}</p>
+  }
+
+  @if (error() && !creating()) {
+    <p class="oh-alert is-error" role="alert">{{ error() }}</p>
+  }
+
+  @if (data(); as d) {
+    @if (visible().length) {
+      <ul class="grid">
+        @for (list of visible(); track list.id) {
+          <li><oh-list-card [list]="list" /></li>
+        }
+      </ul>
+    } @else {
+      <p class="empty">
+        {{ (archived() ? 'lists.emptyArchived' : filter() === 'all' ? 'lists.empty' : 'lists.emptyFiltered') | t }}
+      </p>
+    }
+
+    @if (d.supervisedPrivate.length) {
+      <section class="supervised">
+        <h2>{{ 'lists.supervised.title' | t }}</h2>
+        <ul>
+          @for (s of d.supervisedPrivate; track s.id) {
+            <li>
+              <button type="button" class="oh-btn oh-btn--outline" (click)="openSupervised(s.id, s.ownerNickname)">
+                🔒 {{ 'lists.supervised.item' | t: { name: s.ownerNickname } }}
+              </button>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  } @else if (family()) {
+    <p class="oh-muted" role="status">{{ 'common.loading' | t }}</p>
+  }
+}

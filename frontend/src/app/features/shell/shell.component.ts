@@ -4,6 +4,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { TranslationKey } from '../../core/i18n/i18n.service';
 import { TPipe } from '../../core/i18n/t.pipe';
 import { IconComponent, IconName } from '../../shared/icon.component';
+import { SyncBannerComponent } from './sync-banner.component';
 
 interface NavItem {
   path: string;
@@ -17,7 +18,7 @@ interface NavItem {
  */
 @Component({
   selector: 'oh-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, TPipe, IconComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, TPipe, IconComponent, SyncBannerComponent],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',
 })
@@ -26,6 +27,7 @@ export class ShellComponent {
 
   protected readonly nav: NavItem[] = [
     { path: '/inicio', label: 'shell.home', icon: 'home' },
+    { path: '/listas', label: 'shell.lists', icon: 'list' },
     { path: '/familias', label: 'shell.families', icon: 'family' },
     { path: '/apariencia', label: 'shell.appearance', icon: 'palette' },
     { path: '/perfil', label: 'shell.profile', icon: 'user' },

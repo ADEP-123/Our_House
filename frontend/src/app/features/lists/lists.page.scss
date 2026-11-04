@@ -1,0 +1,124 @@
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.family-select select {
+  margin-top: 6px;
+  min-height: 40px;
+  width: auto;
+}
+
+.form-panel {
+  margin-bottom: 24px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--oh-border-strong);
+  background: transparent;
+  color: var(--oh-text);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &[aria-pressed='true'] {
+    background: var(--oh-secondary-soft);
+    border-color: var(--oh-secondary);
+    color: var(--oh-secondary);
+  }
+}
+
+.switch {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid var(--oh-border);
+  background: var(--oh-surface);
+
+  button {
+    min-height: 32px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--oh-text-muted);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  [aria-pressed='true'] {
+    background: var(--oh-primary);
+    color: var(--oh-on-primary);
+  }
+}
+
+.archived-note {
+  margin: -6px 0 16px;
+}
+
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.empty {
+  display: grid;
+  gap: 16px;
+  justify-items: start;
+  padding: 28px;
+  border: 1px dashed var(--oh-border-strong);
+  border-radius: var(--oh-radius-lg);
+  color: var(--oh-text-muted);
+}
+
+.supervised {
+  margin-top: 32px;
+
+  h2 {
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}

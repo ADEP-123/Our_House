@@ -1,0 +1,72 @@
+<a class="back" [routerLink]="['/familias', id()]">← {{ 'activity.back' | t }}</a>
+<h1>{{ 'activity.title' | t }}</h1>
+<p class="lead">{{ 'activity.lead' | t: { family: familyName() } }}</p>
+
+<form class="filters" (ngSubmit)="load()">
+  <div class="oh-field">
+    <label for="f-list">{{ 'activity.filters.list' | t }}</label>
+    <select id="f-list" class="oh-input" name="listId" [(ngModel)]="filters.listId" (ngModelChange)="load()">
+      <option [ngValue]="undefined">{{ 'activity.filters.allLists' | t }}</option>
+      @for (l of options().lists; track l.id) {
+        <option [ngValue]="l.id">{{ listOptionLabel(l) }}</option>
+      }
+    </select>
+  </div>
+  <div class="oh-field">
+    <label for="f-actor">{{ 'activity.filters.person' | t }}</label>
+    <select id="f-actor" class="oh-input" name="actorId" [(ngModel)]="filters.actorId" (ngModelChange)="load()">
+      <option [ngValue]="undefined">{{ 'activity.filters.everyone' | t }}</option>
+      @for (a of options().actors; track a.id) {
+        <option [ngValue]="a.id">{{ a.nickname }}</option>
+      }
+    </select>
+  </div>
+  <div class="oh-field">
+    <label for="f-from">{{ 'activity.filters.from' | t }}</label>
+    <input id="f-from" class="oh-input" type="date" name="from" [(ngModel)]="filters.from" (ngModelChange)="load()" />
+  </div>
+  <div class="oh-field">
+    <label for="f-to">{{ 'activity.filters.to' | t }}</label>
+    <input id="f-to" class="oh-input" type="date" name="to" [(ngModel)]="filters.to" (ngModelChange)="load()" />
+  </div>
+  @if (hasFilters()) {
+    <button type="button" class="oh-btn oh-btn--text clear" (click)="clearFilters()">{{ 'activity.filters.clear' | t }}</button>
+  }
+</form>
+
+@if (error(); as err) {
+  <p class="oh-alert is-error" role="alert">{{ err }}</p>
+}
+
+@for (day of days(); track day.key) {
+  <section class="day">
+    <h2>{{ day.label }}</h2>
+    <ol class="entries">
+      @for (e of day.entries; track e.id) {
+        <li [class.hidden]="e.hidden" [attr.data-action]="e.action">
+          <time [attr.datetime]="e.createdAt">{{ time(e) }}</time>
+          <div class="text">
+            <p>{{ sentence(e) }}</p>
+            @if (detail(e); as d) {
+              <p class="detail">{{ d }}</p>
+            }
+            @if (e.hidden) {
+              <p class="detail">🔒 {{ 'activity.hiddenNote' | t }}</p>
+            }
+          </div>
+        </li>
+      }
+    </ol>
+  </section>
+} @empty {
+  @if (!loading()) {
+    <p class="empty">{{ 'activity.empty' | t }}</p>
+  }
+}
+
+@if (cursor()) {
+  <button type="button" class="oh-btn oh-btn--outline more" (click)="load(true)" [disabled]="loading()">{{ 'activity.more' | t }}</button>
+}
+@if (loading() && !entries().length) {
+  <p class="oh-muted" role="status">{{ 'common.loading' | t }}</p>
+}

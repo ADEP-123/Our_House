@@ -1,6 +1,7 @@
 import { db, type Db } from '../config/database.js';
 
-export type FamilyRole = 'leader' | 'member';
+/** supervised: miembro supervisado (menor de edad); los líderes pueden ver sus listas privadas */
+export type FamilyRole = 'leader' | 'member' | 'supervised';
 
 export interface FamilyRow {
   id: string;
@@ -88,7 +89,7 @@ export const familiesRepository = {
       `SELECT m.user_id, m.role, m.joined_at, u.nickname, u.first_name, u.last_name, u.avatar_url, u.avatar_preset
          FROM family_members m JOIN users u ON u.id = m.user_id
         WHERE m.family_id = $1
-        ORDER BY m.role = 'leader' DESC, m.joined_at`,
+        ORDER BY CASE m.role WHEN 'leader' THEN 0 WHEN 'member' THEN 1 ELSE 2 END, m.joined_at`,
       [familyId],
     );
     return rows;
