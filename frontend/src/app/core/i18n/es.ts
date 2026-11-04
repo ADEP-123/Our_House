@@ -120,6 +120,22 @@ export const es = {
     manage: 'Ver grupo',
   },
   profile: {
+    calendar: {
+      title: 'Google Calendar',
+      body: 'Conecta tu cuenta de Google y tus tareas con fecha aparecerán solas en un calendario «Our House», con aviso antes de que venzan. Al completarlas, su título pasa a «✓ tarea».',
+      warning: 'Google mostrará un aviso de «app no verificada»: es normal en esta app familiar. Toca «Configuración avanzada» y luego continuar.',
+      connect: 'Conectar Google Calendar',
+      connectedAs: 'Conectado como {email}. Tus tareas con fecha van al calendario «{calendar}».',
+      how: 'Van las tareas que tienes asignadas y las que creaste sin responsable. Si cambias la fecha o la completas, el evento se actualiza.',
+      disconnect: 'Desconectar',
+      disconnectTitle: '¿Desconectar Google Calendar?',
+      disconnectBody: 'Las tareas dejarán de sincronizarse. El calendario «Our House» se queda en tu cuenta de Google; puedes borrarlo desde allá.',
+      disconnected: 'Google Calendar desconectado.',
+      connected: '¡Listo! Google Calendar quedó conectado.',
+      cancelled: 'No se conectó: cancelaste el permiso en Google.',
+      failed: 'No se pudo conectar Google Calendar. Inténtalo de nuevo.',
+      unavailable: 'La conexión con Google Calendar todavía no está configurada en el servidor.',
+    },
     notifications: {
       title: 'Notificaciones',
       body: 'Correos que te avisan de lo que hacen los demás en tus grupos.',
@@ -370,6 +386,12 @@ export const es = {
       custom: 'Personalizar para esta tarea',
       off: 'Sin recordatorios',
     },
+    calendarPrompt: {
+      body: 'Puedes llevar tus tareas con fecha a Google Calendar y recibir el aviso en tu celular.',
+      setup: 'Configurar Google Calendar',
+      later: 'Ahora no',
+      never: 'No volver a mostrar',
+    },
     purchase: {
       already: 'Ya compraste {done} de {of}.',
       howMuch: '¿Cuánto compraste?',
@@ -499,6 +521,7 @@ export const es = {
     },
   },
   errors: {
+    GOOGLE_NOT_CONFIGURED: 'La conexión con Google no está configurada en el servidor',
     REMINDER_EVERY_INVALID: 'La frecuencia debe estar entre 1 y 30 días',
     REMINDER_DAYS_INVALID: 'Los días antes deben estar entre 0 y 60',
     REMINDER_HOUR_INVALID: 'Elige una hora entre 0 y 23',

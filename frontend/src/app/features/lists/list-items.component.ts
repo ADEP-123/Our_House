@@ -1,12 +1,15 @@
 import { CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, OnDestroy, computed, inject, input, model, signal } from '@angular/core';
+import { Component, OnDestroy, computed, effect, inject, input, model, signal, untracked } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { toApiError } from '../../core/api/api-error';
 import { AuthService } from '../../core/auth/auth.service';
 import { I18n } from '../../core/i18n/i18n.service';
 import { TPipe } from '../../core/i18n/t.pipe';
+import { RouterLink } from '@angular/router';
 import { ConfirmService } from '../../shared/confirm.service';
+import { GoogleCalendarService } from '../calendar/google-calendar.service';
+import { ProfileService } from '../profile/profile.service';
 import { ToastService } from '../../shared/toast.service';
 import { FamilyMember } from '../families/families.service';
 import { applyPurchase, applyToggle, formatAmount, formatMoney, isPartial, removeItem, syncParent, unitsFor } from './item-logic';
@@ -31,7 +34,7 @@ const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(mi
 /** Checklist de una lista: agregar, marcar, editar, reordenar, borrar con deshacer, reiniciar y limpiar. */
 @Component({
   selector: 'oh-list-items',
-  imports: [ReactiveFormsModule, NgTemplateOutlet, TPipe, CdkDropList, CdkDrag, CdkDragHandle, PurchaseDialogComponent],
+  imports: [ReactiveFormsModule, NgTemplateOutlet, RouterLink, TPipe, CdkDropList, CdkDrag, CdkDragHandle, PurchaseDialogComponent],
   templateUrl: './list-items.component.html',
   styleUrl: './list-items.component.scss',
 })
@@ -46,6 +49,8 @@ export class ListItemsComponent implements OnDestroy {
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18n);
   private readonly fb = inject(FormBuilder).nonNullable;
+  private readonly calendar = inject(GoogleCalendarService);
+  private readonly profile = inject(ProfileService);
 
   protected readonly canEdit = computed(() => this.list().permissions.canEdit);
   protected readonly canCheck = computed(() => this.list().permissions.canCheck);
@@ -136,6 +141,24 @@ export class ListItemsComponent implements OnDestroy {
   ]);
 
   protected readonly pendingCount = computed(() => this.groups().reduce((n, g) => n + g.items.length, 0));
+
+  /** Aviso al poner una fecha: "puedes llevar tus tareas a Google Calendar" (hasta conectarlo o pedir no verlo más) */
+  private readonly promptClosed = signal(false);
+  protected readonly calendarPrompt = computed(() => {
+    const status = this.calendar.status();
+    return !!status?.available && !status.connected && !this.auth.user()?.calendarPromptDismissed && !this.promptClosed();
+  });
+
+  constructor() {
+    effect(() => {
+      if (this.isTodo()) untracked(() => void this.calendar.load());
+    });
+  }
+
+  dismissCalendarPrompt(forever: boolean): void {
+    this.promptClosed.set(true);
+    if (forever) void this.profile.setSettings({ calendarPromptDismissed: true }).catch(() => undefined);
+  }
 
   ngOnDestroy(): void {
     // Al salir de la pantalla, los borrados pendientes se confirman

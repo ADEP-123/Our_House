@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { TPipe } from '../../core/i18n/t.pipe';
 import { AvatarComponent } from '../../shared/avatar.component';
+import { ProfileCalendarComponent } from './profile-calendar.component';
 import { ProfileDetailsComponent } from './profile-details.component';
 import { ProfileEmailComponent } from './profile-email.component';
 import { ProfileNotificationsComponent } from './profile-notifications.component';
@@ -19,6 +20,7 @@ import { ProfileSecurityComponent } from './profile-security.component';
     ProfileEmailComponent,
     ProfilePasswordComponent,
     ProfileNotificationsComponent,
+    ProfileCalendarComponent,
     ProfileSecurityComponent,
   ],
   template: `
@@ -37,6 +39,7 @@ import { ProfileSecurityComponent } from './profile-security.component';
     <oh-profile-email />
     <oh-profile-password />
     <oh-profile-notifications />
+    <oh-profile-calendar />
     <oh-profile-security />
   `,
   styles: `

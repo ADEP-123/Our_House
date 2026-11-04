@@ -281,3 +281,19 @@ button.text {
   font-size: 0.8125rem;
   min-height: 32px;
 }
+
+.calendar-prompt {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--oh-primary) 8%, var(--oh-surface));
+  line-height: 1.45;
+
+  .prompt-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}

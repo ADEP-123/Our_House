@@ -44,6 +44,16 @@
             <label for="new-time">{{ 'lists.items.dueTime' | t }}</label>
             <input id="new-time" class="oh-input" type="time" formControlName="dueTime" />
           </div>
+          @if (addForm.controls.dueDate.value && calendarPrompt()) {
+            <div class="calendar-prompt wide" role="note">
+              <p>📆 {{ 'lists.calendarPrompt.body' | t }}</p>
+              <div class="prompt-actions">
+                <a class="oh-btn oh-btn--outline" routerLink="/perfil" fragment="calendario">{{ 'lists.calendarPrompt.setup' | t }}</a>
+                <button type="button" class="oh-btn oh-btn--text" (click)="dismissCalendarPrompt(false)">{{ 'lists.calendarPrompt.later' | t }}</button>
+                <button type="button" class="oh-btn oh-btn--text" (click)="dismissCalendarPrompt(true)">{{ 'lists.calendarPrompt.never' | t }}</button>
+              </div>
+            </div>
+          }
           @if (addForm.controls.dueDate.value) {
             <div class="oh-field wide">
               <label for="new-reminders">{{ 'lists.reminders.label' | t }}</label>
@@ -124,6 +134,16 @@
             <label [for]="'edit-time-' + item.id">{{ 'lists.items.dueTime' | t }}</label>
             <input [id]="'edit-time-' + item.id" class="oh-input" type="time" formControlName="dueTime" />
           </div>
+          @if (editForm.controls.dueDate.value && calendarPrompt()) {
+            <div class="calendar-prompt wide" role="note">
+              <p>📆 {{ 'lists.calendarPrompt.body' | t }}</p>
+              <div class="prompt-actions">
+                <a class="oh-btn oh-btn--outline" routerLink="/perfil" fragment="calendario">{{ 'lists.calendarPrompt.setup' | t }}</a>
+                <button type="button" class="oh-btn oh-btn--text" (click)="dismissCalendarPrompt(false)">{{ 'lists.calendarPrompt.later' | t }}</button>
+                <button type="button" class="oh-btn oh-btn--text" (click)="dismissCalendarPrompt(true)">{{ 'lists.calendarPrompt.never' | t }}</button>
+              </div>
+            </div>
+          }
           @if (editForm.controls.dueDate.value) {
             <div class="oh-field wide">
               <label [for]="'edit-rem-' + item.id">{{ 'lists.reminders.label' | t }}</label>
