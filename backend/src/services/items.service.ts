@@ -60,7 +60,7 @@ export const itemsService = {
     await checkAssignee(access, data.assigneeId);
     if (data.parentId) {
       // Un solo nivel y solo en listas de tareas
-      if (access.list.type !== 'todo') throw badRequest('SUBTASKS_ONLY_TODO');
+      if (!access.list.features.includes('subtasks')) throw badRequest('SUBTASKS_DISABLED');
       const parent = await itemsRepository.find(data.parentId);
       if (!parent || parent.list_id !== listId) throw badRequest('PARENT_NOT_FOUND');
       if (parent.parent_id) throw badRequest('SUBTASK_TOO_DEEP');
@@ -139,7 +139,7 @@ export const itemsService = {
   async purchase(listId: string, itemId: string, userId: string, data: { id: string; amount?: number | null; spent?: number | null }) {
     const access = await getAccess(listId, userId);
     if (!access.canCheck) throw forbidden(access.list.archived_at ? 'LIST_ARCHIVED' : 'LIST_READ_ONLY');
-    if (access.list.type !== 'shopping') throw badRequest('NOT_A_SHOPPING_LIST');
+    if (!access.list.features.includes('purchases')) throw badRequest('PURCHASES_DISABLED');
     const before = await getItem(access, itemId);
     const added = await itemsRepository.addPurchase(itemId, listId, userId, { id: data.id, amount: data.amount ?? null, spent: data.spent ?? null });
     const after = (await itemsRepository.find(itemId))!;
