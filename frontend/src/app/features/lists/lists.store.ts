@@ -227,9 +227,12 @@ export class ListsStore {
       const cached = await this.db.get<ListDetail>(listKey(listId));
       if (cached) return cached;
     }
-    return this.read(listKey(listId), async () =>
+    const list = await this.read(listKey(listId), async () =>
       (await firstValueFrom(this.http.get<{ list: ListDetail }>(`/api/lists/${listId}`))).list,
     );
+    // Las listas secretas no se guardan en el dispositivo (ni siquiera sus títulos)
+    if (list.type === 'secret') await this.db.delete(listKey(listId));
+    return list;
   }
 
   /** Se puede crear sin conexión: la lista existe en el dispositivo hasta que se sincroniza. */
