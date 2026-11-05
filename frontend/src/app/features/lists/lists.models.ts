@@ -59,6 +59,25 @@ export interface ListItem {
 
 export interface ListDetail extends ListSummary {
   items: ListItem[];
+  /** Solo en listas secretas: títulos visibles sin código */
+  secretItems?: SecretSummary[];
+}
+
+export type SecretFieldKind = 'text' | 'username' | 'password' | 'url' | 'pin' | 'note';
+
+export interface SecretField {
+  label: string;
+  kind: SecretFieldKind;
+  value: string;
+}
+
+export interface SecretSummary {
+  id: string;
+  title: string;
+  createdBy: { id: string; nickname: string | null };
+  /** Lo creó quien mira: puede editarlo y borrarlo */
+  mine: boolean;
+  updatedAt: string;
 }
 
 export interface FamilyLists {

@@ -1,6 +1,6 @@
 import type { TranslationKey } from '../../core/i18n/i18n.service';
 
-export type ListType = 'todo' | 'shopping' | 'other';
+export type ListType = 'todo' | 'shopping' | 'other' | 'secret';
 
 /** Opciones de los elementos de una lista (se pueden mezclar en cualquier tipo) */
 export type ListFeature = 'quantity' | 'category' | 'purchases' | 'assignee' | 'due' | 'subtasks';
@@ -19,12 +19,14 @@ export const DEFAULT_FEATURES: Record<ListType, ListFeature[]> = {
   shopping: ['quantity', 'category', 'purchases'],
   todo: ['assignee', 'due', 'subtasks'],
   other: [],
+  secret: [],
 };
 
 export const LIST_TYPES: { id: ListType; label: TranslationKey; defaultIcon: string }[] = [
   { id: 'todo', label: 'lists.types.todo', defaultIcon: 'check' },
   { id: 'shopping', label: 'lists.types.shopping', defaultIcon: 'cart' },
   { id: 'other', label: 'lists.types.other', defaultIcon: 'star' },
+  { id: 'secret', label: 'lists.types.secret', defaultIcon: 'lock' },
 ];
 
 /** Tonos medios: se leen sobre fondos claros y oscuros. Los fondos suaves se derivan con color-mix. */
@@ -53,6 +55,8 @@ export const LIST_ICONS: Record<string, string> = {
   tool: '🔧',
   food: '🍽️',
   paw: '🐾',
+  lock: '🔐',
+  key: '🔑',
 };
 
 export const colorOf = (id: string) => LIST_COLORS[id] ?? LIST_COLORS['blue']!;

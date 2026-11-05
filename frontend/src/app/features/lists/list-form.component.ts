@@ -31,6 +31,9 @@ import { ListInput } from './lists.models';
         </fieldset>
       }
 
+      @if (form.controls.type.value === 'secret') {
+        <p class="oh-alert" role="note">🔐 {{ 'secrets.formHint' | t }}</p>
+      } @else {
       <fieldset>
         <legend>{{ 'lists.features.title' | t }}</legend>
         <p class="oh-hint">{{ 'lists.features.intro' | t }}</p>
@@ -46,6 +49,7 @@ import { ListInput } from './lists.models';
           }
         </div>
       </fieldset>
+      }
 
       <fieldset>
         <legend>{{ 'lists.form.color' | t }}</legend>
@@ -263,7 +267,7 @@ export class ListFormComponent implements OnInit {
     if (this.form.invalid) return;
     const value = this.form.getRawValue();
     // En el orden de la lista de opciones, para comparar fácil
-    const features = LIST_FEATURES.map((f) => f.id).filter((id) => this.features().has(id));
+    const features = value.type === 'secret' ? [] : LIST_FEATURES.map((f) => f.id).filter((id) => this.features().has(id));
     this.saved.emit({ ...value, name: value.name.trim(), features });
   }
 }

@@ -9,6 +9,7 @@ import { ToastService } from '../../shared/toast.service';
 import { FamiliesService, FamilyMember } from '../families/families.service';
 import { ListFormComponent } from './list-form.component';
 import { ListItemsComponent } from './list-items.component';
+import { SecretListComponent } from './secret-list.component';
 import { formatMoney } from './item-logic';
 import { colorOf, iconOf, LIST_TYPES } from './list-presets';
 import { ListDetail, ListInput } from './lists.models';
@@ -16,7 +17,7 @@ import { ListsStore } from './lists.store';
 
 @Component({
   selector: 'oh-list-page',
-  imports: [RouterLink, TPipe, ListFormComponent, ListItemsComponent],
+  imports: [RouterLink, TPipe, ListFormComponent, ListItemsComponent, SecretListComponent],
   templateUrl: './list.page.html',
   styleUrl: './list.page.scss',
 })
@@ -152,6 +153,12 @@ export class ListPage implements OnInit {
       this.list.set(updated);
       this.toast.show(this.i18n.t('lists.detail.restored'));
     }
+  }
+
+  /** Lista secreta borrada desde su pantalla */
+  afterDelete(): void {
+    this.toast.show(this.i18n.t('secrets.listDeleted'));
+    void this.router.navigate(['/listas']);
   }
 
   async deleteForever(): Promise<void> {

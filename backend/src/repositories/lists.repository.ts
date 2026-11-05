@@ -6,7 +6,7 @@ export interface ListRow {
   family_id: string;
   created_by: string | null;
   name: string;
-  type: 'todo' | 'shopping' | 'other';
+  type: 'todo' | 'shopping' | 'other' | 'secret';
   color: string;
   icon: string;
   is_private: boolean;
@@ -66,7 +66,8 @@ export const ITEM_SELECT = `
 
 const CARD_SELECT = `
   SELECT l.*, u.nickname AS creator_nickname, fm.role AS creator_role,
-         (SELECT count(*)::int FROM list_items i WHERE i.list_id = l.id AND i.parent_id IS NULL) AS total,
+         CASE WHEN l.type = 'secret' THEN (SELECT count(*)::int FROM secret_items s WHERE s.list_id = l.id)
+              ELSE (SELECT count(*)::int FROM list_items i WHERE i.list_id = l.id AND i.parent_id IS NULL) END AS total,
          (SELECT count(*)::int FROM list_items i WHERE i.list_id = l.id AND i.parent_id IS NULL AND i.completed_at IS NOT NULL) AS completed,
          (SELECT sum(i.spent) FROM list_items i WHERE i.list_id = l.id) AS spent,
          f.currency,
