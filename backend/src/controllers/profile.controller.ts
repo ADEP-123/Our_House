@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { clearAuthCookies } from '../lib/auth-cookies.js';
 import { currentUserId } from '../middlewares/auth.js';
 import { profileService } from '../services/profile.service.js';
+import { verificationCodesService } from '../services/verification-codes.service.js';
 
 export const profileController = {
   async update(req: Request, res: Response): Promise<void> {
@@ -29,6 +30,11 @@ export const profileController = {
 
   async setAvatarPreset(req: Request, res: Response): Promise<void> {
     res.json({ user: await profileService.setAvatarPreset(currentUserId(req), req.body.preset) });
+  },
+
+  /** Envía un código de 6 dígitos al correo de la persona */
+  async requestCode(req: Request, res: Response): Promise<void> {
+    res.status(202).json(await verificationCodesService.request(currentUserId(req), req.body.purpose));
   },
 
   async setSettings(req: Request, res: Response): Promise<void> {

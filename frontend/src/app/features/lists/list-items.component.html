@@ -1,3 +1,6 @@
+<!-- Fijo arriba al desplazar (salvo con "Más detalles" abierto, para no tapar la pantalla) -->
+<div class="top" [class.oh-sticky]="!showMore()">
+<ng-content />
 @if (canEdit()) {
   <form class="add" [formGroup]="addForm" (ngSubmit)="add()" novalidate>
     <div class="add-row">
@@ -5,14 +8,14 @@
       <input id="new-item" class="oh-input" formControlName="text" maxlength="200" autocomplete="off" [placeholder]="'lists.items.addPlaceholder' | t" />
       <button class="oh-btn oh-btn--filled" type="submit" [disabled]="addForm.invalid">{{ 'lists.items.add' | t }}</button>
     </div>
-    @if (isShopping() || isTodo()) {
+    @if (hasDetails()) {
       <button type="button" class="oh-btn oh-btn--text more" [attr.aria-expanded]="showMore()" (click)="showMore.set(!showMore())">
         {{ (showMore() ? 'lists.items.less' : 'lists.items.more') | t }}
       </button>
     }
     @if (showMore()) {
       <div class="extra">
-        @if (isShopping()) {
+        @if (has('quantity')) {
           <div class="oh-field qty">
             <label for="new-amount">{{ 'lists.items.quantity' | t }}</label>
             <div class="qty-row">
@@ -21,12 +24,14 @@
               <input id="new-unit" class="oh-input" formControlName="unit" maxlength="20" list="units" [placeholder]="'lists.items.unitPlaceholder' | t" />
             </div>
           </div>
+        }
+        @if (has('category')) {
           <div class="oh-field">
             <label for="new-cat">{{ 'lists.items.category' | t }}</label>
             <input id="new-cat" class="oh-input" formControlName="category" maxlength="40" list="categories" [placeholder]="'lists.items.categoryPlaceholder' | t" />
           </div>
         }
-        @if (isTodo()) {
+        @if (has('assignee')) {
           <div class="oh-field">
             <label for="new-assignee">{{ 'lists.items.assignee' | t }}</label>
             <select id="new-assignee" class="oh-input" formControlName="assigneeId">
@@ -36,6 +41,8 @@
               }
             </select>
           </div>
+        }
+        @if (has('due')) {
           <div class="oh-field">
             <label for="new-due">{{ 'lists.items.dueDate' | t }}</label>
             <input id="new-due" class="oh-input" type="date" formControlName="dueDate" />
@@ -89,6 +96,7 @@
     }
   </datalist>
 }
+</div>
 
 @if (error(); as err) {
   <p class="oh-alert is-error" role="alert">{{ err }}</p>
@@ -102,7 +110,7 @@
         <input [id]="'edit-text-' + item.id" class="oh-input" formControlName="text" maxlength="200" />
       </div>
       <div class="extra">
-        @if (isShopping()) {
+        @if (has('quantity')) {
           <div class="oh-field qty">
             <label [for]="'edit-amount-' + item.id">{{ 'lists.items.quantity' | t }}</label>
             <div class="qty-row">
@@ -111,12 +119,14 @@
               <input [id]="'edit-unit-' + item.id" class="oh-input" formControlName="unit" maxlength="20" list="units" />
             </div>
           </div>
+        }
+        @if (has('category')) {
           <div class="oh-field">
             <label [for]="'edit-cat-' + item.id">{{ 'lists.items.category' | t }}</label>
             <input [id]="'edit-cat-' + item.id" class="oh-input" formControlName="category" maxlength="40" list="categories" />
           </div>
         }
-        @if (isTodo()) {
+        @if (has('assignee')) {
           <div class="oh-field">
             <label [for]="'edit-assignee-' + item.id">{{ 'lists.items.assignee' | t }}</label>
             <select [id]="'edit-assignee-' + item.id" class="oh-input" formControlName="assigneeId">
@@ -126,6 +136,8 @@
               }
             </select>
           </div>
+        }
+        @if (has('due')) {
           <div class="oh-field">
             <label [for]="'edit-due-' + item.id">{{ 'lists.items.dueDate' | t }}</label>
             <input [id]="'edit-due-' + item.id" class="oh-input" type="date" formControlName="dueDate" />
@@ -173,7 +185,7 @@
       <div class="edit-actions">
         <button class="oh-btn oh-btn--filled" type="submit" [disabled]="editForm.invalid">{{ 'lists.items.save' | t }}</button>
         <button class="oh-btn oh-btn--text" type="button" (click)="editingId.set(null)">{{ 'lists.items.cancel' | t }}</button>
-        @if (isTodo() && !item.parentId) {
+        @if (has('subtasks') && !item.parentId) {
           <button class="oh-btn oh-btn--text" type="button" (click)="editingId.set(null); startSubtask(item)">+ {{ 'lists.subtasks.add' | t }}</button>
         }
         <button class="oh-btn oh-btn--text danger" type="button" (click)="remove(item)">{{ 'lists.items.delete' | t }}</button>
@@ -238,7 +250,7 @@
     </div>
 
     <!-- Subtareas: debajo de su tarea, con su propio orden -->
-    @if (isTodo() && !item.parentId) {
+    @if (has('subtasks') && !item.parentId) {
       @let subs = subtasksOf(item.id);
       @if (subs.length) {
         <ul class="items subtasks" cdkDropList [cdkDropListData]="subs" [cdkDropListDisabled]="!canEdit()" (cdkDropListDropped)="drop($event)">
@@ -280,7 +292,7 @@
 @for (group of groups(); track group.key) {
   @if (group.items.length) {
     <section class="group">
-      @if (isShopping() && groups().length > 1) {
+      @if (has('category') && groups().length > 1) {
         <h3>{{ group.label ?? ('lists.items.noCategory' | t) }}</h3>
       }
       <ul class="items" cdkDropList [cdkDropListData]="group.items" [cdkDropListDisabled]="!canEdit()" (cdkDropListDropped)="drop($event)">

@@ -17,6 +17,7 @@ export function toUserView(user: UserRow) {
       newLists: user.email_new_lists,
       assignments: user.email_assignments,
       reminders: user.email_reminders,
+      secretViews: user.email_secret_views,
     },
     /** Recordatorios de tareas con fecha: valores por defecto de esta persona */
     reminders: {

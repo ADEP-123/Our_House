@@ -1,4 +1,4 @@
-import type { ListType } from './list-presets';
+import type { ListFeature, ListType } from './list-presets';
 
 export interface ListPermissions {
   canEdit: boolean;
@@ -12,6 +12,8 @@ export interface ListSummary {
   familyId: string;
   name: string;
   type: ListType;
+  /** Opciones activas de los elementos */
+  features: ListFeature[];
   color: string;
   icon: string;
   isPrivate: boolean;
@@ -57,6 +59,25 @@ export interface ListItem {
 
 export interface ListDetail extends ListSummary {
   items: ListItem[];
+  /** Solo en listas secretas: títulos visibles sin código */
+  secretItems?: SecretSummary[];
+}
+
+export type SecretFieldKind = 'text' | 'username' | 'password' | 'url' | 'pin' | 'note';
+
+export interface SecretField {
+  label: string;
+  kind: SecretFieldKind;
+  value: string;
+}
+
+export interface SecretSummary {
+  id: string;
+  title: string;
+  createdBy: { id: string; nickname: string | null };
+  /** Lo creó quien mira: puede editarlo y borrarlo */
+  mine: boolean;
+  updatedAt: string;
 }
 
 export interface FamilyLists {
@@ -68,6 +89,7 @@ export interface FamilyLists {
 export interface ListInput {
   name: string;
   type: ListType;
+  features: ListFeature[];
   color: string;
   icon: string;
   isPrivate: boolean;

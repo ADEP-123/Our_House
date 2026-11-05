@@ -37,7 +37,7 @@
           <label for="family-currency">{{ 'families.currency.label' | t }}</label>
           <select id="family-currency" class="oh-input" [value]="currencyDraft()" (change)="currencyDraft.set($any($event.target).value)">
             @for (c of currencies(); track c.code) {
-              <option [value]="c.code">{{ c.code }} · {{ c.name }}</option>
+              <option [value]="c.code" [selected]="c.code === currencyDraft()">{{ c.code }} · {{ c.name }}</option>
             }
           </select>
           <button class="oh-btn oh-btn--filled" type="submit" [disabled]="currencyDraft() === f.currency || busy() === 'currency'">

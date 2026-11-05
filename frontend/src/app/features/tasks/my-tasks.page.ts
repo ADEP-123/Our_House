@@ -22,7 +22,7 @@ interface Section {
   selector: 'oh-my-tasks-page',
   imports: [RouterLink, TPipe],
   template: `
-    <header class="head">
+    <header class="head oh-sticky">
       <h1>{{ 'myTasks.title' | t }}</h1>
       <p class="oh-muted">{{ 'myTasks.intro' | t }}</p>
     </header>
@@ -82,7 +82,7 @@ interface Section {
   `,
   styles: `
     .head {
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
     h1 {
       font-size: 1.75rem;

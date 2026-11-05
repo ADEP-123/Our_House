@@ -1,30 +1,55 @@
-<header class="head">
-  <div>
-    <h1>{{ 'lists.title' | t }}</h1>
-    @if (family(); as f) {
-      @if ((families.families()?.length ?? 0) > 1) {
-        <label class="family-select">
-          <span class="oh-sr-only">{{ 'home.switchGroup' | t }}</span>
-          <select class="oh-input" [value]="f.id" (change)="families.setActive($any($event.target).value)">
-            @for (fam of families.families(); track fam.id) {
-              <option [value]="fam.id">{{ fam.name }}</option>
-            }
-          </select>
-        </label>
-      } @else {
-        <p class="oh-muted">{{ 'lists.of' | t: { family: f.name } }}</p>
+<!-- Encabezado y filtros fijos arriba: solo se desplazan las tarjetas -->
+<div class="oh-sticky lists-top">
+  <header class="head">
+    <div>
+      <h1>{{ 'lists.title' | t }}</h1>
+      @if (family(); as f) {
+        @if ((families.families()?.length ?? 0) > 1) {
+          <label class="family-select">
+            <span class="oh-sr-only">{{ 'home.switchGroup' | t }}</span>
+            <select class="oh-input" [value]="f.id" (change)="families.setActive($any($event.target).value)">
+              @for (fam of families.families(); track fam.id) {
+                <option [value]="fam.id" [selected]="fam.id === f.id">{{ fam.name }}</option>
+              }
+            </select>
+          </label>
+        } @else {
+          <p class="oh-muted">{{ 'lists.of' | t: { family: f.name } }}</p>
+        }
       }
+    </div>
+    <div class="head-actions">
+      @if (family()?.role === 'leader') {
+        <a class="oh-btn oh-btn--text" [routerLink]="['/familias', family()!.id, 'bitacora']">{{ 'activity.title' | t }}</a>
+      }
+      @if (family() && !archived() && !creating()) {
+        <button type="button" class="oh-btn oh-btn--filled" (click)="creating.set(true)">+ {{ 'lists.newList' | t }}</button>
+      }
+    </div>
+  </header>
+
+  @if (family()) {
+    <div class="toolbar">
+      <div class="chips" role="group" [attr.aria-label]="'lists.form.type' | t">
+        <button type="button" class="chip" [attr.aria-pressed]="filter() === 'all'" (click)="filter.set('all')">
+          {{ 'lists.filterAll' | t }}
+        </button>
+        @for (type of types; track type.id) {
+          <button type="button" class="chip" [attr.aria-pressed]="filter() === type.id" (click)="filter.set(type.id)">
+            {{ type.label | t }}
+          </button>
+        }
+      </div>
+      <div class="switch" role="group">
+        <button type="button" [attr.aria-pressed]="!archived()" (click)="archived.set(false)">{{ 'lists.active' | t }}</button>
+        <button type="button" [attr.aria-pressed]="archived()" (click)="archived.set(true)">{{ 'lists.archived' | t }}</button>
+      </div>
+    </div>
+    @if (archived() && data(); as d) {
+      <p class="oh-hint archived-note">{{ 'lists.archivedNote' | t: { days: d.retentionDays } }}</p>
     }
-  </div>
-  <div class="head-actions">
-    @if (family()?.role === 'leader') {
-      <a class="oh-btn oh-btn--text" [routerLink]="['/familias', family()!.id, 'bitacora']">{{ 'activity.title' | t }}</a>
-    }
-    @if (family() && !archived() && !creating()) {
-      <button type="button" class="oh-btn oh-btn--filled" (click)="creating.set(true)">+ {{ 'lists.newList' | t }}</button>
-    }
-  </div>
-</header>
+  }
+</div>
 
 @if (families.families() !== null && !family()) {
   <section class="empty">
@@ -42,27 +67,6 @@
         (cancelled)="creating.set(false)"
       />
     </div>
-  }
-
-  <div class="toolbar">
-    <div class="chips" role="group" [attr.aria-label]="'lists.form.type' | t">
-      <button type="button" class="chip" [attr.aria-pressed]="filter() === 'all'" (click)="filter.set('all')">
-        {{ 'lists.filterAll' | t }}
-      </button>
-      @for (type of types; track type.id) {
-        <button type="button" class="chip" [attr.aria-pressed]="filter() === type.id" (click)="filter.set(type.id)">
-          {{ type.label | t }}
-        </button>
-      }
-    </div>
-    <div class="switch" role="group">
-      <button type="button" [attr.aria-pressed]="!archived()" (click)="archived.set(false)">{{ 'lists.active' | t }}</button>
-      <button type="button" [attr.aria-pressed]="archived()" (click)="archived.set(true)">{{ 'lists.archived' | t }}</button>
-    </div>
-  </div>
-
-  @if (archived() && data(); as d) {
-    <p class="oh-hint archived-note">{{ 'lists.archivedNote' | t: { days: d.retentionDays } }}</p>
   }
 
   @if (error() && !creating()) {

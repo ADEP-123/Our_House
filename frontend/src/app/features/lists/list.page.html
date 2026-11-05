@@ -20,7 +20,7 @@
     @if (editing()) {
       <div class="oh-panel">
         <oh-list-form
-          [initial]="{ name: l.name, type: l.type, color: l.color, icon: l.icon, isPrivate: l.isPrivate, canChangePrivacy: l.permissions.canChangePrivacy }"
+          [initial]="{ name: l.name, type: l.type, features: l.features, color: l.color, icon: l.icon, isPrivate: l.isPrivate, canChangePrivacy: l.permissions.canChangePrivacy }"
           [supervised]="myRole() === 'supervised'"
           [busy]="busy()"
           [error]="error()"
@@ -50,10 +50,15 @@
           <button type="button" class="oh-btn oh-btn--tonal" (click)="togglePin()" [disabled]="busy()">
             📌 {{ (l.pinned ? 'lists.detail.unpin' : 'lists.detail.pin') | t }}
           </button>
-          <button type="button" class="oh-btn oh-btn--outline" (click)="duplicate()" [disabled]="busy()">{{ 'lists.detail.duplicate' | t }}</button>
+          <!-- Las secretas no se duplican ni se archivan: se borran directo desde abajo -->
+          @if (l.type !== 'secret') {
+            <button type="button" class="oh-btn oh-btn--outline" (click)="duplicate()" [disabled]="busy()">{{ 'lists.detail.duplicate' | t }}</button>
+          }
           @if (l.permissions.canEdit) {
             <button type="button" class="oh-btn oh-btn--outline" (click)="editing.set(true)">{{ 'lists.detail.edit' | t }}</button>
-            <button type="button" class="oh-btn oh-btn--text danger" (click)="archive()" [disabled]="busy()">{{ 'lists.detail.archive' | t }}</button>
+            @if (l.type !== 'secret') {
+              <button type="button" class="oh-btn oh-btn--text danger" (click)="archive()" [disabled]="busy()">{{ 'lists.detail.archive' | t }}</button>
+            }
           }
         </div>
         @if (!l.permissions.canEdit) {
@@ -65,15 +70,20 @@
         <p class="oh-alert is-error" role="alert">{{ err }}</p>
       }
 
-      <p class="summary">
-        {{ 'lists.summary' | t: { done: l.counts.completed, total: l.counts.total } }}
-        @if (l.type === 'shopping' && l.spent) {
-          · <strong>{{ 'lists.purchase.spentTotal' | t: { spent: money(l.spent) } }}</strong>
-        }
-        <span class="oh-hint"> · {{ 'lists.items.updatedAgo' | t }}</span>
-      </p>
-
-      <oh-list-items [list]="l" (listChange)="list.set($event)" [members]="members()" />
+      @if (l.type === 'secret') {
+        <oh-secret-list [list]="l" (listChange)="list.set($event)" (deleted)="afterDelete()" />
+      } @else {
+        <!-- El resumen va dentro de la parte fija de la lista, junto al campo para agregar -->
+        <oh-list-items [list]="l" (listChange)="list.set($event)" [members]="members()">
+          <p class="summary">
+            {{ 'lists.summary' | t: { done: l.counts.completed, total: l.counts.total } }}
+            @if (l.spent) {
+              · <strong>{{ 'lists.purchase.spentTotal' | t: { spent: money(l.spent) } }}</strong>
+            }
+            <span class="oh-hint"> · {{ 'lists.items.updatedAgo' | t }}</span>
+          </p>
+        </oh-list-items>
+      }
     }
   </div>
 } @else if (error(); as err) {

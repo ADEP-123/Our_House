@@ -9,6 +9,7 @@ const OPTIONS: { key: keyof UserNotifications; label: TranslationKey; hint: Tran
   { key: 'newLists', label: 'profile.notifications.newLists', hint: 'profile.notifications.newListsHint' },
   { key: 'assignments', label: 'profile.notifications.assignments', hint: 'profile.notifications.assignmentsHint' },
   { key: 'reminders', label: 'profile.notifications.reminders', hint: 'profile.notifications.remindersHint' },
+  { key: 'secretViews', label: 'profile.notifications.secretViews', hint: 'profile.notifications.secretViewsHint' },
 ];
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
@@ -60,7 +61,7 @@ const HOURS = Array.from({ length: 24 }, (_, h) => h);
               <label for="reminder-hour">{{ 'profile.notifications.hour' | t }}</label>
               <select id="reminder-hour" class="oh-input" [value]="draft().hour" (change)="setDraft('hour', $event)">
                 @for (h of hours; track h) {
-                  <option [value]="h">{{ hourLabel(h) }}</option>
+                  <option [value]="h" [selected]="h === draft().hour">{{ hourLabel(h) }}</option>
                 }
               </select>
             </div>
@@ -166,6 +167,7 @@ export class ProfileNotificationsComponent {
     newLists: true,
     assignments: true,
     reminders: true,
+    secretViews: true,
     ...this.auth.user()?.notifications,
   }));
   private readonly saved = computed<ReminderDefaults>(() => ({ hour: 8, startDays: 3, everyDays: 1, ...this.auth.user()?.reminders }));

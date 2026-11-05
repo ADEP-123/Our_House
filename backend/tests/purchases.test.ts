@@ -83,7 +83,7 @@ describe('compras parciales', () => {
     await users.ana!.agent
       .post(`/api/lists/${todo.id}/items/${task.id}/purchases`)
       .send({ id: randomUUID() })
-      .expect(400, { error: 'NOT_A_SHOPPING_LIST' });
+      .expect(400, { error: 'PURCHASES_DISABLED' });
 
     const updated = await users.ana!.agent.patch(`/api/families/${familyId}`).send({ currency: 'COP' }).expect(200);
     expect(updated.body.family.currency).toBe('COP');

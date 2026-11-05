@@ -2,8 +2,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { activityController } from '../controllers/activity.controller.js';
 import { itemsController } from '../controllers/items.controller.js';
-import { listsController } from '../controllers/lists.controller.js';
-import { LIST_COLORS, LIST_ICONS, LIST_TYPES } from '../lib/lists.js';
+import { listsController, secretsController } from '../controllers/lists.controller.js';
+import { LIST_COLORS, LIST_FEATURES, LIST_ICONS, LIST_TYPES, SECRET_FIELD_KINDS } from '../lib/lists.js';
 import { checkIds } from '../lib/route-ids.js';
 import { requireAuth } from '../middlewares/auth.js';
 import { validateBody } from '../middlewares/validate.js';
@@ -11,6 +11,11 @@ import { validateBody } from '../middlewares/validate.js';
 const listName = z.string().trim().min(1, 'LIST_NAME_REQUIRED').max(80, 'LIST_NAME_TOO_LONG');
 /** Id generado por el cliente (opcional): permite crear sin conexión sin duplicar al reenviar */
 const clientId = z.uuid().optional();
+/** Opciones de los elementos (sin repetir); si no vienen al crear, las del tipo */
+const features = z
+  .array(z.enum(LIST_FEATURES, 'FEATURE_INVALID'))
+  .max(LIST_FEATURES.length)
+  .transform((f) => [...new Set(f)]);
 
 /** /api/families/:familyId/lists */
 export const familyListsRoutes = Router({ mergeParams: true });
@@ -26,6 +31,7 @@ familyListsRoutes.post(
       color: z.enum(LIST_COLORS).default('blue'),
       icon: z.enum(LIST_ICONS).default('check'),
       isPrivate: z.boolean().default(false),
+      features: features.optional(),
     }),
   ),
   listsController.create,
@@ -48,7 +54,7 @@ list.patch(
   '/',
   validateBody(
     z
-      .object({ name: listName, color: z.enum(LIST_COLORS), icon: z.enum(LIST_ICONS), isPrivate: z.boolean() })
+      .object({ name: listName, color: z.enum(LIST_COLORS), icon: z.enum(LIST_ICONS), isPrivate: z.boolean(), features })
       .partial(),
   ),
   listsController.update,
@@ -100,6 +106,28 @@ list.post('/clear-completed', itemsController.deleteCompleted);
 list.patch('/items/:itemId', checkIds, validateBody(z.object({ text: itemText.optional(), ...itemFields })), itemsController.update);
 list.put('/items/:itemId/completed', checkIds, validateBody(z.object({ completed: z.boolean() })), itemsController.setCompleted);
 list.delete('/items/:itemId', checkIds, itemsController.remove);
+// ---------- Listas secretas ----------
+const secretTitle = z.string().trim().min(1, 'SECRET_TITLE_REQUIRED').max(120, 'SECRET_TITLE_TOO_LONG');
+const secretFields = z
+  .array(
+    z.strictObject({
+      label: z.string().trim().min(1, 'SECRET_LABEL_REQUIRED').max(40, 'SECRET_LABEL_TOO_LONG'),
+      kind: z.enum(SECRET_FIELD_KINDS),
+      value: z.string().max(2000, 'SECRET_VALUE_TOO_LONG'),
+    }),
+  )
+  .max(20, 'SECRET_TOO_MANY_FIELDS');
+list.post('/unlock', validateBody(z.strictObject({ code: z.string().regex(/^\d{6}$/, 'CODE_INVALID'), supervision: z.boolean().optional() })), secretsController.unlock);
+list.get('/secrets', secretsController.reveal);
+list.post('/secret-items', validateBody(z.strictObject({ id: clientId, title: secretTitle, fields: secretFields })), secretsController.create);
+list.patch(
+  '/secret-items/:itemId',
+  checkIds,
+  validateBody(z.strictObject({ title: secretTitle, fields: secretFields }).partial()),
+  secretsController.update,
+);
+list.delete('/secret-items/:itemId', checkIds, secretsController.remove);
+
 list.post(
   '/items/:itemId/purchases',
   checkIds,

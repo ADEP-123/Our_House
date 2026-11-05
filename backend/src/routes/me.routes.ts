@@ -38,6 +38,9 @@ meRoutes.patch(
 // Mis tareas: lo asignado a mí en todos mis grupos
 meRoutes.get('/tasks', itemsController.assignedToMe);
 
+// Código de verificación al correo (para acciones sensibles)
+meRoutes.post('/verification-codes', validateBody(z.strictObject({ purpose: z.enum(['secrets']) })), profileController.requestCode);
+
 // Preferencias de notificaciones (y más adelante recordatorios y calendario)
 meRoutes.patch(
   '/settings',
@@ -51,6 +54,7 @@ meRoutes.patch(
         reminderStartDays: z.int('REMINDER_DAYS_INVALID').min(0, 'REMINDER_DAYS_INVALID').max(60, 'REMINDER_DAYS_INVALID'),
         reminderEveryDays: z.int('REMINDER_EVERY_INVALID').min(1, 'REMINDER_EVERY_INVALID').max(30, 'REMINDER_EVERY_INVALID'),
         calendarPromptDismissed: z.boolean(),
+        secretViews: z.boolean(),
       })
       .partial()
       .refine((v) => Object.keys(v).length > 0, 'SETTINGS_EMPTY'),

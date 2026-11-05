@@ -1,13 +1,16 @@
 import { randomUUID } from 'node:crypto';
 import { withTransaction, type Db } from '../config/database.js';
 import { env } from '../config/env.js';
-import { conflict, forbidden, notFound } from '../lib/http-error.js';
+import { badRequest, conflict, forbidden, notFound } from '../lib/http-error.js';
 import { familiesRepository, type FamilyRole } from '../repositories/families.repository.js';
+import { DEFAULT_FEATURES, type ListType } from '../lib/lists.js';
 import { listsRepository, type ItemRow, type ListCardRow } from '../repositories/lists.repository.js';
 import { listRef, logActivity } from './activity.service.js';
 import { calendarService } from './calendar.service.js';
 import { notificationsService } from './notifications.service.js';
 import { activityRepository } from '../repositories/activity.repository.js';
+import { secretItemsRepository } from '../repositories/secret-items.repository.js';
+import { toSecretSummary } from './secret-view.js';
 import { requireMember } from './families.service.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -74,6 +77,7 @@ export function toListView(list: ListCardRow, access?: Pick<ListAccess, 'canEdit
     familyId: list.family_id,
     name: list.name,
     type: list.type,
+    features: list.features,
     color: list.color,
     icon: list.icon,
     isPrivate: list.is_private,
@@ -149,11 +153,11 @@ export const listsService = {
   async create(
     familyId: string,
     userId: string,
-    data: { id?: string; name: string; type: string; color: string; icon: string; isPrivate: boolean },
+    data: { id?: string; name: string; type: ListType; color: string; icon: string; isPrivate: boolean; features?: string[] },
   ) {
     await requireMember(familyId, userId);
     const id = data.id ?? randomUUID();
-    const created = await listsRepository.create({ ...data, id, familyId, userId });
+    const created = await listsRepository.create({ ...data, features: data.features ?? DEFAULT_FEATURES[data.type], id, familyId, userId });
     if (!created) {
       // Mismo id reenviado (cola sin conexión): devuelve la existente si es de este usuario y grupo
       const existing = await listsRepository.findCard(id, userId);
@@ -173,11 +177,16 @@ export const listsService = {
       const seen = await activityRepository.recentExists(access.list.family_id, userId, 'list.viewed_private', listId, 30);
       if (!seen) await logActivity(access.list.family_id, userId, 'list.viewed_private', listRef(access.list));
     }
+    if (access.list.type === 'secret') {
+      // Sin código solo se ven los títulos; los valores se piden aparte con el permiso de desbloqueo
+      const secrets = await secretItemsRepository.forList(listId);
+      return { ...toListView(access.list, access), items: [], secretItems: secrets.map((i) => toSecretSummary(i, userId)) };
+    }
     const items = await listsRepository.items(listId);
     return { ...toListView(access.list, access), items: items.map(toItemView) };
   },
 
-  async update(listId: string, userId: string, data: { name?: string; color?: string; icon?: string; isPrivate?: boolean }) {
+  async update(listId: string, userId: string, data: { name?: string; color?: string; icon?: string; isPrivate?: boolean; features?: string[] }) {
     const access = await getAccess(listId, userId);
     requireEdit(access);
     if (data.isPrivate !== undefined && data.isPrivate !== access.list.is_private && !access.canChangePrivacy) {
@@ -190,6 +199,9 @@ export const listsService = {
     for (const key of ['name', 'color', 'icon'] as const) {
       if (data[key] !== undefined && data[key] !== before[key]) changes[key] = { from: before[key], to: data[key]! };
     }
+    if (data.features && [...data.features].sort().join() !== [...before.features].sort().join()) {
+      changes['features'] = { from: before.features.join(','), to: data.features.join(',') };
+    }
     const ref = listRef({ ...before, name: data.name ?? before.name });
     if (Object.keys(changes).length) await logActivity(before.family_id, userId, 'list.updated', { ...ref, details: { changes } });
     if (data.isPrivate !== undefined && data.isPrivate !== before.is_private) {
@@ -198,12 +210,17 @@ export const listsService = {
       if (!data.isPrivate) notificationsService.listShared({ ...before, name: data.name ?? before.name }, userId, true);
     }
     // Cambió quién puede ver la lista o su nombre (aparece en la descripción del evento)
-    if ((data.isPrivate !== undefined && data.isPrivate !== before.is_private) || changes['name']) calendarService.syncList(listId);
+    // Cambió quién puede ver la lista, su nombre (va en la descripción del evento) o si usa fechas
+    if ((data.isPrivate !== undefined && data.isPrivate !== before.is_private) || changes['name'] || changes['features']) {
+      calendarService.syncList(listId);
+    }
     return listsService.detail(listId, userId);
   },
 
   async setArchived(listId: string, userId: string, archived: boolean) {
     const access = await getAccess(listId, userId);
+    // Las secretas no pasan por archivadas: se borran directo (quedarían guardadas 15 días)
+    if (access.list.type === 'secret') throw badRequest('SECRET_LIST_NO_ARCHIVE');
     requireManage(access, userId);
     if (!!access.list.archived_at !== archived) {
       await listsRepository.setArchived(listId, archived);
@@ -231,6 +248,7 @@ export const listsService = {
   /** Nueva lista del usuario con los mismos ítems sin marcar. Privada solo si era suya y privada. */
   async duplicate(listId: string, userId: string, data: { id?: string; name: string }) {
     const access = await getAccess(listId, userId);
+    if (access.list.type === 'secret') throw badRequest('SECRET_LIST_NO_DUPLICATE');
     if (access.supervision) throw forbidden('LIST_READ_ONLY');
     const source = access.list;
     const id = data.id ?? randomUUID();
@@ -242,6 +260,7 @@ export const listsService = {
           userId,
           name: data.name,
           type: source.type,
+          features: source.features,
           color: source.color,
           icon: source.icon,
           isPrivate: source.is_private && source.created_by === userId,

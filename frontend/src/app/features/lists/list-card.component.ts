@@ -34,17 +34,22 @@ import { ListSummary } from './lists.models';
         </span>
       </div>
 
-      <div class="progress" role="progressbar" [attr.aria-valuenow]="percent()" aria-valuemin="0" aria-valuemax="100" [attr.aria-label]="'lists.summary' | t: { done: l.counts.completed, total: l.counts.total }">
-        <span [style.width.%]="percent()"></span>
-      </div>
+      @if (l.type === 'secret') {
+        <!-- Sin conteos de hechos: solo cuántos elementos guarda, con su contenido protegido -->
+        <p class="secret-count">🔐 {{ 'secrets.cardCount' | t: { n: l.counts.total } }}</p>
+      } @else {
+        <div class="progress" role="progressbar" [attr.aria-valuenow]="percent()" aria-valuemin="0" aria-valuemax="100" [attr.aria-label]="'lists.summary' | t: { done: l.counts.completed, total: l.counts.total }">
+          <span [style.width.%]="percent()"></span>
+        </div>
+  
+        <dl class="counts">
+          <div><dt>{{ 'lists.counts.completed' | t }}</dt><dd>{{ l.counts.completed }}</dd></div>
+          <div><dt>{{ 'lists.counts.pending' | t }}</dt><dd>{{ l.counts.pending }}</dd></div>
+          <div><dt>{{ 'lists.counts.total' | t }}</dt><dd>{{ l.counts.total }}</dd></div>
+        </dl>
+      }
 
-      <dl class="counts">
-        <div><dt>{{ 'lists.counts.completed' | t }}</dt><dd>{{ l.counts.completed }}</dd></div>
-        <div><dt>{{ 'lists.counts.pending' | t }}</dt><dd>{{ l.counts.pending }}</dd></div>
-        <div><dt>{{ 'lists.counts.total' | t }}</dt><dd>{{ l.counts.total }}</dd></div>
-      </dl>
-
-      @if (l.type === 'shopping' && l.spent) {
+      @if (l.spent) {
         <p class="spent">{{ 'lists.purchase.spentTotal' | t: { spent: spent() } }}</p>
       }
 
@@ -54,6 +59,11 @@ import { ListSummary } from './lists.models';
     </a>
   `,
   styles: `
+    .secret-count {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--oh-text-muted);
+    }
     .spent {
       font-size: 0.875rem;
       font-weight: 600;

@@ -29,6 +29,7 @@ export interface UserNotifications {
   newLists: boolean;
   assignments: boolean;
   reminders: boolean;
+  secretViews: boolean;
 }
 
 export interface ReminderDefaults {

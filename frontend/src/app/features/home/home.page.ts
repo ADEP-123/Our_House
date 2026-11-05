@@ -40,7 +40,7 @@ import { FamiliesService } from '../families/families.service';
                 <span class="oh-sr-only">{{ 'home.switchGroup' | t }}</span>
                 <select class="oh-input" [value]="active.id" (change)="store.setActive($any($event.target).value)">
                   @for (f of families; track f.id) {
-                    <option [value]="f.id">{{ f.name }}</option>
+                    <option [value]="f.id" [selected]="f.id === active.id">{{ f.name }}</option>
                   }
                 </select>
               </label>

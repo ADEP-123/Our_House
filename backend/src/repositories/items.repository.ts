@@ -151,7 +151,7 @@ export const itemsRepository = {
          JOIN families f ON f.id = l.family_id
          JOIN family_members m ON m.family_id = f.id AND m.user_id = $1
          LEFT JOIN list_items p ON p.id = x.parent_id
-        WHERE x.assignee_id = $1 AND x.completed_at IS NULL AND l.type = 'todo' AND l.archived_at IS NULL
+        WHERE x.assignee_id = $1 AND x.completed_at IS NULL AND 'assignee' = ANY(l.features) AND l.archived_at IS NULL
           AND (NOT l.is_private OR l.created_by = $1)
         ORDER BY x.due_date NULLS LAST, x.due_time NULLS LAST, x.created_at`,
       [userId],

@@ -35,6 +35,7 @@ const LIST: ListDetail = {
   familyId: 'f1',
   name: 'Súper',
   type: 'shopping',
+  features: ['quantity', 'category', 'purchases'],
   color: 'blue',
   icon: 'cart',
   isPrivate: false,
@@ -164,7 +165,7 @@ describe('ListsStore sin conexión', () => {
   });
 
   it('crea una lista sin conexión con permisos completos para quien la crea', async () => {
-    const created = store.create('f1', { name: 'Viaje', type: 'todo', color: 'green', icon: 'check', isPrivate: false });
+    const created = store.create('f1', { name: 'Viaje', type: 'todo', features: [], color: 'green', icon: 'check', isPrivate: false });
     await tick();
     offline('/api/families/f1/lists', 'POST');
     const list = await created;

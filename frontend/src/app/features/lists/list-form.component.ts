@@ -1,10 +1,10 @@
 import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TPipe } from '../../core/i18n/t.pipe';
-import { LIST_COLORS, LIST_ICONS, LIST_TYPES, ListType } from './list-presets';
+import { DEFAULT_FEATURES, LIST_COLORS, LIST_FEATURES, LIST_ICONS, LIST_TYPES, ListFeature, ListType } from './list-presets';
 import { ListInput } from './lists.models';
 
-/** Formulario de crear / editar lista. El tipo solo se elige al crear. */
+/** Formulario de crear / editar lista. El tipo solo se elige al crear; las opciones se cambian cuando se quiera. */
 @Component({
   selector: 'oh-list-form',
   imports: [ReactiveFormsModule, TPipe],
@@ -29,6 +29,26 @@ import { ListInput } from './lists.models';
             }
           </div>
         </fieldset>
+      }
+
+      @if (form.controls.type.value === 'secret') {
+        <p class="oh-alert" role="note">🔐 {{ 'secrets.formHint' | t }}</p>
+      } @else {
+      <fieldset>
+        <legend>{{ 'lists.features.title' | t }}</legend>
+        <p class="oh-hint">{{ 'lists.features.intro' | t }}</p>
+        <div class="features">
+          @for (f of featureOptions; track f.id) {
+            <label class="feature" [class.on]="features().has(f.id)">
+              <input type="checkbox" [checked]="features().has(f.id)" (change)="toggleFeature(f.id)" />
+              <span>
+                <strong>{{ f.label | t }}</strong>
+                <small>{{ f.hint | t }}</small>
+              </span>
+            </label>
+          }
+        </div>
+      </fieldset>
       }
 
       <fieldset>
@@ -160,6 +180,38 @@ import { ListInput } from './lists.models';
       display: flex;
       gap: 8px;
     }
+    .features {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    }
+    .feature {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--oh-border-strong);
+      cursor: pointer;
+    }
+    .feature.on {
+      border-color: var(--oh-primary);
+      background: color-mix(in srgb, var(--oh-primary) 8%, var(--oh-surface));
+    }
+    .feature input {
+      flex: none;
+      margin-top: 2px;
+      width: 18px;
+      height: 18px;
+      accent-color: var(--oh-primary);
+    }
+    .feature small {
+      display: block;
+      margin-top: 2px;
+      color: var(--oh-text-muted);
+      font-size: 0.8125rem;
+      line-height: 1.35;
+    }
   `,
 })
 export class ListFormComponent implements OnInit {
@@ -172,6 +224,9 @@ export class ListFormComponent implements OnInit {
   readonly cancelled = output<void>();
 
   protected readonly types = LIST_TYPES;
+  protected readonly featureOptions = LIST_FEATURES;
+  /** Opciones elegidas; al crear arrancan con las del tipo */
+  protected readonly features = signal<ReadonlySet<ListFeature>>(new Set(DEFAULT_FEATURES.todo));
   protected readonly colors = Object.entries(LIST_COLORS);
   protected readonly icons = Object.entries(LIST_ICONS);
   protected readonly form = inject(FormBuilder).nonNullable.group({
@@ -186,18 +241,33 @@ export class ListFormComponent implements OnInit {
 
   ngOnInit(): void {
     const initial = this.initial();
-    if (initial) this.form.setValue({ name: initial.name, type: initial.type, color: initial.color, icon: initial.icon, isPrivate: initial.isPrivate });
+    if (initial) {
+      this.form.setValue({ name: initial.name, type: initial.type, color: initial.color, icon: initial.icon, isPrivate: initial.isPrivate });
+      this.features.set(new Set(initial.features ?? DEFAULT_FEATURES[initial.type]));
+    }
     this.form.controls.icon.valueChanges.subscribe(() => this.iconTouched.set(true));
   }
 
   /** Al cambiar de tipo sugiere su ícono, salvo que el usuario ya haya elegido otro */
   onType(type: ListType): void {
+    this.features.set(new Set(DEFAULT_FEATURES[type]));
     if (!this.iconTouched()) this.form.controls.icon.setValue(LIST_TYPES.find((t) => t.id === type)!.defaultIcon, { emitEvent: false });
+  }
+
+  toggleFeature(id: ListFeature): void {
+    this.features.update((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   submit(): void {
     if (this.form.invalid) return;
     const value = this.form.getRawValue();
-    this.saved.emit({ ...value, name: value.name.trim() });
+    // En el orden de la lista de opciones, para comparar fácil
+    const features = value.type === 'secret' ? [] : LIST_FEATURES.map((f) => f.id).filter((id) => this.features().has(id));
+    this.saved.emit({ ...value, name: value.name.trim(), features });
   }
 }
