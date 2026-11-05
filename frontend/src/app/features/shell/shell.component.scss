@@ -94,6 +94,9 @@
 }
 
 .main {
+  // Para los encabezados fijos de cada pantalla (.oh-sticky): margen lateral y altura de la barra superior
+  --oh-page-x: 20px;
+  --oh-sticky-top: 60px;
   padding: 24px 20px calc(96px + env(safe-area-inset-bottom));
   max-width: 960px;
   margin: 0 auto;
@@ -153,6 +156,8 @@
   }
 
   .main {
+    --oh-page-x: 48px;
+    --oh-sticky-top: 0px;
     margin-left: 96px;
     padding: 40px 48px;
   }
