@@ -51,6 +51,22 @@ const settingsNote = (locale: Locale, url: string) =>
     : `Puedes desactivar estos correos en tu perfil, en Notificaciones: ${url}`;
 
 export const emailTemplates = {
+  /** Código de verificación (el código va en el asunto para verlo directo en la notificación del celular) */
+  verificationCode(locale: Locale, p: { nickname: string; code: string; purpose: 'secrets'; minutes: number }): EmailContent {
+    if (locale === 'en') {
+      return render(`${p.code} is your Our House code`, {
+        heading: `Your code: ${p.code}`,
+        paragraphs: [`${p.nickname}, use it to see the secret information in a list. It expires in ${p.minutes} minutes and works only once.`],
+        footnote: "If you didn't ask for it, someone may know your password: change it from your profile.",
+      });
+    }
+    return render(`${p.code} es tu código de Our House`, {
+      heading: `Tu código: ${p.code}`,
+      paragraphs: [`${p.nickname}, úsalo para ver la información secreta de una lista. Vence en ${p.minutes} minutos y sirve una sola vez.`],
+      footnote: 'Si no lo pediste, alguien podría conocer tu contraseña: cámbiala desde tu perfil.',
+    });
+  },
+
   /** Lista nueva del grupo, o lista privada que pasó a ser del grupo */
   newList(locale: Locale, p: { author: string; list: string; family: string; madePublic: boolean; url: string; settingsUrl: string }): EmailContent {
     if (locale === 'en') {

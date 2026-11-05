@@ -59,9 +59,10 @@ export class I18n {
     return params ? text.replace(/\{(\w+)\}/g, (_, name: string) => String(params[name] ?? `{${name}}`)) : text;
   }
 
-  /** Traduce un código de error de la API; si no existe, usa el genérico. */
-  error(code: string | undefined): string {
+  /** Traduce un código de error de la API (con sus datos, ej. {attemptsLeft}); si no existe, usa el genérico. */
+  error(code: string | undefined, params?: Record<string, unknown>): string {
     const errors = this.dictionary().errors as Record<string, string>;
-    return (code && errors[code]) || errors['INTERNAL']!;
+    const text = (code && errors[code]) || errors['INTERNAL']!;
+    return params ? text.replace(/\{(\w+)\}/g, (match, name: string) => (params[name] === undefined ? match : String(params[name]))) : text;
   }
 }

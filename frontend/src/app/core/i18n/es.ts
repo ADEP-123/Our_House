@@ -118,6 +118,12 @@ export const es = {
     ready: 'Hay una versión nueva de Our House.',
     reload: 'Actualizar',
   },
+  code: {
+    send: 'Enviar código a {email}',
+    label: 'Código enviado a {email}',
+    resend: 'Reenviar código',
+    resendIn: 'Reenviar en {s} s',
+  },
   home: {
     greeting: 'Hola, {name}',
     intro: 'Aquí verás lo que pasa en tu casa: tareas, calendario y finanzas, a medida que los vayamos agregando.',
@@ -548,6 +554,10 @@ export const es = {
     },
   },
   errors: {
+    CODE_INVALID: 'Código incorrecto. Te quedan {attemptsLeft} intento(s).',
+    CODE_EXPIRED: 'El código venció o ya se usó. Pide uno nuevo.',
+    CODE_TOO_MANY_ATTEMPTS: 'Demasiados intentos. Pide un código nuevo.',
+    CODE_COOLDOWN: 'Espera un momento antes de pedir otro código.',
     FEATURE_INVALID: 'Opción de lista no válida',
     GOOGLE_NOT_CONFIGURED: 'La conexión con Google no está configurada en el servidor',
     REMINDER_EVERY_INVALID: 'La frecuencia debe estar entre 1 y 30 días',

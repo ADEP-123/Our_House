@@ -119,6 +119,12 @@ export const en: Dictionary = {
     ready: 'A new version of Our House is available.',
     reload: 'Update',
   },
+  code: {
+    send: 'Send code to {email}',
+    label: 'Code sent to {email}',
+    resend: 'Resend code',
+    resendIn: 'Resend in {s} s',
+  },
   home: {
     greeting: 'Hi, {name}',
     intro: "This is where you'll see what's happening at home: tasks, calendar and finances, as we add them.",
@@ -549,6 +555,10 @@ export const en: Dictionary = {
     },
   },
   errors: {
+    CODE_INVALID: 'Wrong code. You have {attemptsLeft} attempt(s) left.',
+    CODE_EXPIRED: 'The code expired or was already used. Ask for a new one.',
+    CODE_TOO_MANY_ATTEMPTS: 'Too many attempts. Ask for a new code.',
+    CODE_COOLDOWN: 'Wait a moment before asking for another code.',
     FEATURE_INVALID: 'Invalid list option',
     GOOGLE_NOT_CONFIGURED: 'The Google connection is not set up on the server',
     REMINDER_EVERY_INVALID: 'Frequency must be between 1 and 30 days',

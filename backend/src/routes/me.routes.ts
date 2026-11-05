@@ -38,6 +38,9 @@ meRoutes.patch(
 // Mis tareas: lo asignado a mí en todos mis grupos
 meRoutes.get('/tasks', itemsController.assignedToMe);
 
+// Código de verificación al correo (para acciones sensibles)
+meRoutes.post('/verification-codes', validateBody(z.strictObject({ purpose: z.enum(['secrets']) })), profileController.requestCode);
+
 // Preferencias de notificaciones (y más adelante recordatorios y calendario)
 meRoutes.patch(
   '/settings',
