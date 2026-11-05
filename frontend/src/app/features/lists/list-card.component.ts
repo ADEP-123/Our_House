@@ -44,7 +44,7 @@ import { ListSummary } from './lists.models';
         <div><dt>{{ 'lists.counts.total' | t }}</dt><dd>{{ l.counts.total }}</dd></div>
       </dl>
 
-      @if (l.type === 'shopping' && l.spent) {
+      @if (l.spent) {
         <p class="spent">{{ 'lists.purchase.spentTotal' | t: { spent: spent() } }}</p>
       }
 

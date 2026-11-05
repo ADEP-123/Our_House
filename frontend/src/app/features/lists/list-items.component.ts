@@ -14,6 +14,7 @@ import { ToastService } from '../../shared/toast.service';
 import { FamilyMember } from '../families/families.service';
 import { applyPurchase, applyToggle, formatAmount, formatMoney, isPartial, removeItem, syncParent, unitsFor } from './item-logic';
 import { dueLabel } from './due-label';
+import { DEFAULT_FEATURES, ListFeature } from './list-presets';
 import { ListDetail, ListItem } from './lists.models';
 import { PurchaseDialogComponent, PurchaseInput } from './purchase-dialog.component';
 import { ItemChanges, ListsStore, NewItem } from './lists.store';
@@ -54,8 +55,11 @@ export class ListItemsComponent implements OnDestroy {
 
   protected readonly canEdit = computed(() => this.list().permissions.canEdit);
   protected readonly canCheck = computed(() => this.list().permissions.canCheck);
-  protected readonly isShopping = computed(() => this.list().type === 'shopping');
-  protected readonly isTodo = computed(() => this.list().type === 'todo');
+  /** Opciones activas de la lista (una copia guardada antes de existir las opciones usa las de su tipo) */
+  private readonly features = computed<ReadonlySet<ListFeature>>(() => new Set(this.list().features ?? DEFAULT_FEATURES[this.list().type]));
+  protected readonly has = (feature: ListFeature) => this.features().has(feature);
+  /** Hay campos extra para el botón "Más detalles" */
+  protected readonly hasDetails = computed(() => ['quantity', 'category', 'assignee', 'due'].some((f) => this.features().has(f as ListFeature)));
   protected readonly error = signal<string | null>(null);
   protected readonly showMore = signal(false);
   protected readonly editingId = signal<string | null>(null);
@@ -117,7 +121,7 @@ export class ListItemsComponent implements OnDestroy {
     const pending = this.topLevel()
       .filter((i) => !i.completedAt)
       .sort((a, b) => a.position - b.position);
-    if (!this.isShopping()) return [{ key: 'all', label: null, items: pending }];
+    if (!this.has('category')) return [{ key: 'all', label: null, items: pending }];
     const byKey = new Map<string, Group>();
     for (const item of pending) {
       const label = item.category?.trim() || null;
@@ -151,7 +155,7 @@ export class ListItemsComponent implements OnDestroy {
 
   constructor() {
     effect(() => {
-      if (this.isTodo()) untracked(() => void this.calendar.load());
+      if (this.has('due')) untracked(() => void this.calendar.load());
     });
   }
 
@@ -252,8 +256,7 @@ export class ListItemsComponent implements OnDestroy {
     if (this.addForm.invalid) return;
     const v = this.addForm.getRawValue();
     const item: NewItem = { text: v.text.trim() };
-    if (this.isShopping()) Object.assign(item, this.shoppingFields(v));
-    if (this.isTodo()) Object.assign(item, this.todoFields(v));
+    Object.assign(item, this.featureFields(v));
     this.addForm.reset({
       text: '',
       amount: '',
@@ -295,9 +298,21 @@ export class ListItemsComponent implements OnDestroy {
     await this.create({ text, parentId: parent.id });
   }
 
-  private shoppingFields(v: { amount: string | number | null; unit: string; category: string }): ItemChanges {
-    const amount = this.amountOf(v.amount);
-    return { amount, unit: amount !== null ? v.unit.trim() || null : null, category: v.category.trim() || null };
+  /** Solo los campos de las opciones activas: lo de una opción apagada no se toca */
+  private featureFields(v: ReturnType<typeof this.addForm.getRawValue>): ItemChanges {
+    const changes: ItemChanges = {};
+    if (this.has('quantity')) {
+      const amount = this.amountOf(v.amount);
+      Object.assign(changes, { amount, unit: amount !== null ? v.unit.trim() || null : null });
+    }
+    if (this.has('category')) changes.category = v.category.trim() || null;
+    const todo = this.todoFields(v);
+    if (this.has('assignee')) changes.assigneeId = todo.assigneeId;
+    if (this.has('due')) {
+      const { assigneeId: _assignee, ...due } = todo;
+      Object.assign(changes, due);
+    }
+    return changes;
   }
 
   /** La hora solo cuenta si hay fecha; los recordatorios, "como en el perfil", personalizados o apagados */
@@ -329,7 +344,7 @@ export class ListItemsComponent implements OnDestroy {
   /** En compras, marcar abre "¿Cuánto compraste?"; desmarcar un comprado lo vuelve a pendiente. */
   async toggle(item: ListItem): Promise<void> {
     if (!this.canCheck()) return;
-    if (this.isShopping() && !item.completedAt) {
+    if (this.has('purchases') && !item.completedAt) {
       this.buying.set(item);
       return;
     }
@@ -399,8 +414,7 @@ export class ListItemsComponent implements OnDestroy {
     if (this.editForm.invalid) return;
     const v = this.editForm.getRawValue();
     const changes: ItemChanges = { text: v.text.trim(), note: v.note.trim() || null };
-    if (this.isShopping()) Object.assign(changes, this.shoppingFields(v));
-    if (this.isTodo()) Object.assign(changes, this.todoFields(v));
+    Object.assign(changes, this.featureFields(v));
     this.editingId.set(null);
     this.patchItem(item.id, { ...changes, dueAt: changes.dueDate && changes.dueTime ? new Date(`${changes.dueDate}T${changes.dueTime}`).toISOString() : null });
     try {

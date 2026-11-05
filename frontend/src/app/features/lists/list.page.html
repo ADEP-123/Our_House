@@ -20,7 +20,7 @@
     @if (editing()) {
       <div class="oh-panel">
         <oh-list-form
-          [initial]="{ name: l.name, type: l.type, color: l.color, icon: l.icon, isPrivate: l.isPrivate, canChangePrivacy: l.permissions.canChangePrivacy }"
+          [initial]="{ name: l.name, type: l.type, features: l.features, color: l.color, icon: l.icon, isPrivate: l.isPrivate, canChangePrivacy: l.permissions.canChangePrivacy }"
           [supervised]="myRole() === 'supervised'"
           [busy]="busy()"
           [error]="error()"
@@ -69,7 +69,7 @@
       <oh-list-items [list]="l" (listChange)="list.set($event)" [members]="members()">
         <p class="summary">
           {{ 'lists.summary' | t: { done: l.counts.completed, total: l.counts.total } }}
-          @if (l.type === 'shopping' && l.spent) {
+          @if (l.spent) {
             · <strong>{{ 'lists.purchase.spentTotal' | t: { spent: money(l.spent) } }}</strong>
           }
           <span class="oh-hint"> · {{ 'lists.items.updatedAgo' | t }}</span>
