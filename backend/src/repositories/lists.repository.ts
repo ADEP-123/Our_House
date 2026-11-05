@@ -10,6 +10,7 @@ export interface ListRow {
   color: string;
   icon: string;
   is_private: boolean;
+  features: string[];
   archived_at: Date | null;
   created_at: Date;
   updated_at: Date;
@@ -110,24 +111,38 @@ export const listsRepository = {
 
   /** Crea la lista; si el id ya existe (reenvío sin conexión) no hace nada y devuelve false. */
   async create(
-    data: { id: string; familyId: string; userId: string; name: string; type: string; color: string; icon: string; isPrivate: boolean },
+    data: {
+      id: string;
+      familyId: string;
+      userId: string;
+      name: string;
+      type: string;
+      color: string;
+      icon: string;
+      isPrivate: boolean;
+      features: string[];
+    },
     conn: Db = db(),
   ): Promise<boolean> {
     const { rowCount } = await conn.query(
-      `INSERT INTO lists (id, family_id, created_by, name, type, color, icon, is_private)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING`,
-      [data.id, data.familyId, data.userId, data.name, data.type, data.color, data.icon, data.isPrivate],
+      `INSERT INTO lists (id, family_id, created_by, name, type, color, icon, is_private, features)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (id) DO NOTHING`,
+      [data.id, data.familyId, data.userId, data.name, data.type, data.color, data.icon, data.isPrivate, data.features],
     );
     return rowCount === 1;
   },
 
-  update: (id: string, data: { name?: string; color?: string; icon?: string; isPrivate?: boolean }, conn: Db = db()) =>
+  update: (
+    id: string,
+    data: { name?: string; color?: string; icon?: string; isPrivate?: boolean; features?: string[] },
+    conn: Db = db(),
+  ) =>
     conn.query(
       `UPDATE lists SET
          name = COALESCE($2, name), color = COALESCE($3, color), icon = COALESCE($4, icon),
-         is_private = COALESCE($5, is_private), updated_at = now()
+         is_private = COALESCE($5, is_private), features = COALESCE($6, features), updated_at = now()
        WHERE id = $1`,
-      [id, data.name ?? null, data.color ?? null, data.icon ?? null, data.isPrivate ?? null],
+      [id, data.name ?? null, data.color ?? null, data.icon ?? null, data.isPrivate ?? null, data.features ?? null],
     ),
 
   setArchived: (id: string, archived: boolean, conn: Db = db()) =>

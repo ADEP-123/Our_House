@@ -136,7 +136,7 @@ export class ActivityPage implements OnInit {
       return this.i18n.t('activity.changed', { fields: parts.join(', ') });
     }
     if (e.action === 'item.updated') {
-      const fields = (e.details['fields'] as string[]).map((k) =>
+      const fields = [...new Set((e.details['fields'] as string[]).map((k) => (k.startsWith('reminder') ? 'reminderStartDays' : k)))].map((k) =>
         k === 'text' ? `${field(k)} (${this.i18n.t('activity.previously', { text: String(e.details!['previousText']) })})` : field(k),
       );
       return this.i18n.t('activity.changed', { fields: fields.join(', ') });

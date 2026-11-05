@@ -103,7 +103,7 @@ const WANTED_SELECT = `
     JOIN lists l ON l.id = i.list_id
     JOIN google_accounts ga ON ga.user_id = COALESCE(i.assignee_id, i.created_by)
     JOIN family_members m ON m.family_id = l.family_id AND m.user_id = ga.user_id
-   WHERE i.due_date IS NOT NULL AND l.type = 'todo' AND l.archived_at IS NULL
+   WHERE i.due_date IS NOT NULL AND 'due' = ANY(l.features) AND l.archived_at IS NULL
      AND (NOT l.is_private OR l.created_by = ga.user_id)`;
 
 async function accountOf(userId: string): Promise<Account | null> {

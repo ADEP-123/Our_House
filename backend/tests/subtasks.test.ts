@@ -58,7 +58,7 @@ describe('subtareas', () => {
     await ana.post(`/api/lists/${list.id}/items`).send({ text: 'C', parentId: b.id }).expect(400, { error: 'SUBTASK_TOO_DEEP' });
 
     const compras = await createList(users.ana!, familyId, { type: 'shopping' });
-    await ana.post(`/api/lists/${compras.id}/items`).send({ text: 'x', parentId: a.id }).expect(400, { error: 'SUBTASKS_ONLY_TODO' });
+    await ana.post(`/api/lists/${compras.id}/items`).send({ text: 'x', parentId: a.id }).expect(400, { error: 'SUBTASKS_DISABLED' });
 
     const otra = await createList(users.ana!, familyId, { type: 'todo' });
     await ana.post(`/api/lists/${otra.id}/items`).send({ text: 'x', parentId: a.id }).expect(400, { error: 'PARENT_NOT_FOUND' });

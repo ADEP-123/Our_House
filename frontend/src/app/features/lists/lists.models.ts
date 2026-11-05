@@ -1,4 +1,4 @@
-import type { ListType } from './list-presets';
+import type { ListFeature, ListType } from './list-presets';
 
 export interface ListPermissions {
   canEdit: boolean;
@@ -12,6 +12,8 @@ export interface ListSummary {
   familyId: string;
   name: string;
   type: ListType;
+  /** Opciones activas de los elementos */
+  features: ListFeature[];
   color: string;
   icon: string;
   isPrivate: boolean;
@@ -68,6 +70,7 @@ export interface FamilyLists {
 export interface ListInput {
   name: string;
   type: ListType;
+  features: ListFeature[];
   color: string;
   icon: string;
   isPrivate: boolean;

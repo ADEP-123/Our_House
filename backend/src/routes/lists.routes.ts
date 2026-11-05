@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { activityController } from '../controllers/activity.controller.js';
 import { itemsController } from '../controllers/items.controller.js';
 import { listsController } from '../controllers/lists.controller.js';
-import { LIST_COLORS, LIST_ICONS, LIST_TYPES } from '../lib/lists.js';
+import { LIST_COLORS, LIST_FEATURES, LIST_ICONS, LIST_TYPES } from '../lib/lists.js';
 import { checkIds } from '../lib/route-ids.js';
 import { requireAuth } from '../middlewares/auth.js';
 import { validateBody } from '../middlewares/validate.js';
@@ -11,6 +11,11 @@ import { validateBody } from '../middlewares/validate.js';
 const listName = z.string().trim().min(1, 'LIST_NAME_REQUIRED').max(80, 'LIST_NAME_TOO_LONG');
 /** Id generado por el cliente (opcional): permite crear sin conexión sin duplicar al reenviar */
 const clientId = z.uuid().optional();
+/** Opciones de los elementos (sin repetir); si no vienen al crear, las del tipo */
+const features = z
+  .array(z.enum(LIST_FEATURES, 'FEATURE_INVALID'))
+  .max(LIST_FEATURES.length)
+  .transform((f) => [...new Set(f)]);
 
 /** /api/families/:familyId/lists */
 export const familyListsRoutes = Router({ mergeParams: true });
@@ -26,6 +31,7 @@ familyListsRoutes.post(
       color: z.enum(LIST_COLORS).default('blue'),
       icon: z.enum(LIST_ICONS).default('check'),
       isPrivate: z.boolean().default(false),
+      features: features.optional(),
     }),
   ),
   listsController.create,
@@ -48,7 +54,7 @@ list.patch(
   '/',
   validateBody(
     z
-      .object({ name: listName, color: z.enum(LIST_COLORS), icon: z.enum(LIST_ICONS), isPrivate: z.boolean() })
+      .object({ name: listName, color: z.enum(LIST_COLORS), icon: z.enum(LIST_ICONS), isPrivate: z.boolean(), features })
       .partial(),
   ),
   listsController.update,

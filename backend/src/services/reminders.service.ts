@@ -66,7 +66,7 @@ export const remindersService = {
          JOIN users u ON u.id = COALESCE(i.assignee_id, i.created_by)
          JOIN family_members m ON m.family_id = l.family_id AND m.user_id = u.id
         WHERE i.completed_at IS NULL AND i.due_date IS NOT NULL AND NOT i.reminders_off
-          AND l.type = 'todo' AND l.archived_at IS NULL
+          AND 'due' = ANY(l.features) AND l.archived_at IS NULL
           AND (NOT l.is_private OR l.created_by = u.id)
           AND u.email_reminders AND u.email_verified_at IS NOT NULL
           -- Margen amplio: el cálculo exacto por zona horaria se hace abajo
