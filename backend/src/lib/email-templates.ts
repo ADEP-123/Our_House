@@ -67,6 +67,24 @@ export const emailTemplates = {
     });
   },
 
+  /** Otra persona vio la información secreta de una lista donde tienes elementos */
+  secretsViewed(locale: Locale, p: { viewer: string; list: string; url: string; settingsUrl: string }): EmailContent {
+    if (locale === 'en') {
+      return render(`${p.viewer} viewed the secret information in “${p.list}”`, {
+        heading: 'Someone viewed your secrets',
+        paragraphs: [`${p.viewer} unlocked the list “${p.list}”, where you have items, and can see their values.`, "If you didn't expect it, review who is in your group."],
+        action: { label: 'Open list', url: p.url },
+        footnote: settingsNote(locale, p.settingsUrl),
+      });
+    }
+    return render(`${p.viewer} vio la información secreta de «${p.list}»`, {
+      heading: 'Alguien vio tus secretos',
+      paragraphs: [`${p.viewer} desbloqueó la lista «${p.list}», donde tienes elementos, y puede ver sus valores.`, 'Si no lo esperabas, revisa quiénes están en tu grupo.'],
+      action: { label: 'Abrir lista', url: p.url },
+      footnote: settingsNote(locale, p.settingsUrl),
+    });
+  },
+
   /** Lista nueva del grupo, o lista privada que pasó a ser del grupo */
   newList(locale: Locale, p: { author: string; list: string; family: string; madePublic: boolean; url: string; settingsUrl: string }): EmailContent {
     if (locale === 'en') {

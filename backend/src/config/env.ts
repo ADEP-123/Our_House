@@ -27,6 +27,8 @@ export const env = {
   listArchiveRetentionDays: Math.max(1, Number(optional('LIST_ARCHIVE_RETENTION_DAYS') ?? 15)),
   /** Clave que debe traer quien dispara los recordatorios (workflow de GitHub cada hora). Sin ella, el envío queda apagado. */
   cronSecret: optional('CRON_SECRET'),
+  /** Clave maestra de las listas secretas: 32 bytes en base64 (openssl rand -base64 32). Si se pierde, no se pueden leer. */
+  secretsKey: optional('SECRETS_KEY'),
   /** Google Calendar (OAuth). Sin estas variables la opción de conectar el calendario no aparece. */
   google: {
     clientId: optional('GOOGLE_CLIENT_ID'),

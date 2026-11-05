@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { withTransaction, type Db } from '../config/database.js';
 import { env } from '../config/env.js';
-import { conflict, forbidden, notFound } from '../lib/http-error.js';
+import { badRequest, conflict, forbidden, notFound } from '../lib/http-error.js';
 import { familiesRepository, type FamilyRole } from '../repositories/families.repository.js';
 import { DEFAULT_FEATURES, type ListType } from '../lib/lists.js';
 import { listsRepository, type ItemRow, type ListCardRow } from '../repositories/lists.repository.js';
@@ -9,6 +9,8 @@ import { listRef, logActivity } from './activity.service.js';
 import { calendarService } from './calendar.service.js';
 import { notificationsService } from './notifications.service.js';
 import { activityRepository } from '../repositories/activity.repository.js';
+import { secretItemsRepository } from '../repositories/secret-items.repository.js';
+import { toSecretSummary } from './secret-view.js';
 import { requireMember } from './families.service.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -175,6 +177,11 @@ export const listsService = {
       const seen = await activityRepository.recentExists(access.list.family_id, userId, 'list.viewed_private', listId, 30);
       if (!seen) await logActivity(access.list.family_id, userId, 'list.viewed_private', listRef(access.list));
     }
+    if (access.list.type === 'secret') {
+      // Sin código solo se ven los títulos; los valores se piden aparte con el permiso de desbloqueo
+      const secrets = await secretItemsRepository.forList(listId);
+      return { ...toListView(access.list, access), items: [], secretItems: secrets.map((i) => toSecretSummary(i, userId)) };
+    }
     const items = await listsRepository.items(listId);
     return { ...toListView(access.list, access), items: items.map(toItemView) };
   },
@@ -212,6 +219,8 @@ export const listsService = {
 
   async setArchived(listId: string, userId: string, archived: boolean) {
     const access = await getAccess(listId, userId);
+    // Las secretas no pasan por archivadas: se borran directo (quedarían guardadas 15 días)
+    if (access.list.type === 'secret') throw badRequest('SECRET_LIST_NO_ARCHIVE');
     requireManage(access, userId);
     if (!!access.list.archived_at !== archived) {
       await listsRepository.setArchived(listId, archived);
@@ -239,6 +248,7 @@ export const listsService = {
   /** Nueva lista del usuario con los mismos ítems sin marcar. Privada solo si era suya y privada. */
   async duplicate(listId: string, userId: string, data: { id?: string; name: string }) {
     const access = await getAccess(listId, userId);
+    if (access.list.type === 'secret') throw badRequest('SECRET_LIST_NO_DUPLICATE');
     if (access.supervision) throw forbidden('LIST_READ_ONLY');
     const source = access.list;
     const id = data.id ?? randomUUID();

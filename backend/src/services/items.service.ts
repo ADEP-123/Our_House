@@ -57,6 +57,7 @@ export const itemsService = {
   async create(listId: string, userId: string, data: ItemFields & { id?: string; text: string }) {
     const access = await getAccess(listId, userId);
     requireEdit(access);
+    if (access.list.type === 'secret') throw badRequest('NOT_FOR_SECRET_LISTS');
     await checkAssignee(access, data.assigneeId);
     if (data.parentId) {
       // Un solo nivel y solo en listas de tareas
