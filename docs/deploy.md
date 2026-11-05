@@ -151,6 +151,18 @@ Opcional. Sin estas variables la app funciona igual y la opción no aparece acti
 
 Cómo funciona: cada tarea con fecha aparece en el calendario "Our House" de su responsable (o de quien la creó, si no tiene). Con hora, dura 30 minutos con aviso 30 minutos antes; sin hora, es de todo el día con aviso a las 9 del día anterior. Al completarla su título pasa a "✓ tarea". El refresh token se guarda cifrado con una clave derivada de `JWT_SECRET`: si cambias `JWT_SECRET`, cada persona tiene que volver a conectar.
 
+## 9. Listas secretas y opciones de listas (fase 4)
+
+- **Migraciones:** de `014_opciones_listas` a `016_listas_secretas`. Las aplica el workflow **Migraciones** al llegar a `main`. Las listas existentes conservan sus campos: las de compras quedan con cantidad, categoría y compras, y las de tareas con responsable, fecha y subtareas.
+- **Clave de las listas secretas (obligatoria para usarlas):**
+  1. Genera una clave: `openssl rand -base64 32` (o cualquier generador de 32 bytes en base64).
+  2. En Vercel, proyecto `our-house-api`: agrega `SECRETS_KEY` con ese valor y haz **Redeploy**.
+  3. **Guárdala también en un gestor de contraseñas.** Si se pierde o se cambia, la información secreta ya guardada no se puede leer. No la pongas en el repo.
+
+  Sin `SECRETS_KEY`, crear o ver elementos secretos responde "Las listas secretas no están configuradas en el servidor". El resto de la app funciona igual.
+- **Cómo se protege:** cada elemento se cifra con AES-256-GCM y una clave propia derivada de `SECRETS_KEY` (HKDF con un valor aleatorio por elemento, ligada a su lista y elemento). Ver los valores pide un código de 6 dígitos al correo (vence en 10 minutos, un uso, 5 intentos). El desbloqueo vive solo en la pantalla abierta y se pierde al salir. Nada de una lista secreta se guarda en el dispositivo.
+- **Borrado:** borrar un elemento o una lista secreta la elimina de la base de datos en el acto. Neon puede conservar un historial interno de unas horas para recuperación, siempre cifrado.
+
 ## Desarrollo local
 
 ```bash
