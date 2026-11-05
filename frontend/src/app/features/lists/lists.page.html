@@ -9,7 +9,7 @@
             <span class="oh-sr-only">{{ 'home.switchGroup' | t }}</span>
             <select class="oh-input" [value]="f.id" (change)="families.setActive($any($event.target).value)">
               @for (fam of families.families(); track fam.id) {
-                <option [value]="fam.id">{{ fam.name }}</option>
+                <option [value]="fam.id" [selected]="fam.id === f.id">{{ fam.name }}</option>
               }
             </select>
           </label>
