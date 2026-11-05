@@ -1,10 +1,14 @@
+.lists-top {
+  margin-bottom: 18px;
+}
+
 .head {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 .head-actions {
@@ -28,7 +32,6 @@
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 18px;
 }
 
 .chips {

@@ -65,15 +65,16 @@
         <p class="oh-alert is-error" role="alert">{{ err }}</p>
       }
 
-      <p class="summary">
-        {{ 'lists.summary' | t: { done: l.counts.completed, total: l.counts.total } }}
-        @if (l.type === 'shopping' && l.spent) {
-          · <strong>{{ 'lists.purchase.spentTotal' | t: { spent: money(l.spent) } }}</strong>
-        }
-        <span class="oh-hint"> · {{ 'lists.items.updatedAgo' | t }}</span>
-      </p>
-
-      <oh-list-items [list]="l" (listChange)="list.set($event)" [members]="members()" />
+      <!-- El resumen va dentro de la parte fija de la lista, junto al campo para agregar -->
+      <oh-list-items [list]="l" (listChange)="list.set($event)" [members]="members()">
+        <p class="summary">
+          {{ 'lists.summary' | t: { done: l.counts.completed, total: l.counts.total } }}
+          @if (l.type === 'shopping' && l.spent) {
+            · <strong>{{ 'lists.purchase.spentTotal' | t: { spent: money(l.spent) } }}</strong>
+          }
+          <span class="oh-hint"> · {{ 'lists.items.updatedAgo' | t }}</span>
+        </p>
+      </oh-list-items>
     }
   </div>
 } @else if (error(); as err) {

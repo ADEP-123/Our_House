@@ -1,3 +1,6 @@
+<!-- Fijo arriba al desplazar (salvo con "Más detalles" abierto, para no tapar la pantalla) -->
+<div class="top" [class.oh-sticky]="!showMore()">
+<ng-content />
 @if (canEdit()) {
   <form class="add" [formGroup]="addForm" (ngSubmit)="add()" novalidate>
     <div class="add-row">
@@ -89,6 +92,7 @@
     }
   </datalist>
 }
+</div>
 
 @if (error(); as err) {
   <p class="oh-alert is-error" role="alert">{{ err }}</p>

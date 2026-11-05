@@ -24,6 +24,10 @@
   font-size: 0.875rem;
 }
 
+.top {
+  margin-bottom: 14px;
+}
+
 .qty-row {
   display: grid;
   grid-template-columns: minmax(70px, 1fr) minmax(90px, 1.3fr);

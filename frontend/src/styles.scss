@@ -231,6 +231,17 @@ a {
   color: var(--oh-text-muted);
 }
 
+/* Encabezado que queda fijo arriba al desplazar (filtros, campo para agregar...) */
+.oh-sticky {
+  position: sticky;
+  top: var(--oh-sticky-top, 0px);
+  z-index: 1;
+  margin-inline: calc(-1 * var(--oh-page-x, 0px));
+  padding: 12px var(--oh-page-x, 0px) 10px;
+  background: var(--oh-background);
+  box-shadow: 0 1px 0 var(--oh-border);
+}
+
 .oh-sr-only {
   position: absolute;
   width: 1px;
