@@ -4,7 +4,7 @@ import { ITEM_SELECT, type ItemRow } from './lists.repository.js';
 /** Campos que se pueden escribir al crear o editar un ítem, con su columna. */
 const COLUMNS = {
   text: 'text',
-  note: 'note',
+  description: 'description',
   amount: 'amount',
   unit: 'unit',
   category: 'category',
@@ -21,7 +21,7 @@ const COLUMNS = {
 
 export type ItemFields = {
   text?: string;
-  note?: string | null;
+  description?: string | null;
   amount?: number | null;
   unit?: string | null;
   category?: string | null;

@@ -13,7 +13,7 @@ const item = (id: string, extra: Partial<ListItem> = {}): ListItem => ({
   id,
   parentId: null,
   text: id,
-  note: null,
+  description: null,
   amount: null,
   unit: null,
   purchased: null,

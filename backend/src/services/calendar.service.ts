@@ -18,6 +18,7 @@ interface Account {
 interface Wanted {
   id: string;
   text: string;
+  description: string | null;
   due_date: string;
   due_tz: string | null;
   due_at: Date | null;
@@ -68,9 +69,10 @@ async function accessTokenFor(account: Account): Promise<string> {
 const addDays = (date: string, days: number) => new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
 
 /** Evento de la tarea: con hora, 30 minutos con aviso 30 minutos antes; sin hora, todo el día con aviso a las 9 del día anterior. */
-export function buildEvent(w: Pick<Wanted, 'text' | 'due_date' | 'due_tz' | 'due_at' | 'completed_at' | 'list_id' | 'list_name'>): CalendarEvent {
+export function buildEvent(w: Pick<Wanted, 'text' | 'description' | 'due_date' | 'due_tz' | 'due_at' | 'completed_at' | 'list_id' | 'list_name'>): CalendarEvent {
   const summary = w.completed_at ? `✓ ${w.text}` : w.text;
-  const description = `${w.list_name}\n${env.appUrl}/listas/${w.list_id}`;
+  // La descripción de la tarea primero; al final, la lista y el enlace para abrirla
+  const description = [w.description, `${w.list_name}\n${env.appUrl}/listas/${w.list_id}`].filter(Boolean).join('\n\n');
   if (w.due_at) {
     const timeZone = w.due_tz ?? 'UTC';
     return {
@@ -96,7 +98,7 @@ const isGone = (err: unknown) => err instanceof GoogleError && (err.status === 4
 // ---------- Sincronización ----------
 
 const WANTED_SELECT = `
-  SELECT i.id, i.text, i.due_date, i.due_tz, i.completed_at, l.id AS list_id, l.name AS list_name,
+  SELECT i.id, i.text, i.description, i.due_date, i.due_tz, i.completed_at, l.id AS list_id, l.name AS list_name,
          CASE WHEN i.due_time IS NOT NULL THEN (i.due_date + i.due_time) AT TIME ZONE COALESCE(i.due_tz, 'UTC') END AS due_at,
          ga.user_id, ga.calendar_id
     FROM list_items i

@@ -122,11 +122,12 @@ describe('Google Calendar', () => {
 
     const item = (await users.beto!.agent
       .post(`/api/lists/${list.id}/items`)
-      .send({ text: 'Pagar luz', assigneeId: ana, dueDate: '2026-11-20', dueTime: '18:30' })
+      .send({ text: 'Pagar luz', description: 'Factura en el cajón', assigneeId: ana, dueDate: '2026-11-20', dueTime: '18:30' })
       .expect(201)).body.item;
     await settleBackground();
     const [eventId, event] = [...g.events.entries()][0]!;
     expect(event).toMatchObject({ summary: 'Pagar luz', start: { dateTime: item.dueAt }, reminders: { overrides: [{ minutes: 30 }] } });
+    expect(String(event['description'])).toMatch(/^Factura en el cajón\n\nCasa\n/);
 
     await users.beto!.agent.put(`/api/lists/${list.id}/items/${item.id}/completed`).send({ completed: true }).expect(200);
     await settleBackground();
