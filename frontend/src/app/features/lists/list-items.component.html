@@ -65,7 +65,7 @@
         @if (item.spent !== null) {
           <span class="tag">{{ money(item.spent) }}</span>
         }
-        @if (memberName(item.assigneeId); as who) {
+        @if (assigneeTag(item); as who) {
           <span class="tag">👤 {{ who }}</span>
         }
         @if (dueLabel(item); as due) {
@@ -75,6 +75,9 @@
             [class.today]="due.kind === 'today'"
             >📅 {{ due.text }}</span
           >
+        }
+        @if (repeatTag(item); as repeat) {
+          <span class="tag">🔁 {{ repeat }}</span>
         }
         @if (progress(item); as p) {
           <span class="tag" [attr.aria-label]="'lists.subtasks.progress' | t: p"
@@ -240,6 +243,7 @@
     (saved)="saveEditor(e.item, e.parentId, $event)"
     (deleted)="e.item && remove(e.item)"
     (addSubtask)="e.item && startSubtask(e.item)"
+    (skipped)="e.item && skip(e.item)"
     (closed)="editor.set(null)"
   />
 }

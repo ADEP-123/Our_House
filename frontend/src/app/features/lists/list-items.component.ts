@@ -33,9 +33,10 @@ import {
   isPartial,
   linkify,
   removeItem,
+  rolledOver,
   syncParent,
 } from './item-logic';
-import { dueLabel } from './due-label';
+import { dueLabel, repeatLabel, shortDate } from './due-label';
 import { DEFAULT_FEATURES, ListFeature } from './list-presets';
 import { ListDetail, ListItem } from './lists.models';
 import { ItemEditorComponent, ItemEditorResult } from './item-editor.component';
@@ -199,6 +200,22 @@ export class ListItemsComponent implements OnDestroy {
     return dueLabel(item, this.i18n);
   }
 
+  /** "Cada semana · lun, jue"; si está hecha y vuelve sola, cuándo */
+  protected repeatTag(item: ListItem): string | null {
+    if (!item.repeat || !this.has('repeat')) return null;
+    const label = repeatLabel(item.repeat, this.i18n);
+    return item.completedAt && item.reopenOn
+      ? `${label} · ${this.i18n.t('lists.repeat.returns', { date: shortDate(item.reopenOn, this.i18n) })}`
+      : label;
+  }
+
+  /** "👤 Ana" o, con turnos, "turno de Ana" */
+  protected assigneeTag(item: ListItem): string | null {
+    const name = this.memberName(item.assigneeId);
+    if (!name) return null;
+    return item.rotation?.length ? this.i18n.t('lists.repeat.turnTag', { name }) : name;
+  }
+
   protected subtasksOf(id: string): ListItem[] {
     return this.subtasks().get(id) ?? [];
   }
@@ -346,7 +363,9 @@ export class ListItemsComponent implements OnDestroy {
     this.list.update((l) => ({ ...l, items: applyToggle(l.items, item.id, completed, this.me()) }));
     this.recount();
     try {
-      this.patchItem(item.id, await this.store.setCompleted(this.list().id, item.id, completed));
+      const after = await this.store.setCompleted(this.list().id, item.id, completed);
+      this.patchItem(item.id, after);
+      if (completed) await this.afterDone(item, after);
     } catch (err) {
       this.list.update((l) => ({ ...l, items: before }));
       this.recount();
@@ -357,9 +376,47 @@ export class ListItemsComponent implements OnDestroy {
   async purchase(item: ListItem, input: PurchaseInput): Promise<void> {
     this.patchItem(item.id, applyPurchase(item, input.amount, input.spent, this.me()));
     try {
-      this.patchItem(item.id, await this.store.purchase(this.list().id, item.id, input));
+      const after = await this.store.purchase(this.list().id, item.id, input);
+      this.patchItem(item.id, after);
+      await this.afterDone(item, after);
     } catch (err) {
       this.patchItem(item.id, item);
+      this.fail(err);
+    }
+  }
+
+  /**
+   * Lo que se repite pasa a su siguiente vez en el servidor: se avisa la próxima fecha y, si tiene
+   * subtareas (o es una subtarea que completó a su tarea), se trae la lista con todo desmarcado.
+   */
+  private async afterDone(before: ListItem, after: ListItem): Promise<void> {
+    const parent = before.parentId ? this.list().items.find((i) => i.id === before.parentId) : null;
+    if (parent?.repeat) {
+      const fresh = await this.store.detail(this.list().id);
+      const rolled = fresh.items.find((i) => i.id === parent.id);
+      this.list.set(fresh);
+      if (rolled && rolledOver(parent, rolled)) this.announceRoll(rolled);
+      return;
+    }
+    if (!rolledOver(before, after)) return;
+    this.announceRoll(after);
+    if (this.subtasksOf(after.id).length) this.list.set(await this.store.detail(this.list().id));
+  }
+
+  private announceRoll(item: ListItem, skipped = false): void {
+    const date = shortDate((item.reopenOn ?? item.dueDate)!, this.i18n);
+    const key = skipped ? 'skipped' : item.reopenOn ? 'backOn' : 'done';
+    this.toast.show(this.i18n.t(`lists.repeat.${key}`, { date }));
+  }
+
+  /** Saltar esta vez: pasa a la siguiente fecha sin contar como hecha */
+  async skip(item: ListItem): Promise<void> {
+    this.error.set(null);
+    try {
+      const after = await this.store.skip(this.list().id, item.id);
+      this.patchItem(item.id, after);
+      this.announceRoll(after, true);
+    } catch (err) {
       this.fail(err);
     }
   }

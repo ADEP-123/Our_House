@@ -93,6 +93,77 @@ textarea {
   display: grid;
   grid-template-columns: minmax(70px, 1fr) minmax(90px, 1.3fr);
   gap: 8px;
+  align-items: center;
+
+  .unit {
+    color: var(--oh-text-muted);
+  }
+}
+
+.repeat-box {
+  display: grid;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--oh-primary) 5%, var(--oh-surface));
+
+  .label {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .hint {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--oh-text-muted);
+  }
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  min-width: 44px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--oh-border);
+  border-radius: 999px;
+  background: var(--oh-surface);
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+
+  &.on {
+    background: var(--oh-primary);
+    border-color: var(--oh-primary);
+    color: var(--oh-on-primary);
+  }
+}
+
+.turns {
+  display: grid;
+  gap: 6px;
+}
+
+.turn-list {
+  margin: 0;
+  padding-left: 22px;
+  display: grid;
+  gap: 2px;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .turn-name {
+    flex: 1;
+  }
 }
 
 .calendar-prompt {

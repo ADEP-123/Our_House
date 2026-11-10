@@ -8,7 +8,9 @@ import { SyncStatus } from '../../core/offline/sync-status.service';
 import { applyPurchase, applyToggle, removeItem, syncParent } from './item-logic';
 import { FamilyLists, ListDetail, ListInput, ListItem, ListSummary, MyTask } from './lists.models';
 
-export type ItemChanges = Partial<Pick<ListItem, 'text' | 'description' | 'amount' | 'unit' | 'category' | 'assigneeId' | 'dueDate' | 'dueTime' | 'position'>> & {
+export type ItemChanges = Partial<
+  Pick<ListItem, 'text' | 'description' | 'amount' | 'unit' | 'category' | 'assigneeId' | 'dueDate' | 'dueTime' | 'position' | 'repeat' | 'rotation'>
+> & {
   reminderStartDays?: number | null;
   reminderEveryDays?: number | null;
   remindersOff?: boolean;
@@ -346,6 +348,10 @@ export class ListsStore {
           // El momento exacto lo calcula el servidor; sin conexión se aproxima con la hora local
           dueAt: input.dueDate && input.dueTime ? new Date(`${input.dueDate}T${input.dueTime}`).toISOString() : null,
           reminders: { startDays: input.reminderStartDays ?? null, everyDays: input.reminderEveryDays ?? null, off: input.remindersOff ?? false },
+          repeat: input.repeat ?? null,
+          repeatDone: 0,
+          rotation: input.rotation ?? null,
+          reopenOn: null,
           position: input.position ?? last + 1,
           completedAt: null,
           completedBy: null,
@@ -402,6 +408,12 @@ export class ListsStore {
       () => this.changeCachedItem(listId, itemId, (i) => applyPurchase(i, purchase.amount, purchase.spent, this.me())),
       (res) => this.itemResult(listId, res),
     );
+  }
+
+  /** Saltar esta vez (necesita conexión: la siguiente fecha la calcula el servidor) */
+  async skip(listId: string, itemId: string): Promise<ListItem> {
+    const res = await this.track(firstValueFrom(this.http.post<{ item: ListItem }>(`/api/lists/${listId}/items/${itemId}/skip`, {})));
+    return this.itemResult(listId, res);
   }
 
   private me() {

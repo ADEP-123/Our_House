@@ -3,7 +3,8 @@ import type { TranslationKey } from '../../core/i18n/i18n.service';
 export type ListType = 'todo' | 'shopping' | 'other' | 'secret';
 
 /** Opciones de los elementos de una lista (se pueden mezclar en cualquier tipo) */
-export type ListFeature = 'quantity' | 'category' | 'purchases' | 'assignee' | 'due' | 'subtasks';
+export type ListFeature =
+  'quantity' | 'category' | 'purchases' | 'assignee' | 'due' | 'subtasks' | 'repeat';
 
 export const LIST_FEATURES: { id: ListFeature; label: TranslationKey; hint: TranslationKey }[] = [
   { id: 'quantity', label: 'lists.features.quantity', hint: 'lists.features.quantityHint' },
@@ -12,12 +13,13 @@ export const LIST_FEATURES: { id: ListFeature; label: TranslationKey; hint: Tran
   { id: 'assignee', label: 'lists.features.assignee', hint: 'lists.features.assigneeHint' },
   { id: 'due', label: 'lists.features.due', hint: 'lists.features.dueHint' },
   { id: 'subtasks', label: 'lists.features.subtasks', hint: 'lists.features.subtasksHint' },
+  { id: 'repeat', label: 'lists.features.repeat', hint: 'lists.features.repeatHint' },
 ];
 
 /** Con qué opciones nace cada tipo: son solo un punto de partida */
 export const DEFAULT_FEATURES: Record<ListType, ListFeature[]> = {
-  shopping: ['quantity', 'category', 'purchases'],
-  todo: ['assignee', 'due', 'subtasks'],
+  shopping: ['quantity', 'category', 'purchases', 'repeat'],
+  todo: ['assignee', 'due', 'subtasks', 'repeat'],
   other: [],
   secret: [],
 };

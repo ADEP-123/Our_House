@@ -17,13 +17,14 @@ import { TPipe } from '../../core/i18n/t.pipe';
 import { GoogleCalendarService } from '../calendar/google-calendar.service';
 import { FamilyMember } from '../families/families.service';
 import { ProfileService } from '../profile/profile.service';
-import { unitsFor } from './item-logic';
+import { WEEK_ORDER, unitsFor, weekdayNames } from './item-logic';
 import { DEFAULT_FEATURES, ListFeature } from './list-presets';
-import { ListDetail, ListItem } from './lists.models';
+import { ListDetail, ListItem, RepeatFreq, RepeatRule } from './lists.models';
 import { ItemChanges } from './lists.store';
 
 /** default = lo que diga el perfil de quien recibe la tarea */
 type ReminderMode = 'default' | 'custom' | 'off';
+type RepeatEnd = 'never' | 'until' | 'count';
 
 export interface ItemEditorResult {
   changes: ItemChanges & { text: string };
@@ -56,6 +57,8 @@ export class ItemEditorComponent {
   readonly deleted = output<void>();
   /** Editando una tarea: agregar una subtarea debajo (cierra la ventana) */
   readonly addSubtask = output<void>();
+  /** Saltar esta vez (solo tareas con fecha que se repiten) */
+  readonly skipped = output<void>();
   readonly closed = output<void>();
 
   private readonly auth = inject(AuthService);
@@ -73,6 +76,15 @@ export class ItemEditorComponent {
   protected readonly canHaveSubtasks = computed(
     () => this.has('subtasks') && !this.parentId() && !this.item()?.parentId,
   );
+  /** Repetir: no en subtareas (se repiten con su tarea) */
+  protected readonly canRepeat = computed(
+    () => this.has('repeat') && !this.parentId() && !this.item()?.parentId,
+  );
+  protected readonly freqs: RepeatFreq[] = ['daily', 'weekly', 'monthly', 'yearly'];
+  protected readonly weekdays = computed(() => {
+    const names = weekdayNames(this.i18n.locale());
+    return WEEK_ORDER.map((day) => ({ day, name: names[day] }));
+  });
   protected readonly units = computed(() => unitsFor(this.i18n.locale()));
   protected readonly categories = computed(() => [
     ...new Set(
@@ -99,7 +111,25 @@ export class ItemEditorComponent {
     reminderMode: ['default' as ReminderMode],
     reminderStart: [3],
     reminderEvery: [1],
+    repeatFreq: ['' as RepeatFreq | ''],
+    repeatInterval: [1],
+    repeatFrom: ['schedule' as RepeatRule['from']],
+    repeatEnd: ['never' as RepeatEnd],
+    repeatUntil: [''],
+    repeatCount: [5],
   });
+  /** Días elegidos para "cada semana" (vacío = el día de la fecha límite) */
+  protected readonly repeatDays = signal<ReadonlySet<number>>(new Set());
+  /** Turnos: personas en orden */
+  protected readonly rotation = signal<string[]>([]);
+  protected readonly rotationMembers = computed(() =>
+    this.rotation()
+      .map((id) => this.members().find((m) => m.userId === id))
+      .filter((m): m is FamilyMember => !!m),
+  );
+  protected readonly outOfRotation = computed(() =>
+    this.members().filter((m) => !this.rotation().includes(m.userId)),
+  );
   /** Subtareas que se crean junto con el elemento nuevo */
   protected readonly newSubtasks = signal<string[]>([]);
 
@@ -135,7 +165,15 @@ export class ItemEditorComponent {
             : 'default',
         reminderStart: item?.reminders?.startDays ?? d.startDays,
         reminderEvery: item?.reminders?.everyDays ?? d.everyDays,
+        repeatFreq: item?.repeat?.freq ?? '',
+        repeatInterval: item?.repeat?.interval ?? 1,
+        repeatFrom: item?.repeat?.from ?? 'schedule',
+        repeatEnd: item?.repeat?.until ? 'until' : item?.repeat?.count ? 'count' : 'never',
+        repeatUntil: item?.repeat?.until ?? '',
+        repeatCount: item?.repeat?.count ?? 5,
       });
+      this.repeatDays.set(new Set(item?.repeat?.weekdays ?? []));
+      this.rotation.set(item?.rotation ?? []);
       if (this.has('due')) void this.calendar.load();
       const el = this.dialog().nativeElement;
       if (!el.open) el.showModal();
@@ -166,6 +204,56 @@ export class ItemEditorComponent {
 
   protected removeSubtask(index: number): void {
     this.newSubtasks.update((s) => s.filter((_, i) => i !== index));
+  }
+
+  protected freqLabel(freq: RepeatFreq): string {
+    return this.i18n.t(`lists.repeat.freq.${freq}`);
+  }
+
+  protected unitLabel(freq: RepeatFreq): string {
+    return this.i18n.t(`lists.repeat.unit.${freq}`);
+  }
+
+  protected toggleDay(day: number): void {
+    this.repeatDays.update((s) => {
+      const next = new Set(s);
+      if (next.has(day)) next.delete(day);
+      else next.add(day);
+      return next;
+    });
+  }
+
+  protected addTurn(userId: string): void {
+    if (userId) this.rotation.update((r) => [...r, userId]);
+  }
+
+  protected removeTurn(userId: string): void {
+    this.rotation.update((r) => r.filter((id) => id !== userId));
+  }
+
+  protected moveTurnUp(index: number): void {
+    if (index <= 0) return;
+    this.rotation.update((r) => {
+      const next = [...r];
+      [next[index - 1], next[index]] = [next[index]!, next[index - 1]!];
+      return next;
+    });
+  }
+
+  /** La regla escrita (null = no se repite) */
+  private repeatRule(): RepeatRule | null {
+    const v = this.form.getRawValue();
+    if (!v.repeatFreq) return null;
+    const rule: RepeatRule = {
+      freq: v.repeatFreq,
+      interval: clamp(v.repeatInterval, 1, 365),
+      from: v.repeatFrom,
+    };
+    if (v.repeatFreq === 'weekly' && this.repeatDays().size)
+      rule.weekdays = [...this.repeatDays()].sort();
+    if (v.repeatEnd === 'until' && v.repeatUntil) rule.until = v.repeatUntil;
+    if (v.repeatEnd === 'count') rule.count = clamp(v.repeatCount, 1, 999);
+    return rule;
   }
 
   /** Cantidad escrita: número positivo o vacío (acepta coma decimal; input number entrega número o null) */
@@ -199,6 +287,10 @@ export class ItemEditorComponent {
         reminderEveryDays: custom ? clamp(v.reminderEvery, 1, 30) : null,
       });
     }
+    if (this.canRepeat()) {
+      changes.repeat = this.repeatRule();
+      changes.rotation = changes.repeat && this.rotation().length ? this.rotation() : null;
+    }
     return changes;
   }
 
@@ -215,6 +307,11 @@ export class ItemEditorComponent {
 
   newSubtaskBelow(): void {
     this.addSubtask.emit();
+    this.dialog().nativeElement.close();
+  }
+
+  skip(): void {
+    this.skipped.emit();
     this.dialog().nativeElement.close();
   }
 
