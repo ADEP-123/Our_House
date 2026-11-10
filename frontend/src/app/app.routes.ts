@@ -56,6 +56,15 @@ export const routes: Routes = [
       { path: 'listas/nueva', loadComponent: () => import('./features/lists/list-edit.page').then((m) => m.ListEditPage) },
       { path: 'listas/:id/editar', loadComponent: () => import('./features/lists/list-edit.page').then((m) => m.ListEditPage) },
       { path: 'listas/:id', loadComponent: () => import('./features/lists/list.page').then((m) => m.ListPage) },
+      { path: 'finanzas', loadComponent: () => import('./features/finance/finance.page').then((m) => m.FinancePage) },
+      {
+        path: 'finanzas/cuentas/nueva',
+        loadComponent: () => import('./features/finance/account-edit.page').then((m) => m.AccountEditPage),
+      },
+      {
+        path: 'finanzas/cuentas/:id/editar',
+        loadComponent: () => import('./features/finance/account-edit.page').then((m) => m.AccountEditPage),
+      },
       {
         path: 'familias',
         loadComponent: () => import('./features/families/families.page').then((m) => m.FamiliesPage),
