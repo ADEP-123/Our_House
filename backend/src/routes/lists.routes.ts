@@ -81,7 +81,7 @@ const itemFields = {
   reminderStartDays: z.int('REMINDER_DAYS_INVALID').min(0, 'REMINDER_DAYS_INVALID').max(60, 'REMINDER_DAYS_INVALID').nullable().optional(),
   reminderEveryDays: z.int('REMINDER_EVERY_INVALID').min(1, 'REMINDER_EVERY_INVALID').max(30, 'REMINDER_EVERY_INVALID').nullable().optional(),
   remindersOff: z.boolean().optional(),
-  note: optionalText(500, 'ITEM_NOTE_TOO_LONG'),
+  description: optionalText(2000, 'ITEM_DESCRIPTION_TOO_LONG'),
   amount: z.number('AMOUNT_INVALID').positive('AMOUNT_INVALID').max(1_000_000, 'AMOUNT_INVALID').nullable().optional(),
   unit: optionalText(20, 'ITEM_UNIT_TOO_LONG'),
   category: optionalText(40, 'ITEM_CATEGORY_TOO_LONG'),

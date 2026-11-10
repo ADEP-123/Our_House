@@ -101,7 +101,7 @@ export function toItemView(item: ItemRow) {
     id: item.id,
     parentId: item.parent_id,
     text: item.text,
-    note: item.note,
+    description: item.description,
     amount: item.amount,
     unit: item.unit,
     purchased: item.purchased,

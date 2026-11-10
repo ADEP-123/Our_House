@@ -92,7 +92,7 @@ export const itemsService = {
 
     const columns = {
       text: 'text',
-      note: 'note',
+      description: 'description',
       amount: 'amount',
       unit: 'unit',
       category: 'category',

@@ -8,6 +8,7 @@ import { formatDue } from './notifications.service.js';
 interface Candidate {
   item_id: string;
   text: string;
+  description: string | null;
   list_id: string;
   list_name: string;
   due_date: string;
@@ -56,7 +57,7 @@ export const remindersService = {
   /** Lo llama el workflow de GitHub cada hora. Devuelve cuántos correos se enviaron. */
   async run(now = new Date()): Promise<{ sent: number }> {
     const { rows } = await db().query<Candidate>(
-      `SELECT i.id AS item_id, i.text, l.id AS list_id, l.name AS list_name, i.due_date,
+      `SELECT i.id AS item_id, i.text, i.description, l.id AS list_id, l.name AS list_name, i.due_date,
               CASE WHEN i.due_time IS NOT NULL THEN (i.due_date + i.due_time) AT TIME ZONE COALESCE(i.due_tz, 'UTC') END AS due_at,
               COALESCE(i.reminder_start_days, u.reminder_start_days) AS start_days,
               COALESCE(i.reminder_every_days, u.reminder_every_days) AS every_days,
@@ -90,6 +91,7 @@ export const remindersService = {
           c.email,
           emailTemplates.reminder(c.locale, {
             task: c.text,
+            description: c.description,
             list: c.list_name,
             daysLeft: due.daysLeft,
             due: formatDue(c, c.locale, c.timezone)!,
