@@ -1,4 +1,5 @@
 import {
+  buildOverrides,
   creditUsage,
   localToday,
   movementCode,
@@ -42,5 +43,15 @@ describe('finanzas: utilidades', () => {
     expect(creditUsage(1500, 1000)).toBe(100);
     expect(creditUsage(0, 0)).toBe(0);
     expect(creditUsage(10, 0)).toBe(100);
+  });
+});
+
+describe('finanzas: borrar una categoría', () => {
+  it('solo envía los movimientos con un destino distinto al de todos', () => {
+    expect(buildOverrides({ m1: 'salud', m2: '', m3: 'otros', m4: 'ocio' }, 'otros')).toEqual([
+      { movementId: 'm1', categoryId: 'salud' },
+      { movementId: 'm4', categoryId: 'ocio' },
+    ]);
+    expect(buildOverrides({}, 'otros')).toEqual([]);
   });
 });

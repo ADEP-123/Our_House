@@ -61,3 +61,16 @@ export function localToday(now = new Date()): string {
 /** Porcentaje del cupo usado (0 a 100) para la barra de la tarjeta */
 export const creditUsage = (debt: number, limit: number): number =>
   limit <= 0 ? (debt > 0 ? 100 : 0) : Math.min(100, Math.max(0, Math.round((debt / limit) * 100)));
+
+/**
+ * Destinos puntuales al borrar una categoría: solo los movimientos con una categoría elegida
+ * distinta del destino de todos ('' o la misma no hace falta enviarlos).
+ */
+export function buildOverrides(
+  choices: Record<string, string>,
+  moveTo: string,
+): { movementId: string; categoryId: string }[] {
+  return Object.entries(choices)
+    .filter(([, categoryId]) => categoryId && categoryId !== moveTo)
+    .map(([movementId, categoryId]) => ({ movementId, categoryId }));
+}
