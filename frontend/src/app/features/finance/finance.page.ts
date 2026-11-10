@@ -71,7 +71,11 @@ export class FinancePage implements OnInit {
     effect(() => {
       const family = this.family();
       const archived = this.archived();
-      if (family) untracked(() => void this.load(family.id, archived));
+      untracked(() => {
+        // Sin mostrar por un momento las cuentas del grupo o de la vista anterior
+        this.data.set(null);
+        if (family) void this.load(family.id, archived);
+      });
     });
     // Nombres para mostrar quién ve y quién edita cada cuenta
     effect(() => {

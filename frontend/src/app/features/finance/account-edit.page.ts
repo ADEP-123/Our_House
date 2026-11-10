@@ -8,7 +8,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { toApiError } from '../../core/api/api-error';
@@ -111,6 +111,17 @@ export class AccountEditPage implements OnInit {
   });
 
   constructor() {
+    // El prefijo sigue al nombre (con el valor ya actualizado del control)
+    this.form.controls.name.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.onName());
+    // En tarjetas el monto se escribe como deuda (positivo); al cambiar de tipo se invierte
+    // para que el saldo guardado siga siendo el mismo
+    let wasCredit = this.form.controls.kind.value === 'credit';
+    this.form.controls.kind.valueChanges.pipe(takeUntilDestroyed()).subscribe((kind) => {
+      const isCredit = kind === 'credit';
+      const amount = this.form.controls.openingAmount.value;
+      if (isCredit !== wasCredit && amount) this.form.controls.openingAmount.setValue(-amount);
+      wasCredit = isCredit;
+    });
     effect(() => {
       const familyId = this.familyId();
       if (!familyId) return;

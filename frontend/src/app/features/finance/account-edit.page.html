@@ -38,7 +38,6 @@
           maxlength="60"
           autocomplete="off"
           [placeholder]="'finance.form.namePlaceholder' | t"
-          (input)="onName()"
         />
         @if (fieldError('name'); as e) {
           <p class="oh-error">{{ e }}</p>
