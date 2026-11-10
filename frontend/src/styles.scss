@@ -31,6 +31,19 @@
 }
 
 /*
+ * Patrón de fondo del tema (--oh-pattern, ver ThemeService). Queda quieto al desplazar, así las
+ * barras fijas que lo repiten (encabezados, barra superior) calzan con el resto del fondo.
+ * Las tarjetas y formularios usan --oh-surface y quedan lisos.
+ */
+:root,
+.oh-sticky,
+.oh-pattern-bg {
+  background-image: var(--oh-pattern, none);
+  background-size: 160px 160px;
+  background-attachment: fixed;
+}
+
+/*
  * Colores derivados. Se declaran también en .oh-theme-scope para que una vista previa
  * con otra paleta (variables propias) recalcule sus bordes y textos secundarios.
  */
@@ -238,7 +251,7 @@ a {
   z-index: 1;
   margin-inline: calc(-1 * var(--oh-page-x, 0px));
   padding: 12px var(--oh-page-x, 0px) 10px;
-  background: var(--oh-background);
+  background-color: var(--oh-background);
   box-shadow: 0 1px 0 var(--oh-border);
 }
 

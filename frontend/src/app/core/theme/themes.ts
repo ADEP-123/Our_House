@@ -1,4 +1,5 @@
 import type { TranslationKey } from '../i18n/i18n.service';
+import { samePattern, type PatternSetting } from './patterns';
 
 export const COLOR_TOKENS = ['primary', 'onPrimary', 'secondary', 'background', 'surface', 'text', 'success', 'error'] as const;
 export type ColorToken = (typeof COLOR_TOKENS)[number];
@@ -23,6 +24,8 @@ export const isDarkVariant = (preset: string) => preset.endsWith('-oscuro');
 export interface Theme {
   preset: PresetId | 'custom';
   colors: ThemeColors;
+  /** Patrón de fondo (sin dato: el del tema, suave) */
+  pattern?: PatternSetting;
 }
 
 /** Variable CSS de cada color (ver styles.scss) */
@@ -130,7 +133,9 @@ export const DEFAULT_THEME: Theme = { preset: 'claro', colors: PRESETS.claro };
 
 /** Compara color por color (el orden de las claves puede cambiar al pasar por la base de datos). */
 export const sameTheme = (a: Theme, b: Theme): boolean =>
-  a.preset === b.preset && COLOR_TOKENS.every((t) => a.colors[t].toLowerCase() === b.colors[t].toLowerCase());
+  a.preset === b.preset &&
+  COLOR_TOKENS.every((t) => a.colors[t].toLowerCase() === b.colors[t].toLowerCase()) &&
+  samePattern(a.pattern, b.pattern);
 
 // ---------- Contraste (WCAG 2.x) ----------
 

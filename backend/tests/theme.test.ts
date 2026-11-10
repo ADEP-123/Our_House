@@ -36,6 +36,19 @@ describe('paleta de colores', () => {
     await agent.put('/api/me/theme').send({ theme: { preset: 'claro-oscuro', colors } }).expect(400);
   });
 
+  it('guarda el patrón de fondo y su intensidad, también con un emoji propio', async () => {
+    const { agent } = await createUser('ana');
+    const put = (pattern: unknown) => agent.put('/api/me/theme').send({ theme: { preset: 'invierno', colors, pattern } });
+    expect((await put({ id: 'snow', intensity: 'strong' }).expect(200)).body.user.theme.pattern).toEqual({ id: 'snow', intensity: 'strong' });
+    expect((await put({ id: 'emoji', emoji: '🦄', intensity: 'soft' }).expect(200)).body.user.theme.pattern).toEqual({ id: 'emoji', emoji: '🦄', intensity: 'soft' });
+    // El emoji solo se guarda con el patrón de emoji
+    expect((await put({ id: 'none', emoji: '🦄', intensity: 'soft' }).expect(200)).body.user.theme.pattern).toEqual({ id: 'none', intensity: 'soft' });
+    await put({ id: 'emoji', intensity: 'soft' }).expect(400);
+    await put({ id: 'emoji', emoji: 'hola', intensity: 'soft' }).expect(400);
+    await put({ id: 'rayas', intensity: 'soft' }).expect(400);
+    await put({ id: 'snow', intensity: 'max' }).expect(400);
+  });
+
   it('rechaza colores inválidos, colores de más y temas desconocidos', async () => {
     const { agent } = await createUser('ana');
     await agent.put('/api/me/theme').send({ theme: { preset: 'custom', colors: { ...colors, text: 'red' } } }).expect(400);

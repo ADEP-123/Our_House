@@ -7,6 +7,16 @@ import { I18n, TranslationKey } from '../../core/i18n/i18n.service';
 import { TPipe } from '../../core/i18n/t.pipe';
 import { ThemeService } from '../../core/theme/theme.service';
 import {
+  DEFAULT_PATTERN,
+  PATTERN_IDS,
+  PATTERN_INTENSITIES,
+  PatternIntensity,
+  PatternSetting,
+  patternCss,
+  resolvePattern,
+} from '../../core/theme/patterns';
+import { IconPickerComponent } from '../lists/icon-picker.component';
+import {
   CLASSIC_PRESETS,
   ClassicId,
   COLOR_TOKENS,
@@ -14,6 +24,7 @@ import {
   contrastIssues,
   DEFAULT_THEME,
   FESTIVITIES,
+  isDark,
   isDarkVariant,
   MIN_CONTRAST,
   PRESETS,
@@ -30,7 +41,7 @@ import {
 
 @Component({
   selector: 'oh-appearance-page',
-  imports: [TPipe],
+  imports: [TPipe, IconPickerComponent],
   templateUrl: './appearance.page.html',
   styleUrl: './appearance.page.scss',
 })
@@ -52,6 +63,12 @@ export class AppearancePage {
   /** Borrador que se edita; la app no cambia hasta guardar */
   protected readonly draft = signal<Theme>(structuredClone(this.saved()));
   protected readonly previewStyle = computed(() => ThemeService.previewStyle(this.draft().colors));
+  protected readonly previewPattern = computed(() => ThemeService.patternOf(this.draft()));
+
+  /** Patrón de fondo: separado de los colores, se combina con cualquier tema */
+  protected readonly patternChoices: PatternSetting['id'][] = ['theme', 'none', ...PATTERN_IDS, 'emoji'];
+  protected readonly intensities = PATTERN_INTENSITIES;
+  protected readonly pattern = computed(() => this.draft().pattern ?? DEFAULT_PATTERN);
   protected readonly issues = computed(() => contrastIssues(this.draft().colors));
   protected readonly dirty = computed(() => !sameTheme(this.draft(), this.saved()));
   protected readonly isDefault = computed(() => sameTheme(this.draft(), DEFAULT_THEME));
@@ -88,14 +105,47 @@ export class AppearancePage {
   }
 
   choosePreset(id: PresetId): void {
-    this.draft.set({ preset: id, colors: { ...PRESETS[id] } });
+    this.draft.update((theme) => ({ ...theme, preset: id, colors: { ...PRESETS[id] } }));
     this.message.set(null);
   }
 
   setColor(token: ColorToken, value: string): void {
     if (!/^#[0-9a-f]{6}$/i.test(value)) return;
-    this.draft.update((theme) => ({ preset: 'custom', colors: { ...theme.colors, [token]: value.toLowerCase() } as ThemeColors }));
+    this.draft.update((theme) => ({ ...theme, preset: 'custom', colors: { ...theme.colors, [token]: value.toLowerCase() } as ThemeColors }));
     this.message.set(null);
+  }
+
+  protected patternLabel(id: PatternSetting['id']): string {
+    return this.i18n.t(`appearance.pattern.names.${id}`);
+  }
+
+  protected intensityLabel(id: PatternIntensity): string {
+    return this.i18n.t(`appearance.pattern.${id}`);
+  }
+
+  /** Muestra de cada opción con los colores del borrador */
+  protected patternSample(id: PatternSetting['id']): string {
+    const theme = this.draft();
+    const emoji = id === 'emoji' ? (this.pattern().emoji ?? '⭐') : undefined;
+    const pattern = resolvePattern({ id, emoji, intensity: 'medium' }, seasonalBase(theme.preset));
+    return patternCss(pattern, theme.colors, 'medium', isDark(theme.colors));
+  }
+
+  private updatePattern(change: Partial<PatternSetting>): void {
+    this.draft.update((theme) => ({ ...theme, pattern: { ...(theme.pattern ?? DEFAULT_PATTERN), ...change } }));
+    this.message.set(null);
+  }
+
+  setPattern(id: PatternSetting['id']): void {
+    this.updatePattern(id === 'emoji' ? { id, emoji: this.pattern().emoji ?? '⭐' } : { id });
+  }
+
+  setPatternEmoji(emoji: string): void {
+    this.updatePattern({ id: 'emoji', emoji });
+  }
+
+  setIntensity(intensity: PatternIntensity): void {
+    this.updatePattern({ intensity });
   }
 
   /** Vuelve al tema claro original (borrador; se aplica al guardar). */
