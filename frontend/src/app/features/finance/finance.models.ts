@@ -108,6 +108,8 @@ export interface Movement {
   /** Saldo de la cuenta hasta este movimiento */
   balance: number;
   createdAt: string;
+  /** Hecho sin conexión: todavía no llegó al servidor (aún sin número) */
+  pending?: boolean;
 }
 
 export interface AccountMovements {
