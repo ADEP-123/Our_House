@@ -4,6 +4,7 @@ import { activityController } from '../controllers/activity.controller.js';
 import { itemsController } from '../controllers/items.controller.js';
 import { listsController, secretsController } from '../controllers/lists.controller.js';
 import { LIST_COLORS, LIST_FEATURES, LIST_ICONS, LIST_TYPES, SECRET_FIELD_KINDS } from '../lib/lists.js';
+import { REPEAT_FREQS } from '../lib/recurrence.js';
 import { checkIds } from '../lib/route-ids.js';
 import { requireAuth } from '../middlewares/auth.js';
 import { validateBody } from '../middlewares/validate.js';
@@ -93,6 +94,20 @@ const itemFields = {
     .nullable()
     .optional(),
   position: z.number().finite().optional(),
+  /** Repetición: el inicio lo pone el servidor (la fecha límite o hoy) */
+  repeat: z
+    .strictObject({
+      freq: z.enum(REPEAT_FREQS, 'REPEAT_INVALID'),
+      interval: z.int('REPEAT_INVALID').min(1, 'REPEAT_INVALID').max(365, 'REPEAT_INVALID').default(1),
+      weekdays: z.array(z.int().min(0).max(6)).max(7).optional().transform((d) => (d?.length ? [...new Set(d)].sort() : undefined)),
+      from: z.enum(['schedule', 'completion']).default('schedule'),
+      until: z.iso.date('REPEAT_INVALID').optional(),
+      count: z.int('REPEAT_INVALID').min(1, 'REPEAT_INVALID').max(999, 'REPEAT_INVALID').optional(),
+    })
+    .nullable()
+    .optional(),
+  /** Turnos: personas del grupo en orden */
+  rotation: z.array(z.uuid()).max(20).nullable().optional(),
 };
 const itemText = z.string().trim().min(1, 'ITEM_TEXT_REQUIRED').max(200, 'ITEM_TEXT_TOO_LONG');
 
@@ -104,6 +119,7 @@ list.post(
 list.post('/reset', itemsController.uncheckAll);
 list.post('/clear-completed', itemsController.deleteCompleted);
 list.patch('/items/:itemId', checkIds, validateBody(z.object({ text: itemText.optional(), ...itemFields })), itemsController.update);
+list.post('/items/:itemId/skip', checkIds, itemsController.skip);
 list.put('/items/:itemId/completed', checkIds, validateBody(z.object({ completed: z.boolean() })), itemsController.setCompleted);
 list.delete('/items/:itemId', checkIds, itemsController.remove);
 // ---------- Listas secretas ----------

@@ -1,4 +1,5 @@
 import { db, type Db } from '../config/database.js';
+import type { RepeatRule } from '../lib/recurrence.js';
 import type { FamilyRole } from './families.repository.js';
 
 export interface ListRow {
@@ -50,6 +51,11 @@ export interface ItemRow {
   reminder_start_days: number | null;
   reminder_every_days: number | null;
   reminders_off: boolean;
+  repeat: RepeatRule | null;
+  repeat_done: number;
+  rotation: string[] | null;
+  rotation_index: number;
+  reopen_on: string | null;
   position: number;
   completed_at: Date | null;
   completed_by: string | null;
