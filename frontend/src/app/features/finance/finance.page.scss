@@ -19,7 +19,6 @@
 
 .family-select select {
   margin-top: 6px;
-  min-height: 40px;
   width: auto;
 }
 
@@ -78,7 +77,6 @@
   gap: 4px;
   overflow-x: auto;
   padding: 0 12px;
-  scrollbar-width: thin;
   // La pestaña activa tapa el borde superior de la hoja
   margin-bottom: -1px;
   position: relative;
@@ -101,10 +99,6 @@
   text-align: left;
   cursor: pointer;
 
-  &:hover {
-    background: color-mix(in srgb, var(--oh-text) 9%, var(--oh-background));
-  }
-
   &[aria-selected='true'] {
     background: var(--oh-surface);
     border-color: var(--oh-border);
@@ -114,7 +108,6 @@
   }
 
   &:focus-visible {
-    outline: 3px solid var(--oh-focus);
     outline-offset: -3px;
   }
 }
@@ -199,7 +192,6 @@
   font-size: clamp(1.75rem, 5vw, 2.25rem);
   font-weight: 700;
   line-height: 1.1;
-  letter-spacing: -0.01em;
 }
 
 .credit {

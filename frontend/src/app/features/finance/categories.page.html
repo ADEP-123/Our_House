@@ -1,0 +1,261 @@
+<a class="back" routerLink="/finanzas">← {{ 'finance.title' | t }}</a>
+
+<div class="page">
+  <header class="head">
+    <div>
+      <h1>{{ 'finance.categories.title' | t }}</h1>
+      @if (family(); as f) {
+        <p class="oh-muted">{{ 'finance.of' | t: { family: f.name } }}</p>
+      }
+    </div>
+    @if (data()?.canManage && editing() !== 'new') {
+      <button type="button" class="oh-btn oh-btn--filled" (click)="startNew()">
+        + {{ 'finance.categories.new' | t }}
+      </button>
+    }
+  </header>
+
+  <p class="intro">{{ 'finance.categories.intro' | t }}</p>
+  @if (data() && !data()!.canManage) {
+    <p class="oh-hint">{{ 'finance.categories.leadersOnly' | t }}</p>
+  }
+
+  @if (error()) {
+    <p class="oh-alert is-error" role="alert">{{ error() }}</p>
+  }
+
+  <ng-template #editor>
+    <form class="editor" (submit)="$event.preventDefault(); save()" novalidate>
+      <div class="oh-field">
+        <label for="category-name">{{ 'finance.categories.name' | t }}</label>
+        <input
+          id="category-name"
+          class="oh-input"
+          maxlength="40"
+          autocomplete="off"
+          [placeholder]="'finance.categories.namePlaceholder' | t"
+          [value]="draft().name"
+          (input)="setDraft({ name: $any($event.target).value })"
+        />
+      </div>
+      <fieldset>
+        <legend>{{ 'lists.form.color' | t }}</legend>
+        <div class="swatches">
+          @for (c of colors; track c[0]) {
+            <label
+              class="swatch"
+              [style.background]="c[1]"
+              [class.on]="draft().color === c[0]"
+              [title]="c[0]"
+            >
+              <input
+                type="radio"
+                class="oh-sr-only"
+                name="category-color"
+                [checked]="draft().color === c[0]"
+                (change)="setDraft({ color: c[0] })"
+                [attr.aria-label]="c[0]"
+              />
+            </label>
+          }
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>{{ 'lists.form.icon' | t }}</legend>
+        <oh-icon-picker [value]="draft().icon" (valueChange)="setDraft({ icon: $event })" />
+      </fieldset>
+      @if (formError(); as e) {
+        <p class="oh-alert is-error" role="alert">{{ e }}</p>
+      }
+      <div class="actions">
+        <button
+          type="submit"
+          class="oh-btn oh-btn--filled"
+          [disabled]="busy() || !draft().name.trim()"
+        >
+          {{ (editing() === 'new' ? 'finance.categories.create' : 'finance.categories.save') | t }}
+        </button>
+        <button type="button" class="oh-btn oh-btn--text" (click)="editing.set(null)">
+          {{ 'finance.cancel' | t }}
+        </button>
+      </div>
+    </form>
+  </ng-template>
+
+  <ng-template #row let-c>
+    <div class="cat">
+      <span class="badge" [style.--cat]="colorOf(c.color)" aria-hidden="true">{{
+        iconOf(c.icon)
+      }}</span>
+      <span class="cat-text">
+        <span class="cat-name">{{ c.name }}</span>
+        <span class="cat-usage">{{ usage(c) }}</span>
+      </span>
+      @if (data()?.canManage) {
+        <span class="cat-actions">
+          @if (!c.disabled) {
+            <button type="button" class="oh-btn oh-btn--text" (click)="startEdit(c)">
+              {{ 'finance.categories.edit' | t }}
+            </button>
+            <button
+              type="button"
+              class="oh-btn oh-btn--text"
+              [disabled]="busy()"
+              (click)="setDisabled(c, true)"
+            >
+              {{ 'finance.categories.disable' | t }}
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="oh-btn oh-btn--text"
+              [disabled]="busy()"
+              (click)="setDisabled(c, false)"
+            >
+              {{ 'finance.categories.enable' | t }}
+            </button>
+          }
+          <button
+            type="button"
+            class="oh-btn oh-btn--text delete"
+            [disabled]="busy()"
+            (click)="startRemove(c)"
+          >
+            {{ 'finance.actions.delete' | t }}
+          </button>
+        </span>
+      }
+    </div>
+
+    @if (editing() === c.id) {
+      <ng-container [ngTemplateOutlet]="editor" />
+    }
+
+    @if (removal(); as r) {
+      @if (r.category.id === c.id) {
+        <section
+          class="removal"
+          [attr.aria-label]="'finance.categories.deleteTitle' | t: { name: c.name }"
+        >
+          <p>
+            <strong>{{ 'finance.categories.deleteTitle' | t: { name: c.name } }}</strong
+            ><br />
+            {{ 'finance.categories.deleteInUse' | t: { usage: usage(c) } }}
+          </p>
+          <div class="oh-field">
+            <label for="move-all">{{ 'finance.categories.moveAll' | t }}</label>
+            <select id="move-all" class="oh-input" (change)="setMoveTo($any($event.target).value)">
+              @for (t of targets(); track t.id) {
+                <option [value]="t.id" [selected]="t.id === r.moveTo">
+                  {{ iconOf(t.icon) }} {{ t.name
+                  }}{{ t.disabled ? ' (' + ('finance.categories.disabledTag' | t) + ')' : '' }}
+                </option>
+              }
+            </select>
+          </div>
+
+          @if (r.movements.length) {
+            <details>
+              <summary>{{ 'finance.categories.oneByOne' | t: { n: r.movements.length } }}</summary>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">{{ 'finance.movements.id' | t }}</th>
+                      <th scope="col">{{ 'finance.categories.account' | t }}</th>
+                      <th scope="col">{{ 'finance.movements.date' | t }}</th>
+                      <th scope="col">{{ 'finance.movements.description' | t }}</th>
+                      <th scope="col" class="num">{{ 'finance.movements.amount' | t }}</th>
+                      <th scope="col">{{ 'finance.categories.goesTo' | t }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (m of r.movements; track m.id) {
+                      <tr>
+                        <td class="code">{{ m.code }}</td>
+                        <td>{{ m.account.name }}</td>
+                        <td>{{ date(m.date) }}</td>
+                        <td>{{ m.description }}</td>
+                        <td class="num" [class.negative]="m.kind === 'out'">{{ money(m) }}</td>
+                        <td>
+                          <select
+                            class="oh-input compact"
+                            [attr.aria-label]="'finance.categories.goesToFor' | t: { code: m.code }"
+                            (change)="setOverride(m.id, $any($event.target).value)"
+                          >
+                            <option value="" [selected]="!r.overrides[m.id]">
+                              {{ 'finance.categories.sameAsAll' | t }}
+                            </option>
+                            @for (t of targets(); track t.id) {
+                              <option [value]="t.id" [selected]="r.overrides[m.id] === t.id">
+                                {{ iconOf(t.icon) }} {{ t.name }}
+                              </option>
+                            }
+                          </select>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          }
+          @if (r.hiddenCount) {
+            <p class="oh-hint">{{ 'finance.categories.hidden' | t: { n: r.hiddenCount } }}</p>
+          }
+
+          <div class="actions">
+            <button
+              type="button"
+              class="oh-btn oh-btn--danger"
+              [disabled]="busy() || !r.moveTo"
+              (click)="confirmRemove()"
+            >
+              {{ 'finance.categories.moveAndDelete' | t }}
+            </button>
+            <button type="button" class="oh-btn oh-btn--text" (click)="removal.set(null)">
+              {{ 'finance.cancel' | t }}
+            </button>
+          </div>
+        </section>
+      }
+    }
+  </ng-template>
+
+  @if (data(); as d) {
+    @if (editing() === 'new') {
+      <section class="oh-panel new">
+        <h2>{{ 'finance.categories.new' | t }}</h2>
+        <ng-container [ngTemplateOutlet]="editor" />
+      </section>
+    }
+
+    @if (active().length) {
+      <ul class="cats oh-panel">
+        @for (c of active(); track c.id) {
+          <li>
+            <ng-container [ngTemplateOutlet]="row" [ngTemplateOutletContext]="{ $implicit: c }" />
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="empty">{{ 'finance.categories.empty' | t }}</p>
+    }
+
+    @if (disabled().length) {
+      <section class="disabled-section">
+        <h2>{{ 'finance.categories.disabledTitle' | t }}</h2>
+        <p class="oh-hint">{{ 'finance.categories.disabledHint' | t }}</p>
+        <ul class="cats oh-panel">
+          @for (c of disabled(); track c.id) {
+            <li class="off">
+              <ng-container [ngTemplateOutlet]="row" [ngTemplateOutletContext]="{ $implicit: c }" />
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  } @else if (family()) {
+    <p class="oh-muted" role="status">{{ 'common.loading' | t }}</p>
+  }
+</div>
