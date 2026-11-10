@@ -49,3 +49,38 @@ export interface AccountInput {
   viewers: string[];
   editors: string[];
 }
+
+/** Categoría de los movimientos (el "Tipo" del Excel), del grupo */
+export interface Category {
+  id: string;
+  name: string;
+  icon: string;
+  /** Uno de los colores de las listas */
+  color: string;
+  /** No se ofrece al crear movimientos; sigue en el resumen y los filtros */
+  disabled: boolean;
+  /** Movimientos con esta categoría */
+  usage: number;
+}
+
+export interface FamilyCategories {
+  canManage: boolean;
+  categories: Category[];
+}
+
+export interface CategoryInput {
+  name: string;
+  icon: string;
+  color: string;
+}
+
+/** Movimiento que usa una categoría (para elegir a dónde pasarlo al borrarla) */
+export interface CategoryMovement {
+  id: string;
+  account: { id: string; name: string };
+  code: string;
+  kind: 'opening' | 'in' | 'out';
+  amount: number;
+  date: string;
+  description: string;
+}

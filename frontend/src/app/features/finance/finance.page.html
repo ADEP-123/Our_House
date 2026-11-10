@@ -23,6 +23,9 @@
     </div>
     @if (family() && !supervised()) {
       <div class="head-actions">
+        <a class="oh-btn oh-btn--text" routerLink="/finanzas/categorias">{{
+          'finance.categories.link' | t
+        }}</a>
         <div class="switch" role="group">
           <button type="button" [attr.aria-pressed]="!archived()" (click)="setArchivedView(false)">
             {{ 'finance.active' | t }}

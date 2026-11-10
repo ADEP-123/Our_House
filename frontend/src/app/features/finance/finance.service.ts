@@ -1,7 +1,15 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { Account, AccountInput, FamilyAccounts } from './finance.models';
+import {
+  Account,
+  AccountInput,
+  Category,
+  CategoryInput,
+  CategoryMovement,
+  FamilyAccounts,
+  FamilyCategories,
+} from './finance.models';
 
 /** Cuentas del módulo de finanzas (solo con conexión). */
 @Injectable({ providedIn: 'root' })
@@ -48,5 +56,47 @@ export class FinanceService {
 
   remove(id: string): Promise<unknown> {
     return firstValueFrom(this.http.delete(`/api/accounts/${id}`));
+  }
+
+  // ---------- Categorías ----------
+
+  categories(familyId: string): Promise<FamilyCategories> {
+    return firstValueFrom(this.http.get<FamilyCategories>(`/api/families/${familyId}/categories`));
+  }
+
+  async createCategory(familyId: string, input: CategoryInput): Promise<Category> {
+    return (
+      await firstValueFrom(
+        this.http.post<{ category: Category }>(`/api/families/${familyId}/categories`, input),
+      )
+    ).category;
+  }
+
+  async updateCategory(
+    id: string,
+    changes: Partial<CategoryInput> & { disabled?: boolean },
+  ): Promise<Category> {
+    return (
+      await firstValueFrom(
+        this.http.patch<{ category: Category }>(`/api/categories/${id}`, changes),
+      )
+    ).category;
+  }
+
+  categoryMovements(id: string): Promise<{ movements: CategoryMovement[]; hiddenCount: number }> {
+    return firstValueFrom(
+      this.http.get<{ movements: CategoryMovement[]; hiddenCount: number }>(
+        `/api/categories/${id}/movements`,
+      ),
+    );
+  }
+
+  /** moveTo: a dónde pasan todos sus movimientos; overrides: destino de movimientos puntuales */
+  deleteCategory(
+    id: string,
+    moveTo: string | null,
+    overrides: { movementId: string; categoryId: string }[] = [],
+  ): Promise<unknown> {
+    return firstValueFrom(this.http.post(`/api/categories/${id}/delete`, { moveTo, overrides }));
   }
 }

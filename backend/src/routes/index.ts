@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { accountsRoutes, familyAccountsRoutes } from './accounts.routes.js';
+import { categoriesRoutes, familyCategoriesRoutes } from './categories.routes.js';
 import { cronController } from '../controllers/cron.controller.js';
 import { authRoutes } from './auth.routes.js';
 import { familiesRoutes, invitationsRoutes } from './families.routes.js';
@@ -17,9 +18,11 @@ apiRouter.use('/me', meRoutes);
 apiRouter.use('/families/:familyId/lists', familyListsRoutes);
 apiRouter.use('/families/:familyId/activity', familyActivityRoutes);
 apiRouter.use('/families/:familyId/accounts', familyAccountsRoutes);
+apiRouter.use('/families/:familyId/categories', familyCategoriesRoutes);
 apiRouter.use('/families', familiesRoutes);
 apiRouter.use('/lists', listsRoutes);
 apiRouter.use('/accounts', accountsRoutes);
+apiRouter.use('/categories', categoriesRoutes);
 apiRouter.use('/invitations', invitationsRoutes);
 apiRouter.use('/google', googleRoutes);
 

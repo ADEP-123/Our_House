@@ -58,6 +58,10 @@ export const routes: Routes = [
       { path: 'listas/:id', loadComponent: () => import('./features/lists/list.page').then((m) => m.ListPage) },
       { path: 'finanzas', loadComponent: () => import('./features/finance/finance.page').then((m) => m.FinancePage) },
       {
+        path: 'finanzas/categorias',
+        loadComponent: () => import('./features/finance/categories.page').then((m) => m.CategoriesPage),
+      },
+      {
         path: 'finanzas/cuentas/nueva',
         loadComponent: () => import('./features/finance/account-edit.page').then((m) => m.AccountEditPage),
       },

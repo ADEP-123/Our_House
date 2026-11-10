@@ -10,6 +10,8 @@ export interface FamilyRow {
   avatar_preset: string | null;
   invite_code: string;
   currency: string;
+  /** Ya se crearon las categorías iniciales de finanzas */
+  categories_seeded: boolean;
   created_at: Date;
 }
 
