@@ -1,11 +1,11 @@
-import { applyCompleted, applyPurchase, applyToggle, dueInfo, isPartial, remaining, removeItem } from './item-logic';
+import { applyCompleted, applyPurchase, applyToggle, dueInfo, isPartial, linkify, remaining, removeItem } from './item-logic';
 import { ListItem } from './lists.models';
 
 const leche: ListItem = {
   id: 'i1',
   parentId: null,
   text: 'Leche',
-  note: null,
+  description: null,
   amount: 2,
   unit: 'L',
   purchased: null,
@@ -102,5 +102,18 @@ describe('fechas límite', () => {
     expect(dueInfo(due('2026-11-03', morning), now)!.kind).toBe('overdue');
     expect(dueInfo(due('2026-11-03', evening), now)).toMatchObject({ kind: 'today', timed: true });
     expect(dueInfo(due('2026-11-03', morning, morning), now)!.kind).toBe('today');
+  });
+});
+
+describe('enlaces en la descripción', () => {
+  it('separa los enlaces sin tomar la puntuación final', () => {
+    expect(linkify('Ver https://a.com/x, luego http://b.org.')).toEqual([
+      { text: 'Ver ' },
+      { text: 'https://a.com/x', url: 'https://a.com/x' },
+      { text: ', luego ' },
+      { text: 'http://b.org', url: 'http://b.org' },
+      { text: '.' },
+    ]);
+    expect(linkify('sin enlaces')).toEqual([{ text: 'sin enlaces' }]);
   });
 });
