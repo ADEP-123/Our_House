@@ -2,6 +2,24 @@
   <header class="bar">
     <h3 id="movements-title">{{ 'finance.movements.title' | t }}</h3>
     <div class="bar-actions">
+      @if (canTransfer()) {
+        @if (account().kind === 'credit') {
+          <button
+            type="button"
+            class="oh-btn oh-btn--tonal"
+            (click)="transfer.open({ to: account() })"
+          >
+            {{ 'finance.transfers.payTitle' | t }}
+          </button>
+        }
+        <button
+          type="button"
+          class="oh-btn oh-btn--text"
+          (click)="transfer.open({ from: account() })"
+        >
+          {{ 'finance.transfers.button' | t }}
+        </button>
+      }
       @if (canEdit()) {
         <button type="button" class="oh-btn oh-btn--text" (click)="adjust.open()">
           {{ 'finance.movements.adjust' | t }}
@@ -43,6 +61,9 @@
       <select class="oh-input" (change)="setFilter({ categoryId: $any($event.target).value })">
         <option value="" [selected]="!filters().categoryId">
           {{ 'finance.movements.allCategories' | t }}
+        </option>
+        <option [value]="transfersFilter" [selected]="filters().categoryId === transfersFilter">
+          ⇄ {{ 'finance.transfers.plural' | t }}
         </option>
         @for (c of categories(); track c.id) {
           <option [value]="c.id" [selected]="filters().categoryId === c.id">
@@ -182,6 +203,9 @@
                   } @else if (m.edited) {
                     <span class="edited">{{ 'finance.movements.edited' | t }}</span>
                   }
+                  @if (m.transfer) {
+                    <span class="edited link">{{ transferLabel(m) }}</span>
+                  }
                   @if (m.kind === 'adjust') {
                     <span class="edited">{{ 'finance.movements.adjustTag' | t }}</span>
                   }
@@ -192,6 +216,8 @@
                       <span class="chip" [style.--cat]="colorOf(c.color)"
                         >{{ iconOf(c.icon) }} {{ c.name }}</span
                       >
+                    } @else if (m.transfer) {
+                      <span class="chip transfer">⇄ {{ 'finance.transfers.single' | t }}</span>
                     }
                   </td>
                 }
@@ -258,3 +284,4 @@
 />
 
 <oh-adjust-dialog #adjust [account]="account()" (saved)="refresh()" />
+<oh-transfer-dialog #transfer [accounts]="accounts()" (saved)="refresh()" />

@@ -247,6 +247,16 @@ tbody tr {
   background: color-mix(in srgb, var(--cat) 16%, var(--oh-surface));
 }
 
+// La otra cuenta de una transferencia, en su propia línea debajo de la descripción
+.edited.link {
+  display: block;
+  margin-left: 0;
+}
+
+.chip.transfer {
+  background: color-mix(in srgb, var(--oh-text) 8%, var(--oh-surface));
+}
+
 .sort {
   padding: 0;
   border: 0;

@@ -17,6 +17,7 @@ import { ToastService } from '../../shared/toast.service';
 import { formatMoney } from '../lists/item-logic';
 import { colorOf, iconOf } from '../lists/list-presets';
 import { AdjustDialogComponent } from './adjust-dialog.component';
+import { TransferDialogComponent } from './transfer-dialog.component';
 import { Account, Category, Movement, MovementColumn } from './finance.models';
 import { FinanceStore } from './finance.store';
 import { MovementDialogComponent, MovementRequest } from './movement-dialog.component';
@@ -26,6 +27,7 @@ import {
   MovementFilters,
   filterMovements,
   hasFilters,
+  TRANSFERS_FILTER,
 } from './movement-logic';
 
 const PAGE = 150;
@@ -36,12 +38,14 @@ const PAGE = 150;
  */
 @Component({
   selector: 'oh-movements',
-  imports: [TPipe, MovementDialogComponent, AdjustDialogComponent],
+  imports: [TPipe, MovementDialogComponent, AdjustDialogComponent, TransferDialogComponent],
   templateUrl: './movements.component.html',
   styleUrl: './movements.component.scss',
 })
 export class MovementsComponent {
   readonly account = input.required<Account>();
+  /** Cuentas activas del grupo: destinos posibles de una transferencia */
+  readonly accounts = input<Account[]>([]);
   /** Algo cambió el saldo: la pantalla vuelve a pedir las cuentas */
   readonly changed = output<void>();
 
@@ -72,6 +76,13 @@ export class MovementsComponent {
   protected readonly more = computed(() => this.filtered().rows.length - this.rows().length);
   protected readonly show = (c: MovementColumn) => !this.hidden().has(c);
   protected readonly canEdit = computed(() => this.account().permissions.canEdit);
+  /** Hay otra cuenta que la persona puede editar: se puede transferir */
+  protected readonly canTransfer = computed(
+    () =>
+      this.canEdit() &&
+      this.accounts().some((a) => a.id !== this.account().id && a.permissions.canEdit),
+  );
+  protected readonly transfersFilter = TRANSFERS_FILTER;
   private loadedFamily: string | null = null;
 
   /** Solo al cambiar de cuenta (no cuando llega la misma cuenta con el saldo nuevo) */
@@ -130,6 +141,14 @@ export class MovementsComponent {
       month: 'short',
       year: 'numeric',
     });
+  }
+
+  /** "→ Visa · V0002" o "← Nu"; si la otra cuenta no se ve, "otra cuenta" */
+  protected transferLabel(m: Movement): string {
+    const t = m.transfer!;
+    const name = t.accountName ?? this.i18n.t('finance.transfers.otherAccount');
+    const arrow = m.kind === 'transfer_out' ? '→' : '←';
+    return t.code ? `${arrow} ${name} · ${t.code}` : `${arrow} ${name}`;
   }
 
   protected columnLabel(c: MovementColumn): string {

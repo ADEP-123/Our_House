@@ -201,7 +201,7 @@
               </div>
             }
 
-            <oh-movements [account]="a" (changed)="refreshAccounts()" />
+            <oh-movements [account]="a" [accounts]="d.accounts" (changed)="refreshAccounts()" />
           </div>
         }
       </section>
