@@ -92,7 +92,7 @@ export const es = {
     logout: 'Cerrar sesión',
   },
   sync: {
-    offline: 'Sin conexión. Puedes seguir usando las listas que ya abriste; los cambios se enviarán al volver.',
+    offline: 'Sin conexión. Puedes seguir usando las listas y las cuentas que ya abriste; los cambios se enviarán al volver.',
     offlinePending: 'Sin conexión · {n} cambio(s) guardado(s) en este dispositivo, se enviarán al volver.',
     sending: 'Enviando {n} cambio(s) hechos sin conexión…',
     rejected: 'Algunos cambios hechos sin conexión no se guardaron: la lista cambió mientras tanto (por ejemplo, se archivó).',
@@ -801,6 +801,7 @@ export const es = {
       addedCount: '{n} agregado(s). Sigue con el siguiente.',
       createdByName: 'creado por {name}',
       edited: 'editado',
+      pending: 'sin enviar',
       deleted: '{code} eliminado',
       restored: '{code} recuperado',
       undo: 'Deshacer',

@@ -1,4 +1,4 @@
-import { Movement, MovementColumn } from './finance.models';
+import { Account, Movement, MovementColumn } from './finance.models';
 
 /** Columnas en el orden en que se muestran; la descripción no se puede ocultar */
 export const MOVEMENT_COLUMNS: MovementColumn[] = [
@@ -101,5 +101,36 @@ export function filterMovements(list: Movement[], f: MovementFilters) {
       expense: r2(expense),
       net: r2(income - expense),
     },
+  };
+}
+
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * Saldo acumulado con las mismas reglas del servidor: por fecha, luego por creación y número.
+ * Se usa para la copia local cuando se agrega, edita o borra sin conexión.
+ */
+export function recomputeBalances(list: Movement[]): Movement[] {
+  const sorted = [...list].sort(
+    (a, b) =>
+      a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt) || a.number - b.number,
+  );
+  let running = 0;
+  return sorted.map((m) => {
+    running = r2(running + m.signedAmount);
+    return { ...m, balance: running };
+  });
+}
+
+/** La cuenta con su saldo nuevo (y la deuda y el disponible si es tarjeta) */
+export function withBalance(account: Account, balance: number): Account {
+  const b = r2(balance);
+  if (!account.credit) return { ...account, balance: b };
+  const debt = r2(Math.max(0, -b));
+  const limit = account.credit.limit;
+  return {
+    ...account,
+    balance: b,
+    credit: { limit, debt, available: r2(limit - debt), overLimit: debt > limit },
   };
 }

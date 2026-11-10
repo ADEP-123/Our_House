@@ -14,7 +14,7 @@ import { TPipe } from '../../core/i18n/t.pipe';
 import { formatMoney } from '../lists/item-logic';
 import { localToday } from './finance-logic';
 import { Account } from './finance.models';
-import { FinanceService } from './finance.service';
+import { FinanceStore } from './finance.store';
 import { amountForInput, parseAmount } from './movement-logic';
 
 /** Ajustar saldo: se escribe el saldo real y se crea un movimiento por la diferencia. */
@@ -113,7 +113,7 @@ export class AdjustDialogComponent {
   readonly account = input.required<Account>();
   readonly saved = output<void>();
 
-  private readonly finance = inject(FinanceService);
+  private readonly store = inject(FinanceStore);
   private readonly i18n = inject(I18n);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly input = viewChild<ElementRef<HTMLInputElement>>('realInput');
@@ -150,7 +150,7 @@ export class AdjustDialogComponent {
     this.busy.set(true);
     this.error.set(null);
     try {
-      await this.finance.adjustBalance(this.account().id, {
+      await this.store.adjust(this.account(), {
         id: crypto.randomUUID(),
         balance: real,
         date: this.date(),

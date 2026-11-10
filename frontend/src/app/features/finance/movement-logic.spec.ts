@@ -4,8 +4,10 @@ import {
   filterMovements,
   hasFilters,
   parseAmount,
+  recomputeBalances,
+  withBalance,
 } from './movement-logic';
-import { Movement } from './finance.models';
+import { Account, Movement } from './finance.models';
 
 const mov = (code: string, signedAmount: number, extra: Partial<Movement> = {}): Movement => ({
   id: code,
@@ -107,5 +109,42 @@ describe('finanzas: filtros de movimientos', () => {
     const nov = { ...EMPTY_FILTERS, from: '2026-11-01', to: '2026-11-30' };
     expect(hasFilters(nov)).toBe(true);
     expect(filterMovements(list, nov).rows.map((m) => m.code)).toEqual(['T0003', 'T0004']);
+  });
+});
+
+describe('finanzas: copia local sin conexión', () => {
+  it('recalcula el saldo acumulado por fecha, creación y número', () => {
+    const list = [
+      mov('T0003', -30, { date: '2026-11-05', createdAt: '2026-11-05T10:00:00Z', number: 3 }),
+      mov('', -10, {
+        date: '2026-01-15',
+        createdAt: '2026-11-10T09:00:00Z',
+        number: 0,
+        pending: true,
+      }),
+      mov('T0001', 100, { date: '2026-01-01', createdAt: '2026-01-01T00:00:00Z', number: 1 }),
+      mov('T0002', 50, { date: '2026-11-05', createdAt: '2026-11-05T09:00:00Z', number: 2 }),
+    ];
+    expect(recomputeBalances(list).map((m) => [m.code, m.balance])).toEqual([
+      ['T0001', 100],
+      ['', 90],
+      ['T0002', 140],
+      ['T0003', 110],
+    ]);
+  });
+
+  it('actualiza deuda y disponible de una tarjeta', () => {
+    const card = {
+      balance: 0,
+      credit: { limit: 1000, debt: 0, available: 1000, overLimit: false },
+    } as Account;
+    expect(withBalance(card, -1200.5).credit).toEqual({
+      limit: 1000,
+      debt: 1200.5,
+      available: -200.5,
+      overLimit: true,
+    });
+    const bank = { balance: 0, credit: null } as Account;
+    expect(withBalance(bank, 12.345)).toEqual({ balance: 12.35, credit: null });
   });
 });
