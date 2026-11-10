@@ -28,6 +28,14 @@ describe('paleta de colores', () => {
     expect((await agent.get('/api/auth/me')).body.user.theme).toBeNull();
   });
 
+  it('acepta los temas de temporada en versión clara y oscura', async () => {
+    const { agent } = await createUser('ana');
+    for (const preset of ['navidad', 'halloween-oscuro', 'otono', 'anionuevo-oscuro']) {
+      expect((await agent.put('/api/me/theme').send({ theme: { preset, colors } }).expect(200)).body.user.theme.preset).toBe(preset);
+    }
+    await agent.put('/api/me/theme').send({ theme: { preset: 'claro-oscuro', colors } }).expect(400);
+  });
+
   it('rechaza colores inválidos, colores de más y temas desconocidos', async () => {
     const { agent } = await createUser('ana');
     await agent.put('/api/me/theme').send({ theme: { preset: 'custom', colors: { ...colors, text: 'red' } } }).expect(400);
