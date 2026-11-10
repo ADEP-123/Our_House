@@ -11,6 +11,7 @@ import { IconPickerComponent } from '../lists/icon-picker.component';
 import { formatMoney } from '../lists/item-logic';
 import { LIST_COLORS, colorOf, iconOf } from '../lists/list-presets';
 import { buildOverrides } from './finance-logic';
+import { signOf } from './movement-logic';
 import { Category, CategoryInput, CategoryMovement, FamilyCategories } from './finance.models';
 import { FinanceService } from './finance.service';
 
@@ -99,7 +100,7 @@ export class CategoriesPage implements OnInit {
 
   protected money(m: CategoryMovement): string {
     const currency = this.family()?.currency ?? 'USD';
-    const signed = m.kind === 'out' ? -m.amount : m.amount;
+    const signed = signOf(m.kind, m.amount);
     return formatMoney(signed, currency, this.i18n.locale());
   }
 

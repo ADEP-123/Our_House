@@ -19,7 +19,14 @@
         <p class="oh-hint">{{ 'finance.readOnly' | t }}</p>
       }
 
-      @if (!isAdjust() && movement()?.kind !== 'opening') {
+      @if (isTransfer()) {
+        <p class="transfer-info">⇄ {{ transferText() }}</p>
+        @if (!readOnly()) {
+          <p class="oh-hint">{{ 'finance.transfers.bothSides' | t }}</p>
+        }
+      }
+
+      @if (!plain()) {
         <div class="kind" role="radiogroup" [attr.aria-label]="'finance.movements.kind' | t">
           <button
             type="button"
@@ -99,7 +106,7 @@
       </div>
 
       <div class="row">
-        @if (!isAdjust() && movement()?.kind !== 'opening') {
+        @if (!plain()) {
           <div class="oh-field">
             <label for="movement-category">{{ 'finance.movements.category' | t }}</label>
             <select

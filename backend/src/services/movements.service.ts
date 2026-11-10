@@ -11,10 +11,16 @@ import { requireMember } from './families.service.js';
 export const MOVEMENT_COLUMNS = ['code', 'date', 'description', 'category', 'amount', 'balance', 'createdBy'] as const;
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
-const signed = (m: Pick<MovementRow, 'kind' | 'amount'>) => (m.kind === 'out' ? -m.amount : m.amount);
+const signed = (m: Pick<MovementRow, 'kind' | 'amount'>) => (m.kind === 'out' || m.kind === 'transfer_out' ? -m.amount : m.amount);
+const isTransfer = (m: Pick<MovementRow, 'transfer_id'>) => m.transfer_id !== null;
 const code = (prefix: string, n: number) => `${prefix}${String(n).padStart(4, '0')}`;
 
-function toMovementView(m: MovementViewRow, prefix: string) {
+/**
+ * @param visible cuentas que la persona ve: de la otra mitad de una transferencia
+ * solo se muestra el nombre y el ID si también la ve
+ */
+function toMovementView(m: MovementViewRow, prefix: string, visible: Set<string>) {
+  const seesOther = !!m.counterpart_account_id && visible.has(m.counterpart_account_id);
   return {
     id: m.id,
     code: code(prefix, m.number),
@@ -30,6 +36,14 @@ function toMovementView(m: MovementViewRow, prefix: string) {
     edited: m.edited,
     balance: round2(m.balance),
     createdAt: m.created_at,
+    transfer: m.transfer_id
+      ? {
+          id: m.transfer_id,
+          accountId: seesOther ? m.counterpart_account_id : null,
+          accountName: seesOther ? m.counterpart_account_name : null,
+          code: seesOther && m.counterpart_prefix ? code(m.counterpart_prefix, m.counterpart_number!) : null,
+        }
+      : null,
   };
 }
 
@@ -72,11 +86,12 @@ export interface MovementInput {
 export const movementsService = {
   async listForAccount(accountId: string, userId: string, supervision: boolean) {
     const access = await getAccountAccess(accountId, userId, supervision);
-    const [rows, hiddenColumns] = await Promise.all([
+    const [rows, hiddenColumns, visible] = await Promise.all([
       movementsRepository.listForAccount(accountId),
       movementsRepository.hiddenColumns(accountId, userId),
+      visibleAccountIds(access.account.family_id, userId, access.role),
     ]);
-    return { movements: rows.map((m) => toMovementView(m, access.account.prefix)), hiddenColumns };
+    return { movements: rows.map((m) => toMovementView(m, access.account.prefix, visible)), hiddenColumns };
   },
 
   async create(accountId: string, userId: string, input: MovementInput) {
@@ -105,6 +120,7 @@ export const movementsService = {
     const { movement, access } = await movementAccess(id, userId);
     requireEdit(access);
     if (movement.kind === 'opening') throw badRequest('MOVEMENT_NOT_EDITABLE');
+    if (isTransfer(movement)) return transfers.update(movement, userId, changes);
 
     const isAdjust = movement.kind === 'adjust';
     const next = {
@@ -142,6 +158,7 @@ export const movementsService = {
     const { movement, access } = await movementAccess(id, userId);
     requireEdit(access);
     if (movement.kind === 'opening') throw badRequest('MOVEMENT_NOT_EDITABLE');
+    if (isTransfer(movement)) return transfers.setDeleted(movement, userId, true);
     await withTransaction(async (conn) => {
       await movementsRepository.setDeleted(id, true, userId, conn);
       await movementsRepository.addHistory(id, userId, 'deleted', null, conn);
@@ -153,6 +170,10 @@ export const movementsService = {
     const { movement, access } = await movementAccess(id, userId, { includeDeleted: true });
     requireEdit(access);
     if (!movement.deleted_at) return { id };
+    if (isTransfer(movement)) {
+      await transfers.setDeleted(movement, userId, false);
+      return { id };
+    }
     await withTransaction(async (conn) => {
       await movementsRepository.setDeleted(id, false, userId, conn);
       await movementsRepository.addHistory(id, userId, 'restored', null, conn);
@@ -206,5 +227,105 @@ export const movementsService = {
     await getAccountAccess(accountId, userId);
     await movementsRepository.setHiddenColumns(accountId, userId, columns);
     return { hiddenColumns: columns };
+  },
+};
+
+export interface TransferInput {
+  /** Ids generados por el dispositivo: la transferencia y sus dos movimientos (así funciona sin conexión) */
+  id?: string;
+  outId?: string;
+  inId?: string;
+  fromAccountId: string;
+  toAccountId: string;
+  amount: number;
+  date: string;
+  description: string;
+}
+
+/**
+ * Transferencias entre cuentas del grupo: una salida en una cuenta y una entrada en otra, enlazadas.
+ * Crearlas, cambiarlas o borrarlas pide poder editar las dos cuentas; los cambios se aplican a las dos mitades.
+ */
+const transfers = {
+  /** Permiso de edición en ambas cuentas; si alguna no se ve, la otra "no existe" para la persona */
+  async bothEditable(fromId: string, toId: string, userId: string, existing = false) {
+    const [from, to] = await Promise.all([getAccountAccess(fromId, userId), getAccountAccess(toId, userId)]).catch((err) => {
+      // En una transferencia que ya existe, la otra cuenta puede ser una que la persona no ve
+      if (existing && err instanceof HttpError && err.code === 'ACCOUNT_NOT_FOUND') throw forbidden('TRANSFER_READ_ONLY');
+      throw err;
+    });
+    requireEdit(from);
+    requireEdit(to);
+    if (from.account.family_id !== to.account.family_id) throw badRequest('TRANSFER_OTHER_FAMILY');
+    return { from, to };
+  },
+
+  async pair(movement: MovementRow) {
+    const pair = await movementsRepository.transferPair(movement.transfer_id!);
+    const out = pair.find((m) => m.kind === 'transfer_out')!;
+    const inn = pair.find((m) => m.kind === 'transfer_in')!;
+    return { out, inn };
+  },
+
+  async update(movement: MovementRow, userId: string, changes: Partial<Omit<MovementInput, 'id'>>) {
+    if ((changes.kind && changes.kind !== (movement.kind as string)) || changes.categoryId) throw badRequest('TRANSFER_FIELDS_FIXED');
+    const { out, inn } = await transfers.pair(movement);
+    await transfers.bothEditable(out.account_id, inn.account_id, userId, true);
+    const next = {
+      amount: changes.amount ?? movement.amount,
+      date: changes.date ?? movement.date,
+      description: changes.description ?? movement.description,
+    };
+    if (next.amount <= 0) throw badRequest('MOVEMENT_AMOUNT_INVALID');
+    const diff: Record<string, [unknown, unknown]> = {};
+    if (next.amount !== movement.amount) diff.amount = [movement.amount, next.amount];
+    if (next.date !== movement.date) diff.date = [movement.date, next.date];
+    if (next.description !== movement.description) diff.description = [movement.description, next.description];
+    if (!Object.keys(diff).length) return { id: movement.id };
+    await withTransaction(async (conn) => {
+      for (const m of [out, inn]) {
+        await movementsRepository.update(m.id, { ...next, kind: m.kind, categoryId: null }, userId, conn);
+        await movementsRepository.addHistory(m.id, userId, 'updated', diff, conn);
+      }
+    });
+    return { id: movement.id };
+  },
+
+  async setDeleted(movement: MovementRow, userId: string, deleted: boolean) {
+    const { out, inn } = await transfers.pair(movement);
+    await transfers.bothEditable(out.account_id, inn.account_id, userId, true);
+    await withTransaction(async (conn) => {
+      for (const m of [out, inn]) {
+        await movementsRepository.setDeleted(m.id, deleted, userId, conn);
+        await movementsRepository.addHistory(m.id, userId, deleted ? 'deleted' : 'restored', null, conn);
+      }
+    });
+  },
+};
+
+export const transfersService = {
+  async create(userId: string, input: TransferInput) {
+    if (input.fromAccountId === input.toAccountId) throw badRequest('TRANSFER_SAME_ACCOUNT');
+    const transferId = input.id ?? randomUUID();
+    const outId = input.outId ?? randomUUID();
+    const inId = input.inId ?? randomUUID();
+    await transfers.bothEditable(input.fromAccountId, input.toAccountId, userId);
+
+    // Reenvío de la misma transferencia (cola sin conexión): no se duplica
+    const existing = await movementsRepository.find(outId);
+    if (existing) {
+      if (existing.transfer_id !== transferId) throw badRequest('MOVEMENT_ID_TAKEN');
+      return { id: transferId, outId, inId };
+    }
+    await withTransaction(async (conn) => {
+      const base = { amount: input.amount, date: input.date, description: input.description, categoryId: null, userId, transferId };
+      const outNumber = await accountsRepository.nextNumber(input.fromAccountId, conn);
+      await movementsRepository.create({ ...base, id: outId, accountId: input.fromAccountId, number: outNumber, kind: 'transfer_out' }, conn);
+      const inNumber = await accountsRepository.nextNumber(input.toAccountId, conn);
+      await movementsRepository.create({ ...base, id: inId, accountId: input.toAccountId, number: inNumber, kind: 'transfer_in' }, conn);
+      await movementsRepository.addHistory(outId, userId, 'created', null, conn);
+      await movementsRepository.addHistory(inId, userId, 'created', null, conn);
+    });
+    return { id: transferId, outId, inId };
   },
 };

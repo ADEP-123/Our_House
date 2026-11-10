@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { currentUserId } from '../middlewares/auth.js';
-import { movementsService } from '../services/movements.service.js';
+import { movementsService, transfersService } from '../services/movements.service.js';
 
 const accountId = (req: Request) => String(req.params.accountId);
 const movementId = (req: Request) => String(req.params.movementId);
@@ -42,5 +42,11 @@ export const movementsController = {
 
   async history(req: Request, res: Response): Promise<void> {
     res.json({ history: await movementsService.history(movementId(req), currentUserId(req), req.query.supervision === 'true') });
+  },
+};
+
+export const transfersController = {
+  async create(req: Request, res: Response): Promise<void> {
+    res.status(201).json(await transfersService.create(currentUserId(req), req.body));
   },
 };

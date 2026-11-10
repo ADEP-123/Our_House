@@ -77,6 +77,19 @@ export class MovementDialogComponent {
     return !this.account().permissions.canEdit || m?.kind === 'opening';
   });
   protected readonly isAdjust = computed(() => this.movement()?.kind === 'adjust');
+  protected readonly isTransfer = computed(() => !!this.movement()?.transfer);
+  /** Sin tipo ni categoría: ajustes, transferencias y saldo inicial */
+  protected readonly plain = computed(
+    () => this.isAdjust() || this.isTransfer() || this.movement()?.kind === 'opening',
+  );
+  protected readonly transferText = computed(() => {
+    const m = this.movement();
+    if (!m?.transfer) return '';
+    const name = m.transfer.accountName ?? this.i18n.t('finance.transfers.otherAccount');
+    const key =
+      m.kind === 'transfer_out' ? 'finance.transfers.towards' : 'finance.transfers.fromAccount';
+    return this.i18n.t(key, { name: m.transfer.code ? `${name} · ${m.transfer.code}` : name });
+  });
   /** Categoría elegida (para mostrarla en la copia local sin conexión) */
   private readonly category = computed(
     () => this.categories().find((c) => c.id === this.categoryId()) ?? null,
@@ -91,6 +104,7 @@ export class MovementDialogComponent {
     const amount = this.amount();
     if (this.busy() || !this.description().trim() || !this.date() || amount === null) return false;
     if (this.isAdjust()) return amount !== 0;
+    if (this.isTransfer()) return amount > 0;
     return amount > 0 && !!this.categoryId();
   });
 
@@ -114,7 +128,7 @@ export class MovementDialogComponent {
     this.error.set(null);
     this.suggestions.set([]);
     this.history.set(null);
-    this.kind.set(keep?.kind ?? (m?.kind === 'in' ? 'in' : 'out'));
+    this.kind.set(keep?.kind ?? (m?.kind === 'in' || m?.kind === 'transfer_in' ? 'in' : 'out'));
     this.amountText.set(
       m
         ? amountForInput(m.kind === 'adjust' ? m.amount : Math.abs(m.amount), this.i18n.locale())
@@ -201,7 +215,7 @@ export class MovementDialogComponent {
           },
           this.category(),
         );
-      } else if (m.kind === 'adjust') {
+      } else if (m.kind === 'adjust' || m.transfer) {
         await this.store.updateMovement(
           this.account(),
           m,

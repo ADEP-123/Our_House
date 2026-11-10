@@ -1,6 +1,6 @@
 import { db, type Db } from '../config/database.js';
 
-export type MovementKind = 'opening' | 'in' | 'out' | 'adjust';
+export type MovementKind = 'opening' | 'in' | 'out' | 'adjust' | 'transfer_in' | 'transfer_out';
 
 export interface MovementRow {
   id: string;
@@ -11,6 +11,8 @@ export interface MovementRow {
   date: string;
   description: string;
   category_id: string | null;
+  /** Enlaza la salida y la entrada de una transferencia */
+  transfer_id: string | null;
   created_by: string | null;
   updated_by: string | null;
   deleted_at: Date | null;
@@ -26,6 +28,11 @@ export interface MovementViewRow extends MovementRow {
   created_by_nickname: string | null;
   edited: boolean;
   balance: number;
+  /** La otra mitad de una transferencia */
+  counterpart_account_id: string | null;
+  counterpart_account_name: string | null;
+  counterpart_prefix: string | null;
+  counterpart_number: number | null;
 }
 
 export interface HistoryRow {
@@ -38,7 +45,7 @@ export interface HistoryRow {
 }
 
 /** Monto con signo: las salidas restan; saldo inicial y ajustes ya traen su signo */
-const SIGNED = "CASE WHEN m.kind = 'out' THEN -m.amount ELSE m.amount END";
+const SIGNED = "CASE WHEN m.kind IN ('out', 'transfer_out') THEN -m.amount ELSE m.amount END";
 
 export const movementsRepository = {
   /**
@@ -49,11 +56,15 @@ export const movementsRepository = {
     const { rows } = await db().query<MovementViewRow>(
       `SELECT m.*, c.name AS category_name, c.icon AS category_icon, c.color AS category_color,
               u.nickname AS created_by_nickname,
+              t.account_id AS counterpart_account_id, ta.name AS counterpart_account_name,
+              ta.prefix AS counterpart_prefix, t.number AS counterpart_number,
               EXISTS (SELECT 1 FROM account_movement_history h WHERE h.movement_id = m.id AND h.action = 'updated') AS edited,
               sum(${SIGNED}) OVER (ORDER BY m.date, m.created_at, m.number ROWS UNBOUNDED PRECEDING) AS balance
          FROM account_movements m
          LEFT JOIN movement_categories c ON c.id = m.category_id
          LEFT JOIN users u ON u.id = m.created_by
+         LEFT JOIN account_movements t ON t.transfer_id = m.transfer_id AND t.id <> m.id
+         LEFT JOIN accounts ta ON ta.id = t.account_id
         WHERE m.account_id = $1 AND m.deleted_at IS NULL
         ORDER BY m.date, m.created_at, m.number`,
       [accountId],
@@ -67,13 +78,24 @@ export const movementsRepository = {
 
   /** Crea el movimiento; si el id ya existe (reenvío) no hace nada y devuelve false. */
   async create(
-    m: { id: string; accountId: string; number: number; kind: MovementKind; amount: number; date: string; description: string; categoryId: string | null; userId: string },
+    m: {
+      id: string;
+      accountId: string;
+      number: number;
+      kind: MovementKind;
+      amount: number;
+      date: string;
+      description: string;
+      categoryId: string | null;
+      userId: string;
+      transferId?: string | null;
+    },
     conn: Db,
   ): Promise<boolean> {
     const { rowCount } = await conn.query(
-      `INSERT INTO account_movements (id, account_id, number, kind, amount, date, description, category_id, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (id) DO NOTHING`,
-      [m.id, m.accountId, m.number, m.kind, m.amount, m.date, m.description, m.categoryId, m.userId],
+      `INSERT INTO account_movements (id, account_id, number, kind, amount, date, description, category_id, created_by, transfer_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT (id) DO NOTHING`,
+      [m.id, m.accountId, m.number, m.kind, m.amount, m.date, m.description, m.categoryId, m.userId, m.transferId ?? null],
     );
     return !!rowCount;
   },
@@ -90,6 +112,15 @@ export const movementsRepository = {
         WHERE id = $1`,
       [id, f.kind, f.amount, f.date, f.description, f.categoryId, userId],
     );
+  },
+
+  /** Las dos mitades de una transferencia (salida primero) */
+  async transferPair(transferId: string, conn: Db = db()): Promise<MovementRow[]> {
+    const { rows } = await conn.query<MovementRow>(
+      'SELECT * FROM account_movements WHERE transfer_id = $1 ORDER BY kind DESC',
+      [transferId],
+    );
+    return rows;
   },
 
   setDeleted: (id: string, deleted: boolean, userId: string, conn: Db) =>

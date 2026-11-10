@@ -14,10 +14,12 @@ import {
   MovementColumn,
   MovementInput,
   MovementSuggestion,
+  TransferInput,
 } from './finance.models';
-import { recomputeBalances, withBalance } from './movement-logic';
+import { recomputeBalances, signOf, withBalance } from './movement-logic';
 
-type FinanceRequest = QueuedRequest & { accountId: string };
+/** accountIds: cuentas que el cambio toca (una transferencia toca dos) */
+type FinanceRequest = QueuedRequest & { accountIds: string[] };
 
 const accountsKey = (familyId: string, archived: boolean) =>
   `finance:accounts:${familyId}:${archived ? 'archived' : 'active'}`;
@@ -90,7 +92,7 @@ export class FinanceStore {
     if (supervision) return request();
     return this.localFirst(
       movementsKey(accountId),
-      this.queue.has((m) => m.accountId === accountId),
+      this.queue.has((m) => m.accountIds.includes(accountId)),
       request,
     );
   }
@@ -132,25 +134,42 @@ export class FinanceStore {
 
   /** Aplica un cambio en los movimientos guardados de la cuenta y actualiza su saldo en la lista de cuentas */
   private async applyLocal(
-    account: Account,
+    account: Pick<Account, 'id' | 'familyId'>,
     change: (list: Movement[]) => Movement[],
   ): Promise<void> {
     const cached = await this.queue.cached<AccountMovements>(movementsKey(account.id));
-    const movements = recomputeBalances(change(cached?.movements ?? []));
-    await this.queue.save(movementsKey(account.id), {
-      movements,
-      hiddenColumns: cached?.hiddenColumns ?? [],
-    });
-    const balance = movements.reduce((sum, m) => sum + m.signedAmount, 0);
+    const before = cached?.movements ?? [];
+    const after = recomputeBalances(change(before));
+    // Sin copia de esa cuenta (nunca se abrió en este dispositivo) solo se mueve su saldo
+    if (cached)
+      await this.queue.save(movementsKey(account.id), {
+        movements: after,
+        hiddenColumns: cached.hiddenColumns,
+      });
+    const sum = (list: Movement[]) => list.reduce((total, m) => total + m.signedAmount, 0);
+    const delta = sum(after) - sum(before);
     const key = accountsKey(account.familyId, false);
     const accounts = await this.queue.cached<FamilyAccounts>(key);
-    if (accounts) {
-      await this.queue.save(key, {
-        ...accounts,
-        accounts: accounts.accounts.map((a) => (a.id === account.id ? withBalance(a, balance) : a)),
-      });
-    }
+    if (!accounts || !delta) return;
+    await this.queue.save(key, {
+      ...accounts,
+      accounts: accounts.accounts.map((a) =>
+        a.id === account.id ? withBalance(a, a.balance + delta) : a,
+      ),
+    });
   }
+
+  /** La otra cuenta de una transferencia (si la persona la ve) */
+  private counterpart(
+    account: Account,
+    movement: Movement,
+  ): Pick<Account, 'id' | 'familyId'> | null {
+    const id = movement.transfer?.accountId;
+    return id ? { id, familyId: account.familyId } : null;
+  }
+
+  /** Mitades borradas sin conexión, para poder deshacer (vale mientras la app esté abierta) */
+  private readonly removedHalves = new Map<string, Movement>();
 
   private me() {
     const user = this.auth.user();
@@ -173,7 +192,7 @@ export class FinanceStore {
         method: 'POST',
         url: `/api/accounts/${account.id}/movements`,
         body: input,
-        accountId: account.id,
+        accountIds: [account.id],
       },
       () =>
         this.applyLocal(account, (list) => [
@@ -184,7 +203,7 @@ export class FinanceStore {
             number: 0,
             kind: input.kind,
             amount: input.amount,
-            signedAmount: input.kind === 'out' ? -input.amount : input.amount,
+            signedAmount: signOf(input.kind, input.amount),
             date: input.date,
             description: input.description,
             category: this.categoryView(category),
@@ -205,52 +224,133 @@ export class FinanceStore {
     changes: Partial<Omit<MovementInput, 'id'>>,
     category: Category | null,
   ): Promise<void> {
+    const other = this.counterpart(account, movement);
+    const apply = (m: Movement): Movement => {
+      const kind = changes.kind ?? m.kind;
+      const amount = changes.amount ?? m.amount;
+      return {
+        ...m,
+        ...changes,
+        kind,
+        amount,
+        signedAmount: signOf(kind, amount),
+        category: changes.categoryId ? this.categoryView(category) : m.category,
+        edited: !m.pending || m.edited,
+        pending: true,
+      };
+    };
     return this.queue.mutate(
       {
         method: 'PATCH',
         url: `/api/movements/${movement.id}`,
         body: changes,
-        accountId: account.id,
+        accountIds: [account.id, ...(other ? [other.id] : [])],
       },
-      () =>
-        this.applyLocal(account, (list) =>
-          list.map((m) => {
-            if (m.id !== movement.id) return m;
-            const kind = changes.kind ?? m.kind;
-            const amount = changes.amount ?? m.amount;
-            return {
-              ...m,
-              ...changes,
-              kind,
-              amount,
-              signedAmount: kind === 'out' ? -amount : amount,
-              category: changes.categoryId ? this.categoryView(category) : m.category,
-              edited: !m.pending || m.edited,
-              pending: true,
-            };
-          }),
-        ),
+      async () => {
+        await this.applyLocal(account, (list) =>
+          list.map((m) => (m.id === movement.id ? apply(m) : m)),
+        );
+        // La otra mitad: mismo monto, fecha y descripción
+        if (other) {
+          await this.applyLocal(other, (list) =>
+            list.map((m) => {
+              if (m.transfer?.id !== movement.transfer?.id || m.id === movement.id) return m;
+              const amount = changes.amount ?? m.amount;
+              const date = changes.date ?? m.date;
+              const description = changes.description ?? m.description;
+              return {
+                ...m,
+                amount,
+                date,
+                description,
+                signedAmount: signOf(m.kind, amount),
+                edited: true,
+                pending: true,
+              };
+            }),
+          );
+        }
+      },
       async () => undefined,
     );
   }
 
   deleteMovement(account: Account, movement: Movement): Promise<void> {
+    const other = this.counterpart(account, movement);
     return this.queue.mutate(
-      { method: 'DELETE', url: `/api/movements/${movement.id}`, accountId: account.id },
-      () => this.applyLocal(account, (list) => list.filter((m) => m.id !== movement.id)),
+      {
+        method: 'DELETE',
+        url: `/api/movements/${movement.id}`,
+        accountIds: [account.id, ...(other ? [other.id] : [])],
+      },
+      async () => {
+        await this.applyLocal(account, (list) => list.filter((m) => m.id !== movement.id));
+        if (other) {
+          await this.applyLocal(other, (list) =>
+            list.filter((m) => {
+              const half = m.transfer?.id === movement.transfer?.id && m.id !== movement.id;
+              if (half) this.removedHalves.set(movement.id, m);
+              return !half;
+            }),
+          );
+        }
+      },
       async () => undefined,
     );
   }
 
-  /** Deshacer un borrado: sin conexión vuelve el mismo movimiento a la copia local */
+  /** Deshacer un borrado: sin conexión vuelve el mismo movimiento (y su otra mitad) a la copia local */
   restoreMovement(account: Account, movement: Movement): Promise<void> {
+    const other = this.counterpart(account, movement);
     return this.queue.mutate(
-      { method: 'POST', url: `/api/movements/${movement.id}/restore`, accountId: account.id },
-      () =>
-        this.applyLocal(account, (list) => [
+      {
+        method: 'POST',
+        url: `/api/movements/${movement.id}/restore`,
+        accountIds: [account.id, ...(other ? [other.id] : [])],
+      },
+      async () => {
+        await this.applyLocal(account, (list) => [
           ...list.filter((m) => m.id !== movement.id),
           { ...movement, pending: true },
-        ]),
+        ]);
+        const half = this.removedHalves.get(movement.id);
+        if (other && half) {
+          await this.applyLocal(other, (list) => [
+            ...list.filter((m) => m.id !== half.id),
+            { ...half, pending: true },
+          ]);
+          this.removedHalves.delete(movement.id);
+        }
+      },
+      async () => undefined,
+    );
+  }
+
+  /** Transferir entre dos cuentas (también pagar una tarjeta) */
+  transfer(from: Account, to: Account, input: TransferInput): Promise<void> {
+    const half = (id: string, kind: 'transfer_in' | 'transfer_out', other: Account): Movement => ({
+      id,
+      code: '',
+      number: 0,
+      kind,
+      amount: input.amount,
+      signedAmount: signOf(kind, input.amount),
+      date: input.date,
+      description: input.description,
+      category: null,
+      createdBy: this.me(),
+      edited: false,
+      balance: 0,
+      createdAt: new Date().toISOString(),
+      pending: true,
+      transfer: { id: input.id, accountId: other.id, accountName: other.name, code: null },
+    });
+    return this.queue.mutate(
+      { method: 'POST', url: '/api/transfers', body: input, accountIds: [from.id, to.id] },
+      async () => {
+        await this.applyLocal(from, (list) => [...list, half(input.outId, 'transfer_out', to)]);
+        await this.applyLocal(to, (list) => [...list, half(input.inId, 'transfer_in', from)]);
+      },
       async () => undefined,
     );
   }
@@ -268,7 +368,7 @@ export class FinanceStore {
         method: 'POST',
         url: `/api/accounts/${account.id}/adjust`,
         body: input,
-        accountId: account.id,
+        accountIds: [account.id],
       },
       () =>
         this.applyLocal(account, (list) => {
@@ -303,7 +403,7 @@ export class FinanceStore {
         method: 'PUT',
         url: `/api/accounts/${accountId}/prefs`,
         body: { hiddenColumns },
-        accountId,
+        accountIds: [accountId],
       },
       async () => {
         const cached = await this.queue.cached<AccountMovements>(movementsKey(accountId));

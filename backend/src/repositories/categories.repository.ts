@@ -19,7 +19,7 @@ export interface CategoryMovementRow {
   account_name: string;
   prefix: string;
   number: number;
-  kind: 'opening' | 'in' | 'out';
+  kind: 'opening' | 'in' | 'out' | 'adjust' | 'transfer_in' | 'transfer_out';
   amount: number;
   date: string;
   description: string;
