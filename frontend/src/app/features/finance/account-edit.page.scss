@@ -1,0 +1,145 @@
+.back {
+  display: inline-block;
+  margin-bottom: 20px;
+  text-decoration: none;
+  font-size: 0.9375rem;
+}
+
+.page {
+  display: grid;
+  gap: 20px;
+  max-width: 760px;
+}
+
+h1 {
+  margin: 0;
+}
+
+.head {
+  display: grid;
+  gap: 6px;
+
+  p {
+    margin: 0;
+  }
+}
+
+.family-select select {
+  min-height: 40px;
+  width: auto;
+}
+
+fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+legend {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  margin-bottom: 8px;
+}
+
+textarea.oh-input {
+  resize: vertical;
+  min-height: 64px;
+}
+
+.row {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  align-items: start;
+}
+
+.prefix input {
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+/* Tipo de cuenta: cuatro opciones con su ícono */
+.kinds {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.kind {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--oh-radius);
+  border: 1px solid var(--oh-border-strong);
+  font-weight: 600;
+  cursor: pointer;
+
+  &.on {
+    border-color: var(--oh-primary);
+    background: color-mix(in srgb, var(--oh-primary) 8%, var(--oh-surface));
+  }
+}
+
+.kind-icon {
+  font-size: 1.375rem;
+}
+
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  label {
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--oh-border-strong);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9375rem;
+  }
+
+  label.on {
+    background: var(--oh-primary);
+    border-color: var(--oh-primary);
+    color: var(--oh-on-primary);
+  }
+}
+
+label:has(input:focus-visible) {
+  outline: 3px solid var(--oh-focus);
+  outline-offset: 2px;
+}
+
+.people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+
+  .oh-hint {
+    flex-basis: 100%;
+    margin: 0;
+  }
+}
+
+.person {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  cursor: pointer;
+
+  input {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--oh-primary);
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
