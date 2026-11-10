@@ -103,6 +103,26 @@ describe('Google Calendar', () => {
     expect(rows[0].refresh_token_enc).not.toContain('rt-secreto');
   });
 
+  it('una tarea que se repite deja el evento de esta vez como ✓ y crea el de la siguiente fecha', async () => {
+    const g = fakeGoogle();
+    const { familyId, users } = await setupFamily(['ana']);
+    await connect(users.ana!);
+    const list = await createList(users.ana!, familyId, { type: 'todo' });
+    const body = { text: 'Regar plantas', dueDate: '2030-03-04', repeat: { freq: 'weekly' } };
+    const item = (await users.ana!.agent.post(`/api/lists/${list.id}/items`).send(body).expect(201)).body.item;
+    await settleBackground();
+    const [firstId] = [...g.events.keys()];
+
+    const after = (await users.ana!.agent.put(`/api/lists/${list.id}/items/${item.id}/completed`).send({ completed: true }).expect(200)).body.item;
+    await settleBackground();
+    expect(after).toMatchObject({ dueDate: '2030-03-11', completedAt: null });
+    expect(g.events.size).toBe(2);
+    expect(g.events.get(firstId!)).toMatchObject({ summary: '✓ Regar plantas', start: { date: '2030-03-04' } });
+    const next = [...g.events.entries()].find(([id]) => id !== firstId)![1];
+    expect(next).toMatchObject({ summary: 'Regar plantas', start: { date: '2030-03-11' } });
+    expect((await db().query('SELECT event_id FROM calendar_events')).rows.map((r) => r.event_id)).not.toContain(firstId);
+  });
+
   it('rechaza una vuelta de Google que no empezó este navegador', async () => {
     fakeGoogle();
     const { users } = await setupFamily(['ana']);

@@ -186,6 +186,30 @@ export const calendarService = {
     if (googleAvailable()) runInBackground('calendario', async () => sync(await itemIdsOfList(listId)));
   },
 
+  /**
+   * Una tarea que se repite pasa a su siguiente fecha: el evento de esta vez se queda en el
+   * calendario como "✓ tarea" y se suelta del elemento, para que la sincronización cree el de
+   * la próxima fecha. Se llama antes de mover la fecha.
+   */
+  async archiveOccurrence(itemId: string): Promise<void> {
+    const rows = (await db().query<EventRow>('DELETE FROM calendar_events WHERE item_id = $1 RETURNING *', [itemId])).rows;
+    if (!rows.length || !googleAvailable()) return;
+    const w = (await db().query<Wanted>(`${WANTED_SELECT} AND i.id = $1`, [itemId])).rows[0];
+    if (!w) return;
+    const event = buildEvent({ ...w, completed_at: w.completed_at ?? new Date() });
+    runInBackground('calendario', async () => {
+      for (const row of rows) {
+        const acc = await accountOf(row.user_id);
+        if (!acc) continue;
+        try {
+          await google.updateEvent(await accessTokenFor(acc), acc.calendar_id, row.event_id, event);
+        } catch (err) {
+          if (!isGone(err) && !(err instanceof AccountGone)) console.error('[calendario]', itemId, err);
+        }
+      }
+    });
+  },
+
   /** Para las pruebas y el envío programado */
   sync,
 

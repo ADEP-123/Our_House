@@ -5,8 +5,8 @@ import { I18n, TranslationKey } from '../../core/i18n/i18n.service';
 import { TPipe } from '../../core/i18n/t.pipe';
 import { SyncStatus } from '../../core/offline/sync-status.service';
 import { ToastService } from '../../shared/toast.service';
-import { dueLabel } from '../lists/due-label';
-import { dueInfo } from '../lists/item-logic';
+import { dueLabel, shortDate } from '../lists/due-label';
+import { dueInfo, rolledOver } from '../lists/item-logic';
 import { colorOf, iconOf } from '../lists/list-presets';
 import { MyTask } from '../lists/lists.models';
 import { ListsStore } from '../lists/lists.store';
@@ -275,7 +275,15 @@ export class MyTasksPage implements OnInit {
   async complete(task: MyTask): Promise<void> {
     this.done.update((s) => new Set(s).add(task.id));
     try {
-      await this.store.setCompleted(task.list.id, task.id, true);
+      const after = await this.store.setCompleted(task.list.id, task.id, true);
+      if (rolledOver(task, after)) {
+        // Se repite: vuelve con su siguiente fecha (o con el turno de otra persona)
+        const date = shortDate((after.reopenOn ?? after.dueDate)!, this.i18n);
+        this.toast.show(this.i18n.t(after.reopenOn ? 'lists.repeat.backOn' : 'lists.repeat.done', { date }));
+        this.tasks.set(await this.store.myTasks());
+        this.restore(task.id);
+        return;
+      }
       this.toast.show(this.i18n.t('myTasks.completed', { task: task.text }), {
         actionLabel: this.i18n.t('lists.detail.undo'),
         action: () => void this.undo(task),

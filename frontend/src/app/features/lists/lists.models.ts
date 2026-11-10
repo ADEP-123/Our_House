@@ -29,6 +29,24 @@ export interface ListSummary {
   updatedAt: string;
 }
 
+export type RepeatFreq = 'daily' | 'weekly' | 'monthly' | 'yearly';
+
+/** Cada cuánto se repite (el inicio lo pone el servidor) */
+export interface RepeatRule {
+  freq: RepeatFreq;
+  /** Cada N días/semanas/meses/años */
+  interval: number;
+  /** Semanal: 0 = domingo … 6 = sábado */
+  weekdays?: number[];
+  /** schedule = fechas fijas; completion = desde el día en que se hizo */
+  from: 'schedule' | 'completion';
+  start?: string;
+  /** Termina en esa fecha… */
+  until?: string;
+  /** …o después de N veces */
+  count?: number;
+}
+
 export interface ListItem {
   id: string;
   /** Tarea de la que es subtarea (un solo nivel) */
@@ -53,6 +71,14 @@ export interface ListItem {
   dueAt: string | null;
   /** Recordatorios por correo: null = los del perfil de quien recibe la tarea */
   reminders: { startDays: number | null; everyDays: number | null; off: boolean };
+  /** Repetición (null = una sola vez) */
+  repeat: RepeatRule | null;
+  /** Veces que ya se hizo */
+  repeatDone: number;
+  /** Turnos: personas en orden; el responsable es a quien le toca */
+  rotation: string[] | null;
+  /** Sin fecha: día en que vuelve a estar pendiente */
+  reopenOn: string | null;
   position: number;
   completedAt: string | null;
   completedBy: { id: string; nickname: string | null } | null;

@@ -5,6 +5,7 @@ import { toApiError } from '../../core/api/api-error';
 import { I18n, TranslationKey } from '../../core/i18n/i18n.service';
 import { TPipe } from '../../core/i18n/t.pipe';
 import { FamiliesService } from '../families/families.service';
+import { shortDate } from '../lists/due-label';
 import { formatAmount, formatMoney } from '../lists/item-logic';
 import { ActivityEntry, ActivityFilters, ActivityService } from './activity.service';
 
@@ -129,6 +130,14 @@ export class ActivityPage implements OnInit {
   /** Detalle de qué cambió (ediciones) */
   protected detail(e: ActivityEntry): string | null {
     if (e.hidden || !e.details) return null;
+    // Lo que se repite: la próxima fecha, junto al resto del detalle
+    const next = e.details['next'] ? this.i18n.t('activity.next', { date: shortDate(String(e.details['next']), this.i18n) }) : null;
+    const base = this.baseDetail(e);
+    return [base, next].filter(Boolean).join(' · ') || null;
+  }
+
+  private baseDetail(e: ActivityEntry): string | null {
+    if (!e.details) return null;
     const field = (name: string) => this.i18n.t(`activity.fields.${name}` as TranslationKey);
     if (e.action === 'list.updated') {
       const changes = e.details['changes'] as Record<string, { from: string; to: string }>;

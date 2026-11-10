@@ -8,13 +8,13 @@ export const LIST_ICONS = [
 export type ListType = (typeof LIST_TYPES)[number];
 
 /** Opciones que se pueden activar en los elementos de una lista */
-export const LIST_FEATURES = ['quantity', 'category', 'purchases', 'assignee', 'due', 'subtasks'] as const;
+export const LIST_FEATURES = ['quantity', 'category', 'purchases', 'assignee', 'due', 'subtasks', 'repeat'] as const;
 export type ListFeature = (typeof LIST_FEATURES)[number];
 
 /** Opciones con que nace cada tipo si no se eligen otras */
 export const DEFAULT_FEATURES: Record<ListType, ListFeature[]> = {
-  shopping: ['quantity', 'category', 'purchases'],
-  todo: ['assignee', 'due', 'subtasks'],
+  shopping: ['quantity', 'category', 'purchases', 'repeat'],
+  todo: ['assignee', 'due', 'subtasks', 'repeat'],
   other: [],
   secret: [],
 };

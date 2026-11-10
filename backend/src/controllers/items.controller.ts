@@ -19,6 +19,11 @@ export const itemsController = {
     res.json({ item: await itemsService.setCompleted(listId, itemId, currentUserId(req), req.body.completed) });
   },
 
+  async skip(req: Request, res: Response): Promise<void> {
+    const { listId, itemId } = ids(req);
+    res.json({ item: await itemsService.skip(listId, itemId, currentUserId(req)) });
+  },
+
   async purchase(req: Request, res: Response): Promise<void> {
     const { listId, itemId } = ids(req);
     res.json({ item: await itemsService.purchase(listId, itemId, currentUserId(req), req.body) });

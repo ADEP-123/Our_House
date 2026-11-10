@@ -11,6 +11,7 @@ import { notificationsService } from './notifications.service.js';
 import { activityRepository } from '../repositories/activity.repository.js';
 import { secretItemsRepository } from '../repositories/secret-items.repository.js';
 import { toSecretSummary } from './secret-view.js';
+import { reopenDueItems } from './repeat.service.js';
 import { requireMember } from './families.service.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -112,6 +113,10 @@ export function toItemView(item: ItemRow) {
     dueTime: item.due_time?.slice(0, 5) ?? null,
     dueAt: item.due_at,
     reminders: { startDays: item.reminder_start_days, everyDays: item.reminder_every_days, off: item.reminders_off },
+    repeat: item.repeat,
+    repeatDone: item.repeat_done,
+    rotation: item.rotation,
+    reopenOn: item.reopen_on,
     position: item.position,
     completedAt: item.completed_at,
     completedBy: item.completed_by ? { id: item.completed_by, nickname: item.completed_by_nickname } : null,
@@ -130,6 +135,7 @@ export const listsService = {
   async listForFamily(familyId: string, userId: string, archived: boolean) {
     const role = await requireMember(familyId, userId);
     await listsService.purgeExpired(familyId);
+    await reopenDueItems();
     const lists = await listsRepository.listForFamily(familyId, userId, archived);
     const supervisedPrivate =
       role === 'leader' && !archived ? await listsRepository.supervisedPrivate(familyId, userId) : [];
@@ -171,6 +177,7 @@ export const listsService = {
   },
 
   async detail(listId: string, userId: string, supervision = false) {
+    await reopenDueItems();
     const access = await getAccess(listId, userId, supervision);
     if (access.supervision) {
       // Queda en la bitácora; con la actualización cada 15 s se registra como máximo cada 30 minutos
