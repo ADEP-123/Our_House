@@ -93,7 +93,7 @@ export const en: Dictionary = {
     logout: 'Sign out',
   },
   sync: {
-    offline: "You're offline. You can keep using the lists you've already opened; changes will be sent when you're back.",
+    offline: "You're offline. You can keep using the lists and accounts you've already opened; changes will be sent when you're back.",
     offlinePending: "Offline · {n} change(s) saved on this device, they'll be sent when you're back.",
     sending: 'Sending {n} change(s) made offline…',
     rejected: "Some changes made offline weren't saved: the list changed in the meantime (for example, it was archived).",
@@ -802,6 +802,7 @@ export const en: Dictionary = {
       addedCount: '{n} added. Go on with the next one.',
       createdByName: 'created by {name}',
       edited: 'edited',
+      pending: 'not sent yet',
       deleted: '{code} deleted',
       restored: '{code} restored',
       undo: 'Undo',

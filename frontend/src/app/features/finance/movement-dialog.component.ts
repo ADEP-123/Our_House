@@ -24,6 +24,7 @@ import {
   MovementSuggestion,
 } from './finance.models';
 import { FinanceService } from './finance.service';
+import { FinanceStore } from './finance.store';
 import { amountForInput, parseAmount } from './movement-logic';
 
 /** null: cerrado; movement null: agregar uno nuevo */
@@ -51,6 +52,7 @@ export class MovementDialogComponent {
   readonly closed = output<void>();
 
   private readonly finance = inject(FinanceService);
+  private readonly store = inject(FinanceStore);
   private readonly i18n = inject(I18n);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly amountInput = viewChild<ElementRef<HTMLInputElement>>('amountInput');
@@ -75,6 +77,10 @@ export class MovementDialogComponent {
     return !this.account().permissions.canEdit || m?.kind === 'opening';
   });
   protected readonly isAdjust = computed(() => this.movement()?.kind === 'adjust');
+  /** Categoría elegida (para mostrarla en la copia local sin conexión) */
+  private readonly category = computed(
+    () => this.categories().find((c) => c.id === this.categoryId()) ?? null,
+  );
   protected readonly amount = computed(() => parseAmount(this.amountText(), this.i18n.locale()));
   /** Habilitadas, más la actual del movimiento aunque esté deshabilitada */
   protected readonly categoryOptions = computed(() => {
@@ -137,8 +143,8 @@ export class MovementDialogComponent {
     clearTimeout(this.suggestTimer);
     if (this.movement() || value.trim().length < 2) return this.suggestions.set([]);
     this.suggestTimer = setTimeout(async () => {
-      const list = await this.finance
-        .suggestions(this.account().familyId, value.trim())
+      const list = await this.store
+        .suggestions(this.account().familyId, this.account().id, value.trim())
         .catch(() => []);
       // Si la persona siguió escribiendo, estas ya no aplican
       if (this.description() !== value) return;
@@ -183,28 +189,38 @@ export class MovementDialogComponent {
     this.error.set(null);
     try {
       if (!m) {
-        await this.finance.addMovement(this.account().id, {
-          id: crypto.randomUUID(),
-          kind: this.kind(),
-          amount,
-          date: this.date(),
-          description: this.description().trim(),
-          categoryId: this.categoryId(),
-        });
+        await this.store.addMovement(
+          this.account(),
+          {
+            id: crypto.randomUUID(),
+            kind: this.kind(),
+            amount,
+            date: this.date(),
+            description: this.description().trim(),
+            categoryId: this.categoryId(),
+          },
+          this.category(),
+        );
       } else if (m.kind === 'adjust') {
-        await this.finance.updateMovement(m.id, {
-          amount,
-          date: this.date(),
-          description: this.description().trim(),
-        });
+        await this.store.updateMovement(
+          this.account(),
+          m,
+          { amount, date: this.date(), description: this.description().trim() },
+          null,
+        );
       } else {
-        await this.finance.updateMovement(m.id, {
-          kind: this.kind(),
-          amount,
-          date: this.date(),
-          description: this.description().trim(),
-          categoryId: this.categoryId(),
-        });
+        await this.store.updateMovement(
+          this.account(),
+          m,
+          {
+            kind: this.kind(),
+            amount,
+            date: this.date(),
+            description: this.description().trim(),
+            categoryId: this.categoryId(),
+          },
+          this.category(),
+        );
       }
       this.saved.emit({ keepOpen: keepOpen && !m });
       if (keepOpen && !m) {

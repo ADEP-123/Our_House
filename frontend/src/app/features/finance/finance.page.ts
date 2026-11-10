@@ -20,6 +20,7 @@ import { formatMoney } from '../lists/item-logic';
 import { creditUsage, kindIcon } from './finance-logic';
 import { Account, FamilyAccounts } from './finance.models';
 import { FinanceService } from './finance.service';
+import { FinanceStore } from './finance.store';
 import { MovementsComponent } from './movements.component';
 
 /**
@@ -40,6 +41,7 @@ export class FinancePage implements OnInit {
 
   protected readonly families = inject(FamiliesService);
   private readonly finance = inject(FinanceService);
+  private readonly store = inject(FinanceStore);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly confirm = inject(ConfirmService);
@@ -102,13 +104,18 @@ export class FinancePage implements OnInit {
     });
   }
 
+  /** Al terminar de enviar los cambios hechos sin conexión, saldos del servidor */
+  private readonly syncedEffect = effect(() => {
+    if (this.store.synced() > 0) untracked(() => void this.refreshAccounts());
+  });
+
   async ngOnInit(): Promise<void> {
     if (this.families.families() === null) await this.families.load().catch(() => undefined);
   }
 
   async load(familyId: string, archived: boolean): Promise<void> {
     try {
-      this.data.set(await this.finance.accounts(familyId, archived));
+      this.data.set(await this.store.accounts(familyId, archived));
       this.error.set(null);
     } catch (err) {
       this.error.set(this.i18n.error(toApiError(err).code));

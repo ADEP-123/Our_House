@@ -168,7 +168,7 @@
             @for (m of rows(); track m.id) {
               <tr (click)="open(m)" [class.special]="m.kind === 'opening' || m.kind === 'adjust'">
                 @if (show('code')) {
-                  <td class="code">{{ m.code }}</td>
+                  <td class="code">{{ m.pending && !m.code ? '…' : m.code }}</td>
                 }
                 @if (show('date')) {
                   <td class="date-cell">{{ date(m.date) }}</td>
@@ -177,7 +177,9 @@
                   <button type="button" class="row-btn" (click)="$event.stopPropagation(); open(m)">
                     {{ m.kind === 'opening' ? ('finance.movements.opening' | t) : m.description }}
                   </button>
-                  @if (m.edited) {
+                  @if (m.pending) {
+                    <span class="edited pending">⏳ {{ 'finance.movements.pending' | t }}</span>
+                  } @else if (m.edited) {
                     <span class="edited">{{ 'finance.movements.edited' | t }}</span>
                   }
                   @if (m.kind === 'adjust') {

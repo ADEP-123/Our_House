@@ -18,7 +18,7 @@ import { formatMoney } from '../lists/item-logic';
 import { colorOf, iconOf } from '../lists/list-presets';
 import { AdjustDialogComponent } from './adjust-dialog.component';
 import { Account, Category, Movement, MovementColumn } from './finance.models';
-import { FinanceService } from './finance.service';
+import { FinanceStore } from './finance.store';
 import { MovementDialogComponent, MovementRequest } from './movement-dialog.component';
 import {
   EMPTY_FILTERS,
@@ -45,7 +45,7 @@ export class MovementsComponent {
   /** Algo cambió el saldo: la pantalla vuelve a pedir las cuentas */
   readonly changed = output<void>();
 
-  private readonly finance = inject(FinanceService);
+  private readonly store = inject(FinanceStore);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18n);
 
@@ -78,6 +78,10 @@ export class MovementsComponent {
   private readonly accountId = computed(() => this.account().id);
 
   constructor() {
+    // Al terminar de enviar los cambios hechos sin conexión, se trae la versión del servidor (con números)
+    effect(() => {
+      if (this.store.synced() > 0) untracked(() => void this.load(this.account()));
+    });
     effect(() => {
       this.accountId();
       untracked(() => {
@@ -87,7 +91,7 @@ export class MovementsComponent {
         void this.load(a);
         if (this.loadedFamily !== a.familyId) {
           this.loadedFamily = a.familyId;
-          void this.finance
+          void this.store
             .categories(a.familyId)
             .then((c) => this.categories.set(c.categories))
             .catch(() => this.categories.set([]));
@@ -98,7 +102,7 @@ export class MovementsComponent {
 
   private async load(a: Account): Promise<void> {
     try {
-      const data = await this.finance.movements(a.id, a.permissions.supervision);
+      const data = await this.store.movements(a.id, a.permissions.supervision);
       if (this.account().id !== a.id) return; // cambió de pestaña mientras tanto
       this.movements.set(data.movements);
       this.hidden.set(new Set(data.hiddenColumns));
@@ -148,7 +152,7 @@ export class MovementsComponent {
     if (next.has(c)) next.delete(c);
     else next.add(c);
     this.hidden.set(next);
-    await this.finance.setHiddenColumns(this.account().id, [...next]).catch(() => undefined);
+    await this.store.setHiddenColumns(this.account().id, [...next]).catch(() => undefined);
   }
 
   // ---------- Agregar, editar, borrar ----------
@@ -167,9 +171,9 @@ export class MovementsComponent {
 
   protected async onDelete(m: Movement): Promise<void> {
     try {
-      await this.finance.deleteMovement(m.id);
+      await this.store.deleteMovement(this.account(), m);
       await this.refresh();
-      this.toast.show(this.i18n.t('finance.movements.deleted', { code: m.code }), {
+      this.toast.show(this.i18n.t('finance.movements.deleted', { code: m.code || m.description }), {
         actionLabel: this.i18n.t('finance.movements.undo'),
         action: () => void this.undo(m),
       });
@@ -180,9 +184,9 @@ export class MovementsComponent {
 
   private async undo(m: Movement): Promise<void> {
     try {
-      await this.finance.restoreMovement(m.id);
+      await this.store.restoreMovement(this.account(), m);
       await this.refresh();
-      this.toast.show(this.i18n.t('finance.movements.restored', { code: m.code }));
+      this.toast.show(this.i18n.t('finance.movements.restored', { code: m.code || m.description }));
     } catch (err) {
       this.error.set(this.i18n.error(toApiError(err).code));
     }
