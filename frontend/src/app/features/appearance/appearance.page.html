@@ -11,7 +11,7 @@
             type="button"
             role="radio"
             class="preset"
-            [attr.aria-checked]="draft().preset === id"
+            [attr.aria-checked]="draft().preset === id && !auto().enabled"
             (click)="choosePreset(id)"
           >
             <span class="swatch" [style.background]="presets[id].background" aria-hidden="true">
@@ -22,6 +22,100 @@
             <span class="preset-name">{{ presetLabel(id) | t }}</span>
           </button>
         }
+      </div>
+    </section>
+
+    <section class="auto-box">
+      <label class="switch-label">
+        <input type="checkbox" role="switch" [checked]="auto().enabled" (change)="setAuto(!auto().enabled)" />
+        <span>🗓️ {{ 'appearance.auto.title' | t }}</span>
+      </label>
+      <p class="oh-hint">{{ 'appearance.auto.hint' | t }}</p>
+      @if (auto().enabled) {
+        <p class="auto-now">{{ 'appearance.auto.now' | t: autoNow() }}</p>
+        <div class="intensity" role="radiogroup" [attr.aria-label]="'appearance.auto.hemisphere' | t">
+          <span class="intensity-label">{{ 'appearance.auto.hemisphere' | t }}</span>
+          <div class="segmented">
+            @for (h of hemispheres; track h) {
+              <button type="button" role="radio" [attr.aria-checked]="auto().hemisphere === h" (click)="setHemisphere(h)">
+                {{ hemisphereLabel(h) }}
+              </button>
+            }
+          </div>
+        </div>
+        <p class="oh-hint">{{ 'appearance.auto.darkHint' | t }}</p>
+      }
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>{{ 'appearance.seasonalTitle' | t }}</h2>
+        <label class="switch-label">
+          <input type="checkbox" role="switch" [checked]="darkSeasonal()" (change)="toggleDarkSeasonal()" />
+          <span>🌙 {{ 'appearance.darkVersion' | t }}</span>
+        </label>
+      </div>
+      @for (group of seasonalGroups; track group.label) {
+        <h3 class="group-title">{{ group.label | t }}</h3>
+        <div class="presets" role="radiogroup" [attr.aria-label]="group.label | t">
+          @for (id of group.ids; track id) {
+            @let colors = seasonalColors(id);
+            <button
+              type="button"
+              role="radio"
+              class="preset"
+              [attr.aria-checked]="seasonalSelected() === id"
+              (click)="chooseSeasonal(id)"
+            >
+              <span class="swatch" [style.background]="colors.background" aria-hidden="true">
+                <span [style.background]="colors.primary"></span>
+                <span [style.background]="colors.secondary"></span>
+                <span [style.background]="colors.surface"></span>
+              </span>
+              <span class="preset-name">{{ presetLabel(id) | t }}</span>
+            </button>
+          }
+        </div>
+      }
+    </section>
+
+    <section>
+      <h2>{{ 'appearance.pattern.title' | t }}</h2>
+      <p class="oh-hint pattern-hint">{{ 'appearance.pattern.hint' | t }}</p>
+      <div class="patterns" role="radiogroup" [attr.aria-label]="'appearance.pattern.title' | t">
+        @for (id of patternChoices; track id) {
+          <button type="button" role="radio" class="pattern" [attr.aria-checked]="pattern().id === id" (click)="setPattern(id)">
+            <span
+              class="pattern-tile"
+              aria-hidden="true"
+              [style.background-color]="draft().colors.background"
+              [style.background-image]="patternSample(id)"
+            >
+              @if (id === 'none' || patternSample(id) === 'none') {
+                <span class="no-pattern">∅</span>
+              }
+            </span>
+            <span class="pattern-name">{{ patternLabel(id) }}</span>
+          </button>
+        }
+      </div>
+
+      @if (pattern().id === 'emoji') {
+        <div class="emoji-picker">
+          <p class="oh-hint">{{ 'appearance.pattern.emojiHint' | t }}</p>
+          <oh-icon-picker [value]="pattern().emoji ?? '⭐'" (valueChange)="setPatternEmoji($event)" />
+        </div>
+      }
+
+      <div class="intensity" role="radiogroup" [attr.aria-label]="'appearance.pattern.intensity' | t">
+        <span class="intensity-label">{{ 'appearance.pattern.intensity' | t }}</span>
+        <div class="segmented">
+          @for (i of intensities; track i) {
+            <button type="button" role="radio" [attr.aria-checked]="pattern().intensity === i" (click)="setIntensity(i)">
+              {{ intensityLabel(i) }}
+            </button>
+          }
+        </div>
       </div>
     </section>
 
@@ -57,7 +151,7 @@
   <aside class="preview-col">
     <h2>{{ 'appearance.previewTitle' | t }}</h2>
     <!-- Vista previa en vivo: solo esta caja usa el borrador -->
-    <div class="preview oh-theme-scope" [style]="previewStyle()">
+    <div class="preview oh-theme-scope" [style]="previewStyle()" [style.background-image]="previewPattern()">
       <div class="p-surface">
         <p class="p-title">{{ 'appearance.preview.title' | t }}</p>
         <p class="p-text">{{ 'appearance.preview.text' | t }}</p>

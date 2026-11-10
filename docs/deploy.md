@@ -171,6 +171,15 @@ Cómo funciona: cada tarea con fecha aparece en el calendario "Our House" de su 
 - **Ícono de la app:** los archivos de `frontend/public/icons/` y `favicon.ico` salen del dibujo de `frontend/src/app/core/brand/app-icon.ts`, con el color de siempre. La app instalada mantiene ese ícono; el de la pestaña del navegador toma el color principal de la paleta de cada persona. Si el teléfono ya tenía la app instalada, el ícono nuevo aparece cuando el sistema actualiza la app (en Android puede tardar un día; reinstalarla lo cambia al momento).
 - **Tareas vencidas:** el título de la pestaña muestra cuántas tareas tuyas están vencidas, por ejemplo "(2) Our House". En la app instalada aparece además como globito sobre el ícono donde el sistema lo permite (Chrome y Edge en escritorio y Android, Safari en iOS 16.4 o más con la app agregada a la pantalla de inicio).
 
+## 11. Temporadas (fase 6)
+
+- **Sin migraciones ni variables nuevas:** el tema, el patrón y el modo automático se guardan en la misma columna `theme` de cada persona.
+- **Temas de temporada:** primavera, verano, otoño, invierno, Navidad, Halloween, Amor y Año nuevo, cada uno en versión clara y oscura. Todos cumplen el contraste mínimo de lectura (4.5:1), igual que los clásicos.
+- **Patrón de fondo:** se elige aparte de los colores (el del tema, ninguno, uno de los 10 dibujos o cualquier emoji) con intensidad suave, media o marcada. Se dibuja en el navegador con los colores de la paleta: no hay imágenes que subir ni guardar, y funciona sin conexión. Solo se ve en el fondo; tarjetas y formularios quedan lisos.
+- **Modo automático:** es opcional. Cada día usa el tema de la fiesta o, si no hay, el de la estación según el hemisferio que elija la persona. Fiestas: Halloween del 15 al 31 de octubre, Navidad del 1 al 26 de diciembre, Año nuevo del 27 de diciembre al 6 de enero, Amor del 1 al 14 de febrero. Las estaciones van por meses completos (en el norte, invierno de diciembre a febrero). La app revisa la fecha al volver a abrirla y cada hora.
+- **Ícono de la pestaña:** durante una fiesta lleva su detalle (gorro, calabaza, corazón o estrella), elija la persona el tema que elija. La app instalada mantiene su ícono.
+- **Inicio de sesión:** en escritorio, el panel de la marca lleva el patrón de la temporada.
+
 ## Desarrollo local
 
 ```bash
