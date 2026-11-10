@@ -62,7 +62,7 @@ export class ListsStore {
   constructor() {
     this.ready = this.db.get<Mutation[]>(QUEUE_KEY).then((saved) => {
       this.queue = saved ?? [];
-      this.status.queued.set(this.queue.length);
+      this.status.setQueued('lists', this.queue.length);
     });
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => void this.flush());
@@ -73,7 +73,7 @@ export class ListsStore {
     effect(() => {
       if (this.auth.user() === null) {
         this.queue = [];
-        this.status.queued.set(0);
+        this.status.setQueued('lists', 0);
       }
     });
   }
@@ -94,7 +94,7 @@ export class ListsStore {
   }
 
   private async persistQueue(): Promise<void> {
-    this.status.queued.set(this.queue.length);
+    this.status.setQueued('lists', this.queue.length);
     await this.db.set(QUEUE_KEY, this.queue);
   }
 
