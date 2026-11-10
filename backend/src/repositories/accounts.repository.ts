@@ -52,8 +52,8 @@ export interface AccountFields {
 /** $2 = usuario que consulta */
 const VIEW_SELECT = `
   SELECT a.*, u.nickname AS owner_nickname, fm.role AS owner_role, f.currency,
-         COALESCE((SELECT sum(CASE WHEN m.kind IN ('opening', 'in') THEN m.amount ELSE -m.amount END)
-                     FROM account_movements m WHERE m.account_id = a.id), 0) AS balance,
+         COALESCE((SELECT sum(CASE WHEN m.kind = 'out' THEN -m.amount ELSE m.amount END)
+                     FROM account_movements m WHERE m.account_id = a.id AND m.deleted_at IS NULL), 0) AS balance,
          o.amount AS opening_amount, o.date AS opening_date, o.number AS opening_number,
          COALESCE(me.can_view, false) AS my_view,
          COALESCE(me.can_edit, false) AS my_edit,

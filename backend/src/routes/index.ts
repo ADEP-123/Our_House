@@ -8,6 +8,7 @@ import { googleRoutes } from './google.routes.js';
 import { healthRoutes } from './health.routes.js';
 import { familyActivityRoutes, familyListsRoutes, listsRoutes } from './lists.routes.js';
 import { meRoutes } from './me.routes.js';
+import { familyMovementsRoutes, movementsRoutes } from './movements.routes.js';
 
 /** Punto único donde se registran las rutas de cada módulo (tareas, calendario, finanzas...). */
 export const apiRouter = Router();
@@ -19,10 +20,12 @@ apiRouter.use('/families/:familyId/lists', familyListsRoutes);
 apiRouter.use('/families/:familyId/activity', familyActivityRoutes);
 apiRouter.use('/families/:familyId/accounts', familyAccountsRoutes);
 apiRouter.use('/families/:familyId/categories', familyCategoriesRoutes);
+apiRouter.use('/families/:familyId/movement-suggestions', familyMovementsRoutes);
 apiRouter.use('/families', familiesRoutes);
 apiRouter.use('/lists', listsRoutes);
 apiRouter.use('/accounts', accountsRoutes);
 apiRouter.use('/categories', categoriesRoutes);
+apiRouter.use('/movements', movementsRoutes);
 apiRouter.use('/invitations', invitationsRoutes);
 apiRouter.use('/google', googleRoutes);
 
