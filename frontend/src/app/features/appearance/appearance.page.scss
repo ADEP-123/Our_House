@@ -59,6 +59,48 @@ h2 {
   }
 }
 
+/* ---------- Temporadas ---------- */
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 14px;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.switch-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+
+  input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--oh-primary);
+  }
+}
+
+.group-title {
+  margin: 0 0 8px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--oh-text-muted);
+
+  .presets + & {
+    margin-top: 18px;
+  }
+}
+
 /* ---------- Colores ---------- */
 .colors {
   display: grid;

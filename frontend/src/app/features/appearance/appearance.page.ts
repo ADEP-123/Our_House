@@ -7,19 +7,26 @@ import { I18n, TranslationKey } from '../../core/i18n/i18n.service';
 import { TPipe } from '../../core/i18n/t.pipe';
 import { ThemeService } from '../../core/theme/theme.service';
 import {
+  CLASSIC_PRESETS,
+  ClassicId,
   COLOR_TOKENS,
   ColorToken,
   contrastIssues,
   DEFAULT_THEME,
+  FESTIVITIES,
+  isDarkVariant,
   MIN_CONTRAST,
   PRESETS,
   PresetId,
   sameTheme,
+  SeasonalId,
+  seasonalBase,
+  seasonalPreset,
+  SEASONS,
   Theme,
   ThemeColors,
 } from '../../core/theme/themes';
 
-const PRESET_IDS = Object.keys(PRESETS) as PresetId[];
 
 @Component({
   selector: 'oh-appearance-page',
@@ -32,7 +39,11 @@ export class AppearancePage {
   private readonly auth = inject(AuthService);
   private readonly i18n = inject(I18n);
 
-  protected readonly presetIds = PRESET_IDS;
+  protected readonly presetIds = CLASSIC_PRESETS;
+  protected readonly seasonalGroups: { ids: readonly SeasonalId[]; label: TranslationKey }[] = [
+    { ids: SEASONS, label: 'appearance.seasonsGroup' },
+    { ids: FESTIVITIES, label: 'appearance.festivitiesGroup' },
+  ];
   protected readonly presets = PRESETS;
   protected readonly tokens = COLOR_TOKENS;
   protected readonly minContrast = MIN_CONTRAST;
@@ -45,6 +56,10 @@ export class AppearancePage {
   protected readonly dirty = computed(() => !sameTheme(this.draft(), this.saved()));
   protected readonly isDefault = computed(() => sameTheme(this.draft(), DEFAULT_THEME));
 
+  /** Los temas de temporada se eligen en su versión clara u oscura */
+  protected readonly darkSeasonal = signal(isDarkVariant(this.saved().preset));
+  protected readonly seasonalSelected = computed(() => seasonalBase(this.draft().preset));
+
   protected readonly busy = signal(false);
   protected readonly message = signal<string | null>(null);
   protected readonly isError = signal(false);
@@ -53,8 +68,23 @@ export class AppearancePage {
     return `appearance.tokens.${token}` as TranslationKey;
   }
 
-  protected presetLabel(id: PresetId): TranslationKey {
-    return `appearance.presets.${id}` as TranslationKey;
+  protected presetLabel(id: ClassicId | SeasonalId): TranslationKey {
+    return `appearance.presets.${id}`;
+  }
+
+  protected seasonalColors(id: SeasonalId): ThemeColors {
+    return PRESETS[seasonalPreset(id, this.darkSeasonal())];
+  }
+
+  chooseSeasonal(id: SeasonalId): void {
+    this.choosePreset(seasonalPreset(id, this.darkSeasonal()));
+  }
+
+  /** Cambia entre la versión clara y oscura; si hay un tema de temporada elegido, cambia también */
+  toggleDarkSeasonal(): void {
+    this.darkSeasonal.update((dark) => !dark);
+    const selected = this.seasonalSelected();
+    if (selected) this.chooseSeasonal(selected);
   }
 
   choosePreset(id: PresetId): void {
