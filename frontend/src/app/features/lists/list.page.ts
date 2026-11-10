@@ -7,17 +7,16 @@ import { SyncStatus } from '../../core/offline/sync-status.service';
 import { ConfirmService } from '../../shared/confirm.service';
 import { ToastService } from '../../shared/toast.service';
 import { FamiliesService, FamilyMember } from '../families/families.service';
-import { ListFormComponent } from './list-form.component';
 import { ListItemsComponent } from './list-items.component';
 import { SecretListComponent } from './secret-list.component';
 import { formatMoney } from './item-logic';
 import { colorOf, iconOf, LIST_TYPES } from './list-presets';
-import { ListDetail, ListInput } from './lists.models';
+import { ListDetail } from './lists.models';
 import { ListsStore } from './lists.store';
 
 @Component({
   selector: 'oh-list-page',
-  imports: [RouterLink, TPipe, ListFormComponent, ListItemsComponent, SecretListComponent],
+  imports: [RouterLink, TPipe, ListItemsComponent, SecretListComponent],
   templateUrl: './list.page.html',
   styleUrl: './list.page.scss',
 })
@@ -37,20 +36,18 @@ export class ListPage implements OnInit {
 
   protected readonly list = signal<ListDetail | null>(null);
   protected readonly error = signal<string | null>(null);
-  protected readonly editing = signal(false);
   protected readonly busy = signal(false);
   protected readonly members = signal<FamilyMember[]>([]);
 
   protected readonly color = computed(() => colorOf(this.list()?.color ?? 'blue'));
   protected readonly icon = computed(() => iconOf(this.list()?.icon ?? 'check'));
   protected readonly typeLabel = computed(() => LIST_TYPES.find((t) => t.id === this.list()?.type)?.label ?? 'lists.types.other');
-  protected readonly myRole = computed(() => this.families.families()?.find((f) => f.id === this.list()?.familyId)?.role);
 
   constructor() {
     // Mientras la pantalla está abierta, trae los cambios de los demás cada 15 segundos
     // y al volver a la app. No pisa cambios propios que aún se están enviando.
     const refresh = () => {
-      const idle = this.store.pending() === 0 && this.sync.queued() === 0 && !this.editing();
+      const idle = this.store.pending() === 0 && this.sync.queued() === 0;
       if (document.visibilityState === 'visible' && idle) void this.reload(true);
     };
     // Al terminar de enviar los cambios hechos sin conexión, se trae la versión del servidor
@@ -106,15 +103,6 @@ export class ListPage implements OnInit {
       return undefined;
     } finally {
       this.busy.set(false);
-    }
-  }
-
-  async save(changes: ListInput): Promise<void> {
-    const { type: _type, ...editable } = changes;
-    const updated = await this.run(() => this.store.update(this.id(), editable));
-    if (updated) {
-      this.list.set(updated);
-      this.editing.set(false);
     }
   }
 
