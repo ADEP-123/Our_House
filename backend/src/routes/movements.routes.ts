@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { movementsController } from '../controllers/movements.controller.js';
+import { movementsController, transfersController } from '../controllers/movements.controller.js';
 import { checkIds } from '../lib/route-ids.js';
 import { requireAuth } from '../middlewares/auth.js';
 import { validateBody } from '../middlewares/validate.js';
@@ -77,3 +77,23 @@ movement.patch(
 movement.delete('/', movementsController.remove);
 movement.post('/restore', movementsController.restore);
 movement.get('/history', movementsController.history);
+
+/** /api/transfers — entre dos cuentas del grupo (también el pago de una tarjeta) */
+export const transfersRoutes = Router();
+transfersRoutes.use(requireAuth);
+transfersRoutes.post(
+  '/',
+  validateBody(
+    z.strictObject({
+      id: z.uuid().optional(),
+      outId: z.uuid().optional(),
+      inId: z.uuid().optional(),
+      fromAccountId: z.uuid('TRANSFER_ACCOUNT_REQUIRED'),
+      toAccountId: z.uuid('TRANSFER_ACCOUNT_REQUIRED'),
+      amount,
+      date,
+      description,
+    }),
+  ),
+  transfersController.create,
+);
