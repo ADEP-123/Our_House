@@ -1,4 +1,15 @@
-import { Account, Movement, MovementColumn } from './finance.models';
+import { Account, Movement, MovementColumn, MovementKind } from './finance.models';
+
+/** Monto con signo: salidas (también la salida de una transferencia) en negativo */
+export const signOf = (kind: MovementKind, amount: number): number =>
+  kind === 'out' || kind === 'transfer_out'
+    ? -Math.abs(amount)
+    : kind === 'in' || kind === 'transfer_in'
+      ? Math.abs(amount)
+      : amount;
+
+/** Valor del filtro de categoría que muestra solo las transferencias */
+export const TRANSFERS_FILTER = '__transfers';
 
 /** Columnas en el orden en que se muestran; la descripción no se puede ocultar */
 export const MOVEMENT_COLUMNS: MovementColumn[] = [
@@ -79,7 +90,9 @@ export function filterMovements(list: Movement[], f: MovementFilters) {
   const rows = list.filter((m) => {
     if (text && !fold(`${m.description} ${m.code} ${m.category?.name ?? ''}`).includes(text))
       return false;
-    if (f.categoryId && m.category?.id !== f.categoryId) return false;
+    if (f.categoryId === TRANSFERS_FILTER) {
+      if (!m.transfer) return false;
+    } else if (f.categoryId && m.category?.id !== f.categoryId) return false;
     if (f.kind === 'in' && m.signedAmount <= 0) return false;
     if (f.kind === 'out' && m.signedAmount >= 0) return false;
     if (f.from && m.date < f.from) return false;

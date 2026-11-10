@@ -79,13 +79,13 @@ export interface CategoryMovement {
   id: string;
   account: { id: string; name: string };
   code: string;
-  kind: 'opening' | 'in' | 'out';
+  kind: MovementKind;
   amount: number;
   date: string;
   description: string;
 }
 
-export type MovementKind = 'opening' | 'in' | 'out' | 'adjust';
+export type MovementKind = 'opening' | 'in' | 'out' | 'adjust' | 'transfer_in' | 'transfer_out';
 
 /** Columnas de la tabla de una cuenta (cada persona puede ocultar las que quiera, menos la descripción) */
 export type MovementColumn =
@@ -110,6 +110,25 @@ export interface Movement {
   createdAt: string;
   /** Hecho sin conexión: todavía no llegó al servidor (aún sin número) */
   pending?: boolean;
+  /** Transferencia: la otra cuenta (nombre e ID solo si la persona la ve) */
+  transfer?: {
+    id: string;
+    accountId: string | null;
+    accountName: string | null;
+    code: string | null;
+  } | null;
+}
+
+/** Transferencia entre dos cuentas; los ids los genera el dispositivo (funciona sin conexión) */
+export interface TransferInput {
+  id: string;
+  outId: string;
+  inId: string;
+  fromAccountId: string;
+  toAccountId: string;
+  amount: number;
+  date: string;
+  description: string;
 }
 
 export interface AccountMovements {

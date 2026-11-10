@@ -5,6 +5,8 @@ import {
   hasFilters,
   parseAmount,
   recomputeBalances,
+  signOf,
+  TRANSFERS_FILTER,
   withBalance,
 } from './movement-logic';
 import { Account, Movement } from './finance.models';
@@ -146,5 +148,30 @@ describe('finanzas: copia local sin conexión', () => {
     });
     const bank = { balance: 0, credit: null } as Account;
     expect(withBalance(bank, 12.345)).toEqual({ balance: 12.35, credit: null });
+  });
+});
+
+describe('finanzas: transferencias', () => {
+  it('signo según el tipo', () => {
+    expect(signOf('out', 5)).toBe(-5);
+    expect(signOf('transfer_out', 5)).toBe(-5);
+    expect(signOf('transfer_in', 5)).toBe(5);
+    expect(signOf('in', 5)).toBe(5);
+    expect(signOf('adjust', -3)).toBe(-3);
+  });
+
+  it('el filtro "Transferencias" muestra solo esas', () => {
+    const list = [
+      mov('T0002', -20, { description: 'Café' }),
+      mov('T0003', -50, {
+        kind: 'transfer_out',
+        transfer: { id: 't', accountId: 'v', accountName: 'Visa', code: 'V0002' },
+      }),
+    ];
+    expect(
+      filterMovements(list, { ...EMPTY_FILTERS, categoryId: TRANSFERS_FILTER }).rows.map(
+        (m) => m.code,
+      ),
+    ).toEqual(['T0003']);
   });
 });

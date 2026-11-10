@@ -181,6 +181,66 @@ describe('FinanceStore sin conexión', () => {
     await flushed;
   });
 
+  it('transferir sin conexión: sale de una cuenta y entra en la otra; borrar y deshacer mueven las dos', async () => {
+    const card = { ...ACCOUNT, id: 'a2', name: 'Visa', prefix: 'V', balance: -300 } as Account;
+    // La tarjeta también se abrió antes: sus movimientos quedan en el dispositivo
+    const cardMovs = store.movements('a2');
+    await tick();
+    http.expectOne('/api/accounts/a2/movements').flush({
+      movements: [
+        { ...OPENING, id: 'm2', code: 'V0001', amount: -300, signedAmount: -300, balance: -300 },
+      ],
+      hiddenColumns: [],
+    });
+    await cardMovs;
+
+    const input = {
+      id: 't1',
+      outId: 'o1',
+      inId: 'i1',
+      fromAccountId: 'a1',
+      toAccountId: 'a2',
+      amount: 120,
+      date: '2026-11-05',
+      description: 'Pago tarjeta',
+    };
+    const sent = store.transfer(ACCOUNT, card, input);
+    await tick();
+    offline('/api/transfers', 'POST');
+    await sent;
+
+    const bank = (await store.movements('a1')).movements.at(-1)!;
+    const visa = (await store.movements('a2')).movements.at(-1)!;
+    expect([bank.kind, bank.signedAmount, bank.balance, bank.transfer?.accountName]).toEqual([
+      'transfer_out',
+      -120,
+      -20,
+      'Visa',
+    ]);
+    expect([visa.kind, visa.signedAmount, visa.balance]).toEqual(['transfer_in', 120, -180]);
+
+    await store.deleteMovement(ACCOUNT, bank);
+    expect((await store.movements('a2')).movements).toHaveLength(1);
+    await store.restoreMovement(ACCOUNT, bank);
+    expect((await store.movements('a2')).movements.at(-1)!.id).toBe('i1');
+
+    await store.updateMovement(ACCOUNT, bank, { amount: 100 }, null);
+    expect((await store.movements('a2')).movements.at(-1)!.balance).toBe(-200);
+
+    const flushed = store.flush();
+    for (const [method, url] of [
+      ['POST', '/api/transfers'],
+      ['DELETE', '/api/movements/o1'],
+      ['POST', '/api/movements/o1/restore'],
+      ['PATCH', '/api/movements/o1'],
+    ]) {
+      await tick();
+      http.expectOne({ method, url }).flush({});
+    }
+    await flushed;
+    expect(status.queued()).toBe(0);
+  });
+
   it('lo que el servidor rechaza al sincronizar se descarta y se avisa', async () => {
     const added = store.addMovement(
       ACCOUNT,
