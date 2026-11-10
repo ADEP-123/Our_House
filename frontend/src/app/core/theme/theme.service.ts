@@ -1,7 +1,8 @@
 import { DOCUMENT, Injectable, effect, inject } from '@angular/core';
 import { AuthService } from '../auth/auth.service';
 import { appIconDataUrl } from '../brand/app-icon';
-import { COLOR_TOKENS, CSS_VARS, DEFAULT_THEME, isDark, Theme, ThemeColors } from './themes';
+import { patternCss, resolvePattern } from './patterns';
+import { COLOR_TOKENS, CSS_VARS, DEFAULT_THEME, isDark, seasonalBase, Theme, ThemeColors } from './themes';
 
 const STORAGE_KEY = 'oh_theme';
 
@@ -30,11 +31,18 @@ export class ThemeService {
     const root = this.document.documentElement;
     for (const token of COLOR_TOKENS) root.style.setProperty(CSS_VARS[token], theme.colors[token]);
     root.style.colorScheme = isDark(theme.colors) ? 'dark' : 'light';
+    root.style.setProperty('--oh-pattern', ThemeService.patternOf(theme));
     this.document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme.colors.primary);
     // El ícono de la pestaña toma el color principal de la paleta
     this.document
       .querySelector('link[rel="icon"][type="image/svg+xml"]')
       ?.setAttribute('href', appIconDataUrl({ background: theme.colors.primary, foreground: theme.colors.onPrimary }));
+  }
+
+  /** Patrón de fondo del tema (valor de background-image) */
+  static patternOf(theme: Theme): string {
+    const pattern = resolvePattern(theme.pattern, seasonalBase(theme.preset));
+    return patternCss(pattern, theme.colors, theme.pattern?.intensity ?? 'soft', isDark(theme.colors));
   }
 
   /** Estilo en línea para pintar una vista previa con otros colores sin tocar el resto de la app. */
