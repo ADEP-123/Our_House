@@ -49,6 +49,14 @@ describe('paleta de colores', () => {
     await put({ id: 'snow', intensity: 'max' }).expect(400);
   });
 
+  it('guarda el modo automático por temporada', async () => {
+    const { agent } = await createUser('ana');
+    const auto = { enabled: true, hemisphere: 'south', dark: true };
+    expect((await agent.put('/api/me/theme').send({ theme: { preset: 'claro', colors, auto } }).expect(200)).body.user.theme.auto).toEqual(auto);
+    await agent.put('/api/me/theme').send({ theme: { preset: 'claro', colors, auto: { ...auto, hemisphere: 'este' } } }).expect(400);
+    await agent.put('/api/me/theme').send({ theme: { preset: 'claro', colors, auto: { enabled: true } } }).expect(400);
+  });
+
   it('rechaza colores inválidos, colores de más y temas desconocidos', async () => {
     const { agent } = await createUser('ana');
     await agent.put('/api/me/theme').send({ theme: { preset: 'custom', colors: { ...colors, text: 'red' } } }).expect(400);

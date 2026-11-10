@@ -16,4 +16,13 @@ describe('ícono de la app', () => {
       /^data:image\/svg\+xml,%3Csvg/,
     );
   });
+
+  it('lleva el detalle de la fiesta solo en el ícono normal', () => {
+    const colors = { background: '#000', foreground: '#fff' };
+    expect(appIconSvg({ ...colors, decoration: 'navidad' })).toContain('#d62839');
+    expect(appIconSvg({ ...colors, decoration: 'navidad', maskable: true })).not.toContain(
+      '#d62839',
+    );
+    expect(appIconSvg(colors)).not.toContain('#d62839');
+  });
 });

@@ -11,7 +11,7 @@
             type="button"
             role="radio"
             class="preset"
-            [attr.aria-checked]="draft().preset === id"
+            [attr.aria-checked]="draft().preset === id && !auto().enabled"
             (click)="choosePreset(id)"
           >
             <span class="swatch" [style.background]="presets[id].background" aria-hidden="true">
@@ -23,6 +23,28 @@
           </button>
         }
       </div>
+    </section>
+
+    <section class="auto-box">
+      <label class="switch-label">
+        <input type="checkbox" role="switch" [checked]="auto().enabled" (change)="setAuto(!auto().enabled)" />
+        <span>🗓️ {{ 'appearance.auto.title' | t }}</span>
+      </label>
+      <p class="oh-hint">{{ 'appearance.auto.hint' | t }}</p>
+      @if (auto().enabled) {
+        <p class="auto-now">{{ 'appearance.auto.now' | t: autoNow() }}</p>
+        <div class="intensity" role="radiogroup" [attr.aria-label]="'appearance.auto.hemisphere' | t">
+          <span class="intensity-label">{{ 'appearance.auto.hemisphere' | t }}</span>
+          <div class="segmented">
+            @for (h of hemispheres; track h) {
+              <button type="button" role="radio" [attr.aria-checked]="auto().hemisphere === h" (click)="setHemisphere(h)">
+                {{ hemisphereLabel(h) }}
+              </button>
+            }
+          </div>
+        </div>
+        <p class="oh-hint">{{ 'appearance.auto.darkHint' | t }}</p>
+      }
     </section>
 
     <section>
