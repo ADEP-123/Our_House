@@ -17,9 +17,10 @@ import { ConfirmService } from '../../shared/confirm.service';
 import { ToastService } from '../../shared/toast.service';
 import { FamiliesService } from '../families/families.service';
 import { formatMoney } from '../lists/item-logic';
-import { creditUsage, kindIcon, movementCode } from './finance-logic';
+import { creditUsage, kindIcon } from './finance-logic';
 import { Account, FamilyAccounts } from './finance.models';
 import { FinanceService } from './finance.service';
+import { MovementsComponent } from './movements.component';
 
 /**
  * Finanzas: una pestaña por cuenta, como las hojas de un Excel.
@@ -27,7 +28,7 @@ import { FinanceService } from './finance.service';
  */
 @Component({
   selector: 'oh-finance-page',
-  imports: [RouterLink, TPipe],
+  imports: [RouterLink, TPipe, MovementsComponent],
   templateUrl: './finance.page.html',
   styleUrl: './finance.page.scss',
 })
@@ -114,25 +115,20 @@ export class FinancePage implements OnInit {
     }
   }
 
+  /** Un movimiento cambió el saldo: se vuelven a pedir las cuentas sin perder la pestaña abierta */
+  protected async refreshAccounts(): Promise<void> {
+    const supervised = this.supervised();
+    if (supervised) return this.supervised.set(await this.finance.account(supervised.id, true));
+    const family = this.family();
+    if (family) await this.load(family.id, this.archived());
+  }
+
   protected money(n: number, account: Account | null = this.selected()): string {
     return formatMoney(n, account?.currency ?? this.data()?.currency ?? 'USD', this.i18n.locale());
   }
 
-  protected date(iso: string): string {
-    const [y, m, d] = iso.split('-').map(Number);
-    return new Date(y!, m! - 1, d!).toLocaleDateString(this.i18n.locale(), {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  }
-
   protected kindLabel(a: Account): string {
     return this.i18n.t(`finance.kinds.${a.kind}`);
-  }
-
-  protected code(account: Account, n: number): string {
-    return movementCode(account.prefix, n);
   }
 
   protected open(id: string): void {
