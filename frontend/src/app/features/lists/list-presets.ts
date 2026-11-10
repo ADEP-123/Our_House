@@ -1,4 +1,5 @@
 import type { TranslationKey } from '../../core/i18n/i18n.service';
+import { isSingleEmoji } from './list-icons';
 
 export type ListType = 'todo' | 'shopping' | 'other' | 'secret';
 
@@ -62,4 +63,5 @@ export const LIST_ICONS: Record<string, string> = {
 };
 
 export const colorOf = (id: string) => LIST_COLORS[id] ?? LIST_COLORS['blue']!;
-export const iconOf = (id: string) => LIST_ICONS[id] ?? LIST_ICONS['check']!;
+/** Emoji de una lista: los íconos con nombre o el emoji guardado tal cual */
+export const iconOf = (id: string) => LIST_ICONS[id] ?? (isSingleEmoji(id) ? id : LIST_ICONS['check']!);

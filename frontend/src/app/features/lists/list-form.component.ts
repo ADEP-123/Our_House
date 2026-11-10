@@ -1,13 +1,14 @@
 import { Component, OnInit, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TPipe } from '../../core/i18n/t.pipe';
-import { DEFAULT_FEATURES, LIST_COLORS, LIST_FEATURES, LIST_ICONS, LIST_TYPES, ListFeature, ListType } from './list-presets';
+import { IconPickerComponent } from './icon-picker.component';
+import { DEFAULT_FEATURES, LIST_COLORS, LIST_FEATURES, LIST_TYPES, ListFeature, ListType } from './list-presets';
 import { ListInput } from './lists.models';
 
 /** Formulario de crear / editar lista. El tipo solo se elige al crear; las opciones se cambian cuando se quiera. */
 @Component({
   selector: 'oh-list-form',
-  imports: [ReactiveFormsModule, TPipe],
+  imports: [ReactiveFormsModule, TPipe, IconPickerComponent],
   template: `
     <form class="oh-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
       @if (showTitle()) {
@@ -66,14 +67,7 @@ import { ListInput } from './lists.models';
 
       <fieldset>
         <legend>{{ 'lists.form.icon' | t }}</legend>
-        <div class="icons">
-          @for (i of icons; track i[0]) {
-            <label class="icon" [class.on]="form.controls.icon.value === i[0]">
-              <input type="radio" class="oh-sr-only" formControlName="icon" [value]="i[0]" [attr.aria-label]="i[0]" />
-              <span aria-hidden="true">{{ i[1] }}</span>
-            </label>
-          }
-        </div>
+        <oh-icon-picker [value]="icon()" (valueChange)="pickIcon($event)" />
       </fieldset>
 
       @if (showPrivacy()) {
@@ -135,8 +129,7 @@ import { ListInput } from './lists.models';
       border-color: var(--oh-primary);
       color: var(--oh-on-primary);
     }
-    .swatches,
-    .icons {
+    .swatches {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
@@ -150,20 +143,6 @@ import { ListInput } from './lists.models';
     }
     .swatch.on {
       outline: 3px solid var(--oh-text);
-    }
-    .icon {
-      display: grid;
-      place-items: center;
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      border: 2px solid transparent;
-      background: var(--oh-background);
-      font-size: 1.3rem;
-      cursor: pointer;
-    }
-    .icon.on {
-      border-color: var(--oh-primary);
     }
     label:has(input:focus-visible) {
       outline: 3px solid var(--oh-focus);
@@ -238,7 +217,6 @@ export class ListFormComponent implements OnInit {
   /** Opciones elegidas; al crear arrancan con las del tipo */
   protected readonly features = signal<ReadonlySet<ListFeature>>(new Set(DEFAULT_FEATURES.todo));
   protected readonly colors = Object.entries(LIST_COLORS);
-  protected readonly icons = Object.entries(LIST_ICONS);
   protected readonly form = inject(FormBuilder).nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(80)]],
     type: ['todo' as ListType],
@@ -247,6 +225,8 @@ export class ListFormComponent implements OnInit {
     isPrivate: [false],
   });
   private readonly iconTouched = signal(false);
+  /** Ícono elegido (en una señal para que la pantalla se actualice al instante) */
+  protected readonly icon = signal('check');
   protected readonly showPrivacy = computed(() => !this.initial() || this.initial()!.canChangePrivacy);
 
   constructor() {
@@ -258,7 +238,7 @@ export class ListFormComponent implements OnInit {
         const name = this.form.controls.name;
         if (preset.name || !name.dirty) name.setValue(preset.name);
         this.form.patchValue({ type: preset.type, color: preset.color }, { emitEvent: false });
-        this.form.controls.icon.setValue(preset.icon, { emitEvent: false });
+        this.setIcon(preset.icon);
         this.iconTouched.set(false);
         this.features.set(new Set(preset.features ?? DEFAULT_FEATURES[preset.type]));
         this.typeChanged.emit(preset.type);
@@ -270,16 +250,26 @@ export class ListFormComponent implements OnInit {
     const initial = this.initial();
     if (initial) {
       this.form.setValue({ name: initial.name, type: initial.type, color: initial.color, icon: initial.icon, isPrivate: initial.isPrivate });
+      this.icon.set(initial.icon);
       this.features.set(new Set(initial.features ?? DEFAULT_FEATURES[initial.type]));
     }
-    this.form.controls.icon.valueChanges.subscribe(() => this.iconTouched.set(true));
   }
 
   /** Al cambiar de tipo sugiere su ícono, salvo que el usuario ya haya elegido otro */
   onType(type: ListType): void {
     this.features.set(new Set(DEFAULT_FEATURES[type]));
     this.typeChanged.emit(type);
-    if (!this.iconTouched()) this.form.controls.icon.setValue(LIST_TYPES.find((t) => t.id === type)!.defaultIcon, { emitEvent: false });
+    if (!this.iconTouched()) this.setIcon(LIST_TYPES.find((t) => t.id === type)!.defaultIcon);
+  }
+
+  protected pickIcon(icon: string): void {
+    this.setIcon(icon);
+    this.iconTouched.set(true);
+  }
+
+  private setIcon(icon: string): void {
+    this.icon.set(icon);
+    this.form.controls.icon.setValue(icon);
   }
 
   toggleFeature(id: ListFeature): void {
