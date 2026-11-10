@@ -53,6 +53,8 @@ export const routes: Routes = [
       { path: 'inicio', loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage) },
       { path: 'mis-tareas', loadComponent: () => import('./features/tasks/my-tasks.page').then((m) => m.MyTasksPage) },
       { path: 'listas', loadComponent: () => import('./features/lists/lists.page').then((m) => m.ListsPage) },
+      { path: 'listas/nueva', loadComponent: () => import('./features/lists/list-edit.page').then((m) => m.ListEditPage) },
+      { path: 'listas/:id/editar', loadComponent: () => import('./features/lists/list-edit.page').then((m) => m.ListEditPage) },
       { path: 'listas/:id', loadComponent: () => import('./features/lists/list.page').then((m) => m.ListPage) },
       {
         path: 'familias',

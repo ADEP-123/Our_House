@@ -1,0 +1,419 @@
+<dialog #dialog (close)="closed.emit()" aria-labelledby="item-editor-title">
+  <form class="sheet" [formGroup]="form" (ngSubmit)="save()" novalidate>
+    <header class="sheet-head">
+      <h2 id="item-editor-title">
+        {{
+          (isNew()
+            ? parentId()
+              ? 'lists.editor.newSubtask'
+              : 'lists.editor.newTitle'
+            : 'lists.editor.editTitle'
+          ) | t
+        }}
+      </h2>
+      <button
+        type="button"
+        class="oh-btn oh-btn--text close"
+        [attr.aria-label]="'lists.items.cancel' | t"
+        (click)="close()"
+      >
+        ✕
+      </button>
+    </header>
+
+    <div class="sheet-body">
+      <div class="oh-field">
+        <label for="item-text">{{ 'lists.editor.text' | t }}</label>
+        <input
+          id="item-text"
+          class="oh-input"
+          formControlName="text"
+          maxlength="200"
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="oh-field">
+        <label for="item-description">{{ 'lists.editor.description' | t }}</label>
+        <textarea
+          id="item-description"
+          class="oh-input"
+          formControlName="description"
+          rows="3"
+          maxlength="2000"
+          [placeholder]="'lists.editor.descriptionPlaceholder' | t"
+        ></textarea>
+      </div>
+
+      <div class="grid">
+        @if (has('quantity')) {
+          <div class="oh-field">
+            <label for="item-amount">{{ 'lists.items.quantity' | t }}</label>
+            <div class="qty-row">
+              <input
+                id="item-amount"
+                class="oh-input"
+                type="number"
+                inputmode="decimal"
+                min="0"
+                step="any"
+                formControlName="amount"
+                placeholder="2"
+              />
+              <label class="oh-sr-only" for="item-unit">{{ 'lists.items.unit' | t }}</label>
+              <input
+                id="item-unit"
+                class="oh-input"
+                formControlName="unit"
+                maxlength="20"
+                list="editor-units"
+                [placeholder]="'lists.items.unitPlaceholder' | t"
+              />
+            </div>
+          </div>
+        }
+        @if (has('category')) {
+          <div class="oh-field">
+            <label for="item-category">{{ 'lists.items.category' | t }}</label>
+            <input
+              id="item-category"
+              class="oh-input"
+              formControlName="category"
+              maxlength="40"
+              list="editor-categories"
+              [placeholder]="'lists.items.categoryPlaceholder' | t"
+            />
+          </div>
+        }
+        @if (has('assignee')) {
+          <div class="oh-field">
+            <label for="item-assignee">{{ 'lists.items.assignee' | t }}</label>
+            <select id="item-assignee" class="oh-input" formControlName="assigneeId">
+              <option value="">{{ 'lists.items.nobody' | t }}</option>
+              @for (m of members(); track m.userId) {
+                <option [value]="m.userId">{{ m.nickname }}</option>
+              }
+            </select>
+          </div>
+        }
+        @if (has('due')) {
+          <div class="oh-field">
+            <label for="item-due">{{ 'lists.items.dueDate' | t }}</label>
+            <input id="item-due" class="oh-input" type="date" formControlName="dueDate" />
+          </div>
+          <div class="oh-field">
+            <label for="item-time">{{ 'lists.items.dueTime' | t }}</label>
+            <input id="item-time" class="oh-input" type="time" formControlName="dueTime" />
+          </div>
+        }
+      </div>
+
+      @if (has('due') && form.controls.dueDate.value) {
+        @if (calendarPrompt()) {
+          <div class="calendar-prompt" role="note">
+            <p>📆 {{ 'lists.calendarPrompt.body' | t }}</p>
+            <div class="prompt-actions">
+              <a
+                class="oh-btn oh-btn--outline"
+                routerLink="/perfil"
+                fragment="calendario"
+                (click)="close()"
+                >{{ 'lists.calendarPrompt.setup' | t }}</a
+              >
+              <button
+                type="button"
+                class="oh-btn oh-btn--text"
+                (click)="dismissCalendarPrompt(false)"
+              >
+                {{ 'lists.calendarPrompt.later' | t }}
+              </button>
+              <button
+                type="button"
+                class="oh-btn oh-btn--text"
+                (click)="dismissCalendarPrompt(true)"
+              >
+                {{ 'lists.calendarPrompt.never' | t }}
+              </button>
+            </div>
+          </div>
+        }
+        <div class="grid">
+          <div class="oh-field wide">
+            <label for="item-reminders">{{ 'lists.reminders.label' | t }}</label>
+            <select id="item-reminders" class="oh-input" formControlName="reminderMode">
+              <option value="default">{{ 'lists.reminders.default' | t: defaults() }}</option>
+              <option value="custom">{{ 'lists.reminders.custom' | t }}</option>
+              <option value="off">{{ 'lists.reminders.off' | t }}</option>
+            </select>
+          </div>
+          @if (form.controls.reminderMode.value === 'custom') {
+            <div class="oh-field">
+              <label for="item-rem-start">{{ 'profile.notifications.startDays' | t }}</label>
+              <input
+                id="item-rem-start"
+                class="oh-input"
+                type="number"
+                min="0"
+                max="60"
+                formControlName="reminderStart"
+              />
+            </div>
+            <div class="oh-field">
+              <label for="item-rem-every">{{ 'profile.notifications.everyDays' | t }}</label>
+              <input
+                id="item-rem-every"
+                class="oh-input"
+                type="number"
+                min="1"
+                max="30"
+                formControlName="reminderEvery"
+              />
+            </div>
+          }
+        </div>
+      }
+
+      @if (canRepeat()) {
+        <fieldset class="repeat-box">
+          <legend>🔁 {{ 'lists.repeat.label' | t }}</legend>
+          <div class="grid">
+            <div class="oh-field">
+              <label for="item-repeat">{{ 'lists.repeat.how' | t }}</label>
+              <select id="item-repeat" class="oh-input" formControlName="repeatFreq">
+                <option value="" [selected]="!form.controls.repeatFreq.value">
+                  {{ 'lists.repeat.none' | t }}
+                </option>
+                @for (f of freqs; track f) {
+                  <option [value]="f" [selected]="form.controls.repeatFreq.value === f">
+                    {{ freqLabel(f) }}
+                  </option>
+                }
+              </select>
+            </div>
+            @if (form.controls.repeatFreq.value; as freq) {
+              <div class="oh-field">
+                <label for="item-repeat-interval">{{ 'lists.repeat.interval' | t }}</label>
+                <div class="qty-row">
+                  <input
+                    id="item-repeat-interval"
+                    class="oh-input"
+                    type="number"
+                    min="1"
+                    max="365"
+                    formControlName="repeatInterval"
+                  />
+                  <span class="unit">{{ unitLabel(freq) }}</span>
+                </div>
+              </div>
+            }
+          </div>
+
+          @if (form.controls.repeatFreq.value; as freq) {
+            @if (freq === 'weekly') {
+              <div class="oh-field">
+                <span class="label" id="repeat-days-label">{{ 'lists.repeat.weekdays' | t }}</span>
+                <div class="chips" role="group" aria-labelledby="repeat-days-label">
+                  @for (d of weekdays(); track d.day) {
+                    <button
+                      type="button"
+                      class="chip"
+                      [class.on]="repeatDays().has(d.day)"
+                      [attr.aria-pressed]="repeatDays().has(d.day)"
+                      (click)="toggleDay(d.day)"
+                    >
+                      {{ d.name }}
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+
+            <div class="grid">
+              <div class="oh-field">
+                <label for="item-repeat-from">{{ 'lists.repeat.from' | t }}</label>
+                <select id="item-repeat-from" class="oh-input" formControlName="repeatFrom">
+                  <option
+                    value="schedule"
+                    [selected]="form.controls.repeatFrom.value === 'schedule'"
+                  >
+                    {{ 'lists.repeat.fromSchedule' | t }}
+                  </option>
+                  <option
+                    value="completion"
+                    [selected]="form.controls.repeatFrom.value === 'completion'"
+                  >
+                    {{ 'lists.repeat.fromCompletion' | t }}
+                  </option>
+                </select>
+              </div>
+              <div class="oh-field">
+                <label for="item-repeat-end">{{ 'lists.repeat.ends' | t }}</label>
+                <select id="item-repeat-end" class="oh-input" formControlName="repeatEnd">
+                  <option value="never" [selected]="form.controls.repeatEnd.value === 'never'">
+                    {{ 'lists.repeat.never' | t }}
+                  </option>
+                  <option value="until" [selected]="form.controls.repeatEnd.value === 'until'">
+                    {{ 'lists.repeat.until' | t }}
+                  </option>
+                  <option value="count" [selected]="form.controls.repeatEnd.value === 'count'">
+                    {{ 'lists.repeat.count' | t }}
+                  </option>
+                </select>
+              </div>
+              @if (form.controls.repeatEnd.value === 'until') {
+                <div class="oh-field">
+                  <label for="item-repeat-until">{{ 'lists.repeat.untilDate' | t }}</label>
+                  <input
+                    id="item-repeat-until"
+                    class="oh-input"
+                    type="date"
+                    formControlName="repeatUntil"
+                  />
+                </div>
+              }
+              @if (form.controls.repeatEnd.value === 'count') {
+                <div class="oh-field">
+                  <label for="item-repeat-count">{{ 'lists.repeat.count' | t }}</label>
+                  <div class="qty-row">
+                    <input
+                      id="item-repeat-count"
+                      class="oh-input"
+                      type="number"
+                      min="1"
+                      max="999"
+                      formControlName="repeatCount"
+                    />
+                    <span class="unit">{{ 'lists.repeat.times' | t }}</span>
+                  </div>
+                </div>
+              }
+            </div>
+
+            @if (!form.controls.dueDate.value) {
+              <p class="hint">{{ 'lists.repeat.noDateHint' | t }}</p>
+            }
+
+            @if (has('assignee') && members().length > 1) {
+              <div class="oh-field turns">
+                <span class="label">{{ 'lists.repeat.turns' | t }}</span>
+                <p class="hint">{{ 'lists.repeat.turnsHint' | t }}</p>
+                @if (rotationMembers().length) {
+                  <ol class="turn-list">
+                    @for (m of rotationMembers(); track m.userId; let i = $index) {
+                      <li>
+                        <span class="turn-name">{{ m.nickname }}</span>
+                        @if (i > 0) {
+                          <button
+                            type="button"
+                            class="oh-btn oh-btn--text"
+                            [attr.aria-label]="'lists.repeat.moveUp' | t: { name: m.nickname }"
+                            (click)="moveTurnUp(i)"
+                          >
+                            ↑
+                          </button>
+                        }
+                        <button
+                          type="button"
+                          class="oh-btn oh-btn--text"
+                          [attr.aria-label]="'lists.repeat.removeTurn' | t: { name: m.nickname }"
+                          (click)="removeTurn(m.userId)"
+                        >
+                          ✕
+                        </button>
+                      </li>
+                    }
+                  </ol>
+                }
+                @if (outOfRotation().length) {
+                  <div class="chips">
+                    @for (m of outOfRotation(); track m.userId) {
+                      <button
+                        type="button"
+                        class="chip"
+                        [attr.aria-label]="'lists.repeat.addTurn' | t: { name: m.nickname }"
+                        (click)="addTurn(m.userId)"
+                      >
+                        + {{ m.nickname }}
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          }
+        </fieldset>
+      }
+
+      @if (isNew() && canHaveSubtasks()) {
+        <fieldset class="new-subtasks-box">
+          <legend>{{ 'lists.editor.subtasks' | t }}</legend>
+          <ul class="new-subtasks">
+            @for (s of newSubtasks(); track $index; let i = $index) {
+              <li>
+                <label class="oh-sr-only" [for]="'new-sub-' + i">{{
+                  'lists.editor.subtask' | t
+                }}</label>
+                <input
+                  [id]="'new-sub-' + i"
+                  class="oh-input"
+                  maxlength="200"
+                  autocomplete="off"
+                  [value]="s"
+                  (input)="setSubtask(i, $any($event.target).value)"
+                  (keydown.enter)="$event.preventDefault(); addSubtaskRow()"
+                />
+                <button
+                  type="button"
+                  class="oh-btn oh-btn--text"
+                  [attr.aria-label]="'lists.editor.removeSubtask' | t"
+                  (click)="removeSubtask(i)"
+                >
+                  ✕
+                </button>
+              </li>
+            }
+          </ul>
+          <button type="button" class="oh-btn oh-btn--text add-sub" (click)="addSubtaskRow()">
+            + {{ 'lists.subtasks.add' | t }}
+          </button>
+        </fieldset>
+      }
+    </div>
+
+    <footer class="sheet-foot">
+      @if (!isNew()) {
+        <button class="oh-btn oh-btn--text danger" type="button" (click)="remove()">
+          {{ 'lists.items.delete' | t }}
+        </button>
+        @if (item()?.repeat && item()?.dueDate) {
+          <button class="oh-btn oh-btn--text" type="button" (click)="skip()">
+            ⏭ {{ 'lists.repeat.skip' | t }}
+          </button>
+        }
+        @if (canHaveSubtasks()) {
+          <button class="oh-btn oh-btn--text" type="button" (click)="newSubtaskBelow()">
+            + {{ 'lists.subtasks.add' | t }}
+          </button>
+        }
+      }
+      <span class="spacer"></span>
+      <button class="oh-btn oh-btn--text" type="button" (click)="close()">
+        {{ 'lists.items.cancel' | t }}
+      </button>
+      <button class="oh-btn oh-btn--filled" type="submit" [disabled]="form.invalid">
+        {{ (isNew() ? 'lists.items.add' : 'lists.items.save') | t }}
+      </button>
+    </footer>
+  </form>
+
+  <datalist id="editor-units">
+    @for (u of units(); track u) {
+      <option [value]="u"></option>
+    }
+  </datalist>
+  <datalist id="editor-categories">
+    @for (c of categories(); track c) {
+      <option [value]="c"></option>
+    }
+  </datalist>
+</dialog>

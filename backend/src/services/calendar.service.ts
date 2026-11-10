@@ -18,6 +18,7 @@ interface Account {
 interface Wanted {
   id: string;
   text: string;
+  description: string | null;
   due_date: string;
   due_tz: string | null;
   due_at: Date | null;
@@ -68,9 +69,10 @@ async function accessTokenFor(account: Account): Promise<string> {
 const addDays = (date: string, days: number) => new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
 
 /** Evento de la tarea: con hora, 30 minutos con aviso 30 minutos antes; sin hora, todo el día con aviso a las 9 del día anterior. */
-export function buildEvent(w: Pick<Wanted, 'text' | 'due_date' | 'due_tz' | 'due_at' | 'completed_at' | 'list_id' | 'list_name'>): CalendarEvent {
+export function buildEvent(w: Pick<Wanted, 'text' | 'description' | 'due_date' | 'due_tz' | 'due_at' | 'completed_at' | 'list_id' | 'list_name'>): CalendarEvent {
   const summary = w.completed_at ? `✓ ${w.text}` : w.text;
-  const description = `${w.list_name}\n${env.appUrl}/listas/${w.list_id}`;
+  // La descripción de la tarea primero; al final, la lista y el enlace para abrirla
+  const description = [w.description, `${w.list_name}\n${env.appUrl}/listas/${w.list_id}`].filter(Boolean).join('\n\n');
   if (w.due_at) {
     const timeZone = w.due_tz ?? 'UTC';
     return {
@@ -96,7 +98,7 @@ const isGone = (err: unknown) => err instanceof GoogleError && (err.status === 4
 // ---------- Sincronización ----------
 
 const WANTED_SELECT = `
-  SELECT i.id, i.text, i.due_date, i.due_tz, i.completed_at, l.id AS list_id, l.name AS list_name,
+  SELECT i.id, i.text, i.description, i.due_date, i.due_tz, i.completed_at, l.id AS list_id, l.name AS list_name,
          CASE WHEN i.due_time IS NOT NULL THEN (i.due_date + i.due_time) AT TIME ZONE COALESCE(i.due_tz, 'UTC') END AS due_at,
          ga.user_id, ga.calendar_id
     FROM list_items i
@@ -182,6 +184,30 @@ export const calendarService = {
 
   syncList(listId: string): void {
     if (googleAvailable()) runInBackground('calendario', async () => sync(await itemIdsOfList(listId)));
+  },
+
+  /**
+   * Una tarea que se repite pasa a su siguiente fecha: el evento de esta vez se queda en el
+   * calendario como "✓ tarea" y se suelta del elemento, para que la sincronización cree el de
+   * la próxima fecha. Se llama antes de mover la fecha.
+   */
+  async archiveOccurrence(itemId: string): Promise<void> {
+    const rows = (await db().query<EventRow>('DELETE FROM calendar_events WHERE item_id = $1 RETURNING *', [itemId])).rows;
+    if (!rows.length || !googleAvailable()) return;
+    const w = (await db().query<Wanted>(`${WANTED_SELECT} AND i.id = $1`, [itemId])).rows[0];
+    if (!w) return;
+    const event = buildEvent({ ...w, completed_at: w.completed_at ?? new Date() });
+    runInBackground('calendario', async () => {
+      for (const row of rows) {
+        const acc = await accountOf(row.user_id);
+        if (!acc) continue;
+        try {
+          await google.updateEvent(await accessTokenFor(acc), acc.calendar_id, row.event_id, event);
+        } catch (err) {
+          if (!isGone(err) && !(err instanceof AccountGone)) console.error('[calendario]', itemId, err);
+        }
+      }
+    });
   },
 
   /** Para las pruebas y el envío programado */

@@ -1,11 +1,11 @@
-import { applyCompleted, applyPurchase, applyToggle, dueInfo, isPartial, remaining, removeItem } from './item-logic';
+import { applyCompleted, applyPurchase, applyToggle, dueInfo, isPartial, linkify, remaining, removeItem, rolledOver, weekdayNames } from './item-logic';
 import { ListItem } from './lists.models';
 
 const leche: ListItem = {
   id: 'i1',
   parentId: null,
   text: 'Leche',
-  note: null,
+  description: null,
   amount: 2,
   unit: 'L',
   purchased: null,
@@ -16,6 +16,10 @@ const leche: ListItem = {
   dueTime: null,
   dueAt: null,
   reminders: { startDays: null, everyDays: null, off: false },
+  repeat: null,
+  repeatDone: 0,
+  rotation: null,
+  reopenOn: null,
   position: 1,
   completedAt: null,
   completedBy: null,
@@ -102,5 +106,34 @@ describe('fechas límite', () => {
     expect(dueInfo(due('2026-11-03', morning), now)!.kind).toBe('overdue');
     expect(dueInfo(due('2026-11-03', evening), now)).toMatchObject({ kind: 'today', timed: true });
     expect(dueInfo(due('2026-11-03', morning, morning), now)!.kind).toBe('today');
+  });
+});
+
+describe('enlaces en la descripción', () => {
+  it('separa los enlaces sin tomar la puntuación final', () => {
+    expect(linkify('Ver https://a.com/x, luego http://b.org.')).toEqual([
+      { text: 'Ver ' },
+      { text: 'https://a.com/x', url: 'https://a.com/x' },
+      { text: ', luego ' },
+      { text: 'http://b.org', url: 'http://b.org' },
+      { text: '.' },
+    ]);
+    expect(linkify('sin enlaces')).toEqual([{ text: 'sin enlaces' }]);
+  });
+});
+
+describe('repetición', () => {
+  it('nombra los días empezando el domingo', () => {
+    expect(weekdayNames('en-US')[0]).toBe('Sun');
+    expect(weekdayNames('en-US')[4]).toBe('Thu');
+  });
+
+  it('reconoce cuándo la tarea pasó a su siguiente vez', () => {
+    const repeat = { freq: 'weekly' as const, interval: 1, from: 'schedule' as const };
+    expect(rolledOver({ dueDate: '2030-03-04' }, { repeat, completedAt: null, dueDate: '2030-03-11', reopenOn: null })).toBe(true);
+    expect(rolledOver({ dueDate: null }, { repeat, completedAt: 'x', dueDate: null, reopenOn: '2030-03-11' })).toBe(true);
+    // Terminó la repetición: queda hecha
+    expect(rolledOver({ dueDate: '2030-03-04' }, { repeat, completedAt: 'x', dueDate: '2030-03-04', reopenOn: null })).toBe(false);
+    expect(rolledOver({ dueDate: '2030-03-04' }, { repeat: null, completedAt: null, dueDate: '2030-03-11', reopenOn: null })).toBe(false);
   });
 });

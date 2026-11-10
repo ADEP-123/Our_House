@@ -1,26 +1,47 @@
-import { CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
+import {
+  CdkDrag,
+  CdkDragDrop,
+  CdkDragHandle,
+  CdkDropList,
+  moveItemInArray,
+} from '@angular/cdk/drag-drop';
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, OnDestroy, computed, effect, inject, input, model, signal, untracked } from '@angular/core';
+import {
+  Component,
+  OnDestroy,
+  computed,
+  effect,
+  inject,
+  input,
+  model,
+  signal,
+  untracked,
+} from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { toApiError } from '../../core/api/api-error';
 import { AuthService } from '../../core/auth/auth.service';
 import { I18n } from '../../core/i18n/i18n.service';
 import { TPipe } from '../../core/i18n/t.pipe';
-import { RouterLink } from '@angular/router';
 import { ConfirmService } from '../../shared/confirm.service';
-import { GoogleCalendarService } from '../calendar/google-calendar.service';
-import { ProfileService } from '../profile/profile.service';
 import { ToastService } from '../../shared/toast.service';
 import { FamilyMember } from '../families/families.service';
-import { applyPurchase, applyToggle, formatAmount, formatMoney, isPartial, removeItem, syncParent, unitsFor } from './item-logic';
-import { dueLabel } from './due-label';
+import {
+  applyPurchase,
+  applyToggle,
+  formatAmount,
+  formatMoney,
+  isPartial,
+  linkify,
+  removeItem,
+  rolledOver,
+  syncParent,
+} from './item-logic';
+import { dueLabel, repeatLabel, shortDate } from './due-label';
 import { DEFAULT_FEATURES, ListFeature } from './list-presets';
 import { ListDetail, ListItem } from './lists.models';
+import { ItemEditorComponent, ItemEditorResult } from './item-editor.component';
 import { PurchaseDialogComponent, PurchaseInput } from './purchase-dialog.component';
-import { ItemChanges, ListsStore, NewItem } from './lists.store';
-
-/** default = lo que diga el perfil de quien recibe la tarea */
-type ReminderMode = 'default' | 'custom' | 'off';
+import { ListsStore, NewItem } from './lists.store';
 
 interface Group {
   key: string;
@@ -30,12 +51,19 @@ interface Group {
 
 const UNDO_MS = 5000;
 
-const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, Math.round(Number(n) || 0)));
-
 /** Checklist de una lista: agregar, marcar, editar, reordenar, borrar con deshacer, reiniciar y limpiar. */
 @Component({
   selector: 'oh-list-items',
-  imports: [ReactiveFormsModule, NgTemplateOutlet, RouterLink, TPipe, CdkDropList, CdkDrag, CdkDragHandle, PurchaseDialogComponent],
+  imports: [
+    ReactiveFormsModule,
+    NgTemplateOutlet,
+    TPipe,
+    CdkDropList,
+    CdkDrag,
+    CdkDragHandle,
+    PurchaseDialogComponent,
+    ItemEditorComponent,
+  ],
   templateUrl: './list-items.component.html',
   styleUrl: './list-items.component.scss',
 })
@@ -50,60 +78,46 @@ export class ListItemsComponent implements OnDestroy {
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18n);
   private readonly fb = inject(FormBuilder).nonNullable;
-  private readonly calendar = inject(GoogleCalendarService);
-  private readonly profile = inject(ProfileService);
 
   protected readonly canEdit = computed(() => this.list().permissions.canEdit);
   protected readonly canCheck = computed(() => this.list().permissions.canCheck);
   /** Opciones activas de la lista (una copia guardada antes de existir las opciones usa las de su tipo) */
-  private readonly features = computed<ReadonlySet<ListFeature>>(() => new Set(this.list().features ?? DEFAULT_FEATURES[this.list().type]));
+  private readonly features = computed<ReadonlySet<ListFeature>>(
+    () => new Set(this.list().features ?? DEFAULT_FEATURES[this.list().type]),
+  );
   protected readonly has = (feature: ListFeature) => this.features().has(feature);
-  /** Hay campos extra para el botón "Más detalles" */
-  protected readonly hasDetails = computed(() => ['quantity', 'category', 'assignee', 'due'].some((f) => this.features().has(f as ListFeature)));
   protected readonly error = signal<string | null>(null);
-  protected readonly showMore = signal(false);
-  protected readonly editingId = signal<string | null>(null);
   /** Ítem de compras cuyo diálogo "¿Cuánto compraste?" está abierto */
   protected readonly buying = signal<ListItem | null>(null);
-  protected readonly units = computed(() => unitsFor(this.i18n.locale()));
-  /** Recordatorios por defecto (perfil) para proponer al personalizar */
-  protected readonly defaults = computed(() => ({ startDays: 3, everyDays: 1, ...this.auth.user()?.reminders }));
   protected readonly isPartial = isPartial;
   /** Tarea en la que se está escribiendo una subtarea */
   protected readonly addingSubtaskTo = signal<string | null>(null);
   protected readonly subtaskText = signal('');
 
   /** Ítems borrados que todavía se pueden recuperar (se ocultan, pero aún no se envían) */
-  private readonly pendingDeletes = new Map<string, { item: ListItem; timer: ReturnType<typeof setTimeout> }>();
+  private readonly pendingDeletes = new Map<
+    string,
+    { item: ListItem; timer: ReturnType<typeof setTimeout> }
+  >();
   private readonly hidden = signal<ReadonlySet<string>>(new Set());
 
+  /** Campo rápido: solo el título */
   protected readonly addForm = this.fb.group({
     text: ['', [Validators.required, Validators.maxLength(200)]],
-    amount: [''],
-    unit: ['', Validators.maxLength(20)],
-    category: ['', Validators.maxLength(40)],
-    assigneeId: [''],
-    dueDate: [''],
-    dueTime: [''],
-    reminderMode: ['default' as ReminderMode],
-    reminderStart: [3],
-    reminderEvery: [1],
   });
-  protected readonly editForm = this.fb.group({
-    text: ['', [Validators.required, Validators.maxLength(200)]],
-    note: ['', Validators.maxLength(500)],
-    amount: [''],
-    unit: ['', Validators.maxLength(20)],
-    category: ['', Validators.maxLength(40)],
-    assigneeId: [''],
-    dueDate: [''],
-    dueTime: [''],
-    reminderMode: ['default' as ReminderMode],
-    reminderStart: [3],
-    reminderEvery: [1],
-  });
+  /** Ventana de detalles abierta: elemento a editar (null = nuevo), título ya escrito o tarea de la subtarea */
+  protected readonly editor = signal<{
+    item: ListItem | null;
+    text: string;
+    parentId: string | null;
+  } | null>(null);
+  /** Descripciones abiertas con "ver más" */
+  protected readonly expanded = signal<ReadonlySet<string>>(new Set());
+  protected readonly linkify = linkify;
 
-  private readonly visibleItems = computed(() => this.list().items.filter((i) => !this.hidden().has(i.id)));
+  private readonly visibleItems = computed(() =>
+    this.list().items.filter((i) => !this.hidden().has(i.id)),
+  );
   /** Tareas principales (las subtareas se muestran dentro de su tarea) */
   private readonly topLevel = computed(() => this.visibleItems().filter((i) => !i.parentId));
   private readonly subtasks = computed(() => {
@@ -130,7 +144,9 @@ export class ListItemsComponent implements OnDestroy {
       byKey.get(key)!.items.push(item);
     }
     // Alfabético, "sin categoría" al final
-    return [...byKey.values()].sort((a, b) => (a.key === '' ? 1 : b.key === '' ? -1 : a.key.localeCompare(b.key)));
+    return [...byKey.values()].sort((a, b) =>
+      a.key === '' ? 1 : b.key === '' ? -1 : a.key.localeCompare(b.key),
+    );
   });
 
   /** Los completados bajan al final, el último marcado primero */
@@ -141,28 +157,16 @@ export class ListItemsComponent implements OnDestroy {
   );
 
   protected readonly categories = computed(() => [
-    ...new Set(this.list().items.map((i) => i.category?.trim()).filter((c): c is string => !!c)),
+    ...new Set(
+      this.list()
+        .items.map((i) => i.category?.trim())
+        .filter((c): c is string => !!c),
+    ),
   ]);
 
-  protected readonly pendingCount = computed(() => this.groups().reduce((n, g) => n + g.items.length, 0));
-
-  /** Aviso al poner una fecha: "puedes llevar tus tareas a Google Calendar" (hasta conectarlo o pedir no verlo más) */
-  private readonly promptClosed = signal(false);
-  protected readonly calendarPrompt = computed(() => {
-    const status = this.calendar.status();
-    return !!status?.available && !status.connected && !this.auth.user()?.calendarPromptDismissed && !this.promptClosed();
-  });
-
-  constructor() {
-    effect(() => {
-      if (this.has('due')) untracked(() => void this.calendar.load());
-    });
-  }
-
-  dismissCalendarPrompt(forever: boolean): void {
-    this.promptClosed.set(true);
-    if (forever) void this.profile.setSettings({ calendarPromptDismissed: true }).catch(() => undefined);
-  }
+  protected readonly pendingCount = computed(() =>
+    this.groups().reduce((n, g) => n + g.items.length, 0),
+  );
 
   ngOnDestroy(): void {
     // Al salir de la pantalla, los borrados pendientes se confirman
@@ -185,13 +189,31 @@ export class ListItemsComponent implements OnDestroy {
     const time = date.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
     const today = new Date();
     const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
-    if (date.toDateString() === today.toDateString()) return this.i18n.t('lists.items.today', { time });
-    if (date.toDateString() === yesterday.toDateString()) return this.i18n.t('lists.items.yesterday', { time });
+    if (date.toDateString() === today.toDateString())
+      return this.i18n.t('lists.items.today', { time });
+    if (date.toDateString() === yesterday.toDateString())
+      return this.i18n.t('lists.items.yesterday', { time });
     return `${date.toLocaleDateString(locale, { day: 'numeric', month: 'short' })} ${time}`;
   }
 
   protected dueLabel(item: ListItem) {
     return dueLabel(item, this.i18n);
+  }
+
+  /** "Cada semana · lun, jue"; si está hecha y vuelve sola, cuándo */
+  protected repeatTag(item: ListItem): string | null {
+    if (!item.repeat || !this.has('repeat')) return null;
+    const label = repeatLabel(item.repeat, this.i18n);
+    return item.completedAt && item.reopenOn
+      ? `${label} · ${this.i18n.t('lists.repeat.returns', { date: shortDate(item.reopenOn, this.i18n) })}`
+      : label;
+  }
+
+  /** "👤 Ana" o, con turnos, "turno de Ana" */
+  protected assigneeTag(item: ListItem): string | null {
+    const name = this.memberName(item.assigneeId);
+    if (!name) return null;
+    return item.rotation?.length ? this.i18n.t('lists.repeat.turnTag', { name }) : name;
   }
 
   protected subtasksOf(id: string): ListItem[] {
@@ -202,7 +224,9 @@ export class ListItemsComponent implements OnDestroy {
   protected progress(item: ListItem): { done: number; total: number } | null {
     if (item.parentId) return null;
     const subs = this.subtasksOf(item.id);
-    return subs.length ? { done: subs.filter((s) => s.completedAt).length, total: subs.length } : null;
+    return subs.length
+      ? { done: subs.filter((s) => s.completedAt).length, total: subs.length }
+      : null;
   }
 
   /** "2 L"; si es parcial, "1 de 2 L" */
@@ -210,31 +234,33 @@ export class ListItemsComponent implements OnDestroy {
     if (item.amount === null) return null;
     const locale = this.i18n.locale();
     const of = [formatAmount(item.amount, locale), item.unit].filter(Boolean).join(' ');
-    return isPartial(item) ? this.i18n.t('lists.purchase.partialTag', { done: formatAmount(item.purchased!, locale), of }) : of;
+    return isPartial(item)
+      ? this.i18n.t('lists.purchase.partialTag', {
+          done: formatAmount(item.purchased!, locale),
+          of,
+        })
+      : of;
   }
 
   protected money(value: number): string {
     return formatMoney(value, this.list().currency, this.i18n.locale());
   }
 
-  /** Cantidad escrita en el formulario: número positivo o vacío (acepta coma decimal) */
-  private amountOf(raw: string | number | null): number | null {
-    // input type=number entrega un número (o null si está vacío)
-    const text = String(raw ?? '').trim();
-    const value = Number(text.replace(',', '.'));
-    return text && value > 0 ? value : null;
-  }
-
   // ---------- Cambios locales ----------
 
   private patchItem(id: string, changes: Partial<ListItem>): void {
-    this.list.update((l) => ({ ...l, items: l.items.map((i) => (i.id === id ? { ...i, ...changes } : i)) }));
+    this.list.update((l) => ({
+      ...l,
+      items: l.items.map((i) => (i.id === id ? { ...i, ...changes } : i)),
+    }));
     this.recount();
   }
 
   private recount(): void {
     this.list.update((l) => {
-      const items = l.items.filter((i) => !this.hidden().has(i.id) && !this.hidden().has(i.parentId ?? ''));
+      const items = l.items.filter(
+        (i) => !this.hidden().has(i.id) && !this.hidden().has(i.parentId ?? ''),
+      );
       const tasks = items.filter((i) => !i.parentId);
       const completed = tasks.filter((i) => i.completedAt).length;
       const spent = items.reduce((sum, i) => sum + (i.spent ?? 0), 0);
@@ -254,33 +280,36 @@ export class ListItemsComponent implements OnDestroy {
 
   async add(): Promise<void> {
     if (this.addForm.invalid) return;
-    const v = this.addForm.getRawValue();
-    const item: NewItem = { text: v.text.trim() };
-    Object.assign(item, this.featureFields(v));
-    this.addForm.reset({
-      text: '',
-      amount: '',
-      unit: '',
-      category: v.category,
-      assigneeId: '',
-      dueDate: '',
-      dueTime: '',
-      reminderMode: 'default',
-      reminderStart: this.defaults().startDays,
-      reminderEvery: this.defaults().everyDays,
-    });
+    const text = this.addForm.getRawValue().text.trim();
+    this.addForm.reset({ text: '' });
     this.error.set(null);
-    await this.create(item);
+    await this.create({ text });
   }
 
-  private async create(item: NewItem): Promise<void> {
+  /** "Con detalles": abre la ventana con el título que ya se haya escrito */
+  openNew(): void {
+    const text = this.addForm.getRawValue().text.trim();
+    this.addForm.reset({ text: '' });
+    this.editor.set({ item: null, text, parentId: null });
+  }
+
+  private async create(item: NewItem): Promise<ListItem | null> {
     try {
       const created = await this.store.addItem(this.list().id, item);
       // Una subtarea nueva reabre su tarea si estaba completa
-      this.list.update((l) => ({ ...l, items: syncParent([...l.items.filter((i) => i.id !== created.id), created], created.parentId, this.me()) }));
+      this.list.update((l) => ({
+        ...l,
+        items: syncParent(
+          [...l.items.filter((i) => i.id !== created.id), created],
+          created.parentId,
+          this.me(),
+        ),
+      }));
       this.recount();
+      return created;
     } catch (err) {
       this.fail(err);
+      return null;
     }
   }
 
@@ -298,44 +327,6 @@ export class ListItemsComponent implements OnDestroy {
     await this.create({ text, parentId: parent.id });
   }
 
-  /** Solo los campos de las opciones activas: lo de una opción apagada no se toca */
-  private featureFields(v: ReturnType<typeof this.addForm.getRawValue>): ItemChanges {
-    const changes: ItemChanges = {};
-    if (this.has('quantity')) {
-      const amount = this.amountOf(v.amount);
-      Object.assign(changes, { amount, unit: amount !== null ? v.unit.trim() || null : null });
-    }
-    if (this.has('category')) changes.category = v.category.trim() || null;
-    const todo = this.todoFields(v);
-    if (this.has('assignee')) changes.assigneeId = todo.assigneeId;
-    if (this.has('due')) {
-      const { assigneeId: _assignee, ...due } = todo;
-      Object.assign(changes, due);
-    }
-    return changes;
-  }
-
-  /** La hora solo cuenta si hay fecha; los recordatorios, "como en el perfil", personalizados o apagados */
-  private todoFields(v: {
-    assigneeId: string;
-    dueDate: string;
-    dueTime: string;
-    reminderMode: ReminderMode;
-    reminderStart: number;
-    reminderEvery: number;
-  }): ItemChanges {
-    const dueDate = v.dueDate || null;
-    const custom = v.reminderMode === 'custom';
-    return {
-      assigneeId: v.assigneeId || null,
-      dueDate,
-      dueTime: dueDate ? v.dueTime || null : null,
-      remindersOff: v.reminderMode === 'off',
-      reminderStartDays: custom ? clamp(v.reminderStart, 0, 60) : null,
-      reminderEveryDays: custom ? clamp(v.reminderEvery, 1, 30) : null,
-    };
-  }
-
   private me() {
     const me = this.auth.user();
     return me ? { id: me.id, nickname: me.nickname } : null;
@@ -350,7 +341,10 @@ export class ListItemsComponent implements OnDestroy {
     }
     const completed = !item.completedAt;
     // Completar una tarea con subtareas pendientes las completa todas: se pide confirmación
-    const pendingSubs = completed && !item.parentId ? this.subtasksOf(item.id).filter((s) => !s.completedAt).length : 0;
+    const pendingSubs =
+      completed && !item.parentId
+        ? this.subtasksOf(item.id).filter((s) => !s.completedAt).length
+        : 0;
     if (pendingSubs) {
       const ok = await this.confirm.ask({
         title: this.i18n.t('lists.subtasks.confirmTitle', { task: item.text }),
@@ -369,7 +363,9 @@ export class ListItemsComponent implements OnDestroy {
     this.list.update((l) => ({ ...l, items: applyToggle(l.items, item.id, completed, this.me()) }));
     this.recount();
     try {
-      this.patchItem(item.id, await this.store.setCompleted(this.list().id, item.id, completed));
+      const after = await this.store.setCompleted(this.list().id, item.id, completed);
+      this.patchItem(item.id, after);
+      if (completed) await this.afterDone(item, after);
     } catch (err) {
       this.list.update((l) => ({ ...l, items: before }));
       this.recount();
@@ -380,9 +376,47 @@ export class ListItemsComponent implements OnDestroy {
   async purchase(item: ListItem, input: PurchaseInput): Promise<void> {
     this.patchItem(item.id, applyPurchase(item, input.amount, input.spent, this.me()));
     try {
-      this.patchItem(item.id, await this.store.purchase(this.list().id, item.id, input));
+      const after = await this.store.purchase(this.list().id, item.id, input);
+      this.patchItem(item.id, after);
+      await this.afterDone(item, after);
     } catch (err) {
       this.patchItem(item.id, item);
+      this.fail(err);
+    }
+  }
+
+  /**
+   * Lo que se repite pasa a su siguiente vez en el servidor: se avisa la próxima fecha y, si tiene
+   * subtareas (o es una subtarea que completó a su tarea), se trae la lista con todo desmarcado.
+   */
+  private async afterDone(before: ListItem, after: ListItem): Promise<void> {
+    const parent = before.parentId ? this.list().items.find((i) => i.id === before.parentId) : null;
+    if (parent?.repeat) {
+      const fresh = await this.store.detail(this.list().id);
+      const rolled = fresh.items.find((i) => i.id === parent.id);
+      this.list.set(fresh);
+      if (rolled && rolledOver(parent, rolled)) this.announceRoll(rolled);
+      return;
+    }
+    if (!rolledOver(before, after)) return;
+    this.announceRoll(after);
+    if (this.subtasksOf(after.id).length) this.list.set(await this.store.detail(this.list().id));
+  }
+
+  private announceRoll(item: ListItem, skipped = false): void {
+    const date = shortDate((item.reopenOn ?? item.dueDate)!, this.i18n);
+    const key = skipped ? 'skipped' : item.reopenOn ? 'backOn' : 'done';
+    this.toast.show(this.i18n.t(`lists.repeat.${key}`, { date }));
+  }
+
+  /** Saltar esta vez: pasa a la siguiente fecha sin contar como hecha */
+  async skip(item: ListItem): Promise<void> {
+    this.error.set(null);
+    try {
+      const after = await this.store.skip(this.list().id, item.id);
+      this.patchItem(item.id, after);
+      this.announceRoll(after, true);
+    } catch (err) {
       this.fail(err);
     }
   }
@@ -392,31 +426,33 @@ export class ListItemsComponent implements OnDestroy {
     void this.setCompleted(item, false);
   }
 
+  /** Tocar el texto abre la ventana con todos sus datos */
   startEdit(item: ListItem): void {
     if (!this.canEdit()) return;
-    this.editForm.setValue({
-      text: item.text,
-      note: item.note ?? '',
-      amount: item.amount === null ? '' : String(item.amount),
-      unit: item.unit ?? '',
-      category: item.category ?? '',
-      assigneeId: item.assigneeId ?? '',
-      dueDate: item.dueDate ?? '',
-      dueTime: item.dueTime ?? '',
-      reminderMode: item.reminders?.off ? 'off' : item.reminders?.startDays !== null && item.reminders?.startDays !== undefined ? 'custom' : 'default',
-      reminderStart: item.reminders?.startDays ?? this.defaults().startDays,
-      reminderEvery: item.reminders?.everyDays ?? this.defaults().everyDays,
-    });
-    this.editingId.set(item.id);
+    this.editor.set({ item, text: item.text, parentId: item.parentId });
   }
 
-  async saveEdit(item: ListItem): Promise<void> {
-    if (this.editForm.invalid) return;
-    const v = this.editForm.getRawValue();
-    const changes: ItemChanges = { text: v.text.trim(), note: v.note.trim() || null };
-    Object.assign(changes, this.featureFields(v));
-    this.editingId.set(null);
-    this.patchItem(item.id, { ...changes, dueAt: changes.dueDate && changes.dueTime ? new Date(`${changes.dueDate}T${changes.dueTime}`).toISOString() : null });
+  /** Guardar desde la ventana: crea (con sus subtareas) o edita */
+  async saveEditor(
+    item: ListItem | null,
+    parentId: string | null,
+    result: ItemEditorResult,
+  ): Promise<void> {
+    this.error.set(null);
+    if (!item) {
+      const created = await this.create({ ...result.changes, parentId });
+      if (created)
+        for (const text of result.subtasks) await this.create({ text, parentId: created.id });
+      return;
+    }
+    const changes = result.changes;
+    this.patchItem(item.id, {
+      ...changes,
+      dueAt:
+        changes.dueDate && changes.dueTime
+          ? new Date(`${changes.dueDate}T${changes.dueTime}`).toISOString()
+          : null,
+    });
     try {
       this.patchItem(item.id, await this.store.updateItem(this.list().id, item.id, changes));
     } catch (err) {
@@ -425,15 +461,25 @@ export class ListItemsComponent implements OnDestroy {
     }
   }
 
+  toggleExpanded(id: string): void {
+    this.expanded.update((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   /** Borrar con "Deshacer": se oculta al instante y se envía cuando pasan 5 segundos. */
   remove(item: ListItem): void {
-    this.editingId.set(null);
     const listId = this.list().id;
     const timer = setTimeout(() => {
       this.pendingDeletes.delete(item.id);
       this.store
         .deleteItem(listId, item.id)
-        .then(() => this.list.update((l) => ({ ...l, items: removeItem(l.items, item.id, this.me()) })))
+        .then(() =>
+          this.list.update((l) => ({ ...l, items: removeItem(l.items, item.id, this.me()) })),
+        )
         .catch((err) => {
           this.unhide(item.id);
           this.fail(err);
@@ -471,7 +517,11 @@ export class ListItemsComponent implements OnDestroy {
     const before = items[i - 1]?.position;
     const after = items[i + 1]?.position;
     const position =
-      before !== undefined && after !== undefined ? (before + after) / 2 : before !== undefined ? before + 1 : after! - 1;
+      before !== undefined && after !== undefined
+        ? (before + after) / 2
+        : before !== undefined
+          ? before + 1
+          : after! - 1;
     const item = items[i]!;
     this.patchItem(item.id, { position });
     try {

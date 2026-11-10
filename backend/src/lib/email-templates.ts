@@ -28,7 +28,7 @@ function render(subject: string, layout: Layout): EmailContent {
 <p style="font-size:20px;font-weight:700;color:#3F5F90;margin:0 0 24px">Our House</p>
 <div style="background:#ffffff;border:1px solid #E1E5EC;border-radius:20px;padding:28px">
 <h1 style="font-size:20px;margin:0 0 16px">${escapeHtml(layout.heading)}</h1>
-${layout.paragraphs.map((p) => `<p style="line-height:1.55;margin:0 0 12px">${escapeHtml(p)}</p>`).join('')}
+${layout.paragraphs.map((p) => `<p style="line-height:1.55;margin:0 0 12px;white-space:pre-line">${escapeHtml(p)}</p>`).join('')}
 ${button}
 ${layout.footnote ? `<p style="font-size:13px;color:#5B6475;margin-top:20px">${escapeHtml(layout.footnote)}</p>` : ''}
 </div></div></body></html>`;
@@ -106,12 +106,16 @@ export const emailTemplates = {
   },
 
   /** Recordatorio de una tarea que vence pronto (o hoy) */
-  reminder(locale: Locale, p: { task: string; list: string; daysLeft: number; due: string; url: string; settingsUrl: string }): EmailContent {
+  reminder(
+    locale: Locale,
+    p: { task: string; description?: string | null; list: string; daysLeft: number; due: string; url: string; settingsUrl: string },
+  ): EmailContent {
+    const extra = p.description ? [p.description] : [];
     if (locale === 'en') {
       const when = p.daysLeft === 0 ? 'today' : p.daysLeft === 1 ? 'tomorrow' : `in ${p.daysLeft} days`;
       return render(`Reminder: “${p.task}” is due ${when}`, {
         heading: `“${p.task}” is due ${when}`,
-        paragraphs: [`It's still pending in the list “${p.list}”.`, `Due: ${p.due}.`],
+        paragraphs: [`It's still pending in the list “${p.list}”.`, `Due: ${p.due}.`, ...extra],
         action: { label: 'Open list', url: p.url },
         footnote: settingsNote(locale, p.settingsUrl),
       });
@@ -119,7 +123,7 @@ export const emailTemplates = {
     const when = p.daysLeft === 0 ? 'hoy' : p.daysLeft === 1 ? 'mañana' : `en ${p.daysLeft} días`;
     return render(`Recordatorio: «${p.task}» vence ${when}`, {
       heading: `«${p.task}» vence ${when}`,
-      paragraphs: [`Sigue pendiente en la lista «${p.list}».`, `Fecha límite: ${p.due}.`],
+      paragraphs: [`Sigue pendiente en la lista «${p.list}».`, `Fecha límite: ${p.due}.`, ...extra],
       action: { label: 'Abrir lista', url: p.url },
       footnote: settingsNote(locale, p.settingsUrl),
     });

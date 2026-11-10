@@ -1,4 +1,5 @@
 import { db, type Db } from '../config/database.js';
+import type { RepeatRule } from '../lib/recurrence.js';
 import type { FamilyRole } from './families.repository.js';
 
 export interface ListRow {
@@ -32,7 +33,7 @@ export interface ItemRow {
   id: string;
   list_id: string;
   text: string;
-  note: string | null;
+  description: string | null;
   amount: number | null;
   unit: string | null;
   purchased: number | null;
@@ -50,6 +51,11 @@ export interface ItemRow {
   reminder_start_days: number | null;
   reminder_every_days: number | null;
   reminders_off: boolean;
+  repeat: RepeatRule | null;
+  repeat_done: number;
+  rotation: string[] | null;
+  rotation_index: number;
+  reopen_on: string | null;
   position: number;
   completed_at: Date | null;
   completed_by: string | null;
@@ -171,8 +177,8 @@ export const listsRepository = {
   copyItems: (fromId: string, toId: string, userId: string, conn: Db) =>
     conn.query(
       `WITH src AS (SELECT *, gen_random_uuid() AS new_id FROM list_items WHERE list_id = $1)
-       INSERT INTO list_items (id, list_id, parent_id, text, note, amount, unit, category, assignee_id, due_date, due_time, due_tz, position, created_by)
-       SELECT s.new_id, $2, p.new_id, s.text, s.note, s.amount, s.unit, s.category, s.assignee_id, s.due_date, s.due_time, s.due_tz, s.position, $3
+       INSERT INTO list_items (id, list_id, parent_id, text, description, amount, unit, category, assignee_id, due_date, due_time, due_tz, position, created_by)
+       SELECT s.new_id, $2, p.new_id, s.text, s.description, s.amount, s.unit, s.category, s.assignee_id, s.due_date, s.due_time, s.due_tz, s.position, $3
          FROM src s LEFT JOIN src p ON p.id = s.parent_id`,
       [fromId, toId, userId],
     ),

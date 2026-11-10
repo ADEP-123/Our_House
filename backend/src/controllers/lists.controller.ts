@@ -1,6 +1,8 @@
 import type { Request, Response } from 'express';
 import { secretsService } from '../services/secrets.service.js';
 import { currentUserId } from '../middlewares/auth.js';
+import { z } from 'zod';
+import { LIST_TYPES } from '../lib/lists.js';
 import { getAccess, listsService } from '../services/lists.service.js';
 
 const listId = (req: Request) => String(req.params.listId);
@@ -9,6 +11,11 @@ export const listsController = {
   async listForFamily(req: Request, res: Response): Promise<void> {
     const archived = req.query.archived === 'true';
     res.json(await listsService.listForFamily(String(req.params.familyId), currentUserId(req), archived));
+  },
+
+  async suggestions(req: Request, res: Response): Promise<void> {
+    const type = z.enum(LIST_TYPES).parse(req.query.type);
+    res.json({ suggestions: await listsService.suggestions(String(req.params.familyId), currentUserId(req), type) });
   },
 
   async create(req: Request, res: Response): Promise<void> {

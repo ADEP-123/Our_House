@@ -113,3 +113,35 @@ export function dueInfo(item: Pick<ListItem, 'dueDate' | 'dueAt' | 'completedAt'
   const kind: DueKind = !item.completedAt && passed ? 'overdue' : diffDays === 0 ? 'today' : diffDays === 1 ? 'tomorrow' : 'later';
   return { kind, at, timed };
 }
+
+// ---------- Texto ----------
+
+/** Divide un texto en partes y marca los enlaces (http/https) para mostrarlos tocables sin usar HTML */
+export function linkify(text: string): { text: string; url?: string }[] {
+  const parts: { text: string; url?: string }[] = [];
+  const re = /https?:\/\/[^\s<>"]+[^\s<>".,;:!?)\]]/g;
+  let last = 0;
+  for (const m of text.matchAll(re)) {
+    if (m.index! > last) parts.push({ text: text.slice(last, m.index) });
+    parts.push({ text: m[0], url: m[0] });
+    last = m.index! + m[0].length;
+  }
+  if (last < text.length) parts.push({ text: text.slice(last) });
+  return parts;
+}
+
+/** Nombres cortos de los días en el idioma, empezando el domingo (0) como Date.getDay() */
+export function weekdayNames(locale: string): string[] {
+  const format = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
+  // El 1 de enero de 2023 fue domingo
+  return Array.from({ length: 7 }, (_, day) => format.format(new Date(Date.UTC(2023, 0, 1 + day))));
+}
+
+/** Días de la semana en el orden en que se muestran: de lunes a domingo */
+export const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
+
+/** Al responder el servidor: ¿la tarea pasó a su siguiente vez? (sigue pendiente con otra fecha, o hecha hasta que vuelva) */
+export function rolledOver(before: Pick<ListItem, 'dueDate'>, after: Pick<ListItem, 'repeat' | 'completedAt' | 'dueDate' | 'reopenOn'>): boolean {
+  if (!after.repeat) return false;
+  return after.reopenOn !== null || (after.completedAt === null && after.dueDate !== before.dueDate);
+}

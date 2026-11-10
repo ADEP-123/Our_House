@@ -15,10 +15,10 @@ describe('ítems de las listas', () => {
     const a = (await users.ana!.agent.post(`/api/lists/${list.id}/items`).send({ text: ' Leche ', amount: 2, unit: 'L', category: 'Lácteos' }).expect(201)).body.item;
     const b = (await users.ana!.agent
       .post(`/api/lists/${list.id}/items`)
-      .send({ text: 'Pagar luz', assigneeId: users.beto!.user.id, dueDate: '2026-11-20', note: '' })
+      .send({ text: 'Pagar luz', assigneeId: users.beto!.user.id, dueDate: '2026-11-20', description: '' })
       .expect(201)).body.item;
     expect(a).toMatchObject({ text: 'Leche', amount: 2, unit: 'L', category: 'Lácteos', completedAt: null });
-    expect(b).toMatchObject({ assigneeId: users.beto!.user.id, dueDate: '2026-11-20', note: null });
+    expect(b).toMatchObject({ assigneeId: users.beto!.user.id, dueDate: '2026-11-20', description: null });
     expect(b.position).toBeGreaterThan(a.position);
 
     const zoe = (await setupFamily(['zoe'])).users.zoe!;

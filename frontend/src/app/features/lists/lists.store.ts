@@ -7,8 +7,11 @@ import { OfflineDb } from '../../core/offline/offline-db.service';
 import { SyncStatus } from '../../core/offline/sync-status.service';
 import { applyPurchase, applyToggle, removeItem, syncParent } from './item-logic';
 import { FamilyLists, ListDetail, ListInput, ListItem, ListSummary, MyTask } from './lists.models';
+import type { ListType } from './list-presets';
 
-export type ItemChanges = Partial<Pick<ListItem, 'text' | 'note' | 'amount' | 'unit' | 'category' | 'assigneeId' | 'dueDate' | 'dueTime' | 'position'>> & {
+export type ItemChanges = Partial<
+  Pick<ListItem, 'text' | 'description' | 'amount' | 'unit' | 'category' | 'assigneeId' | 'dueDate' | 'dueTime' | 'position' | 'repeat' | 'rotation'>
+> & {
   reminderStartDays?: number | null;
   reminderEveryDays?: number | null;
   remindersOff?: boolean;
@@ -271,6 +274,16 @@ export class ListsStore {
 
   // Estas acciones necesitan conexión (afectan a todo el grupo o requieren confirmación del servidor)
 
+  /** Lo que el grupo suele agregar en ese tipo de lista (sin conexión: nada) */
+  async suggestions(familyId: string, type: ListType): Promise<string[]> {
+    try {
+      const res = await firstValueFrom(this.http.get<{ suggestions: string[] }>(`/api/families/${familyId}/lists/suggestions`, { params: { type } }));
+      return res.suggestions;
+    } catch {
+      return [];
+    }
+  }
+
   async update(listId: string, changes: Partial<ListInput>): Promise<ListDetail> {
     return (await firstValueFrom(this.http.patch<{ list: ListDetail }>(`/api/lists/${listId}`, changes))).list;
   }
@@ -334,7 +347,7 @@ export class ListsStore {
           id,
           parentId: input.parentId ?? null,
           text: input.text,
-          note: input.note ?? null,
+          description: input.description ?? null,
           amount: input.amount ?? null,
           unit: input.unit ?? null,
           purchased: null,
@@ -346,6 +359,10 @@ export class ListsStore {
           // El momento exacto lo calcula el servidor; sin conexión se aproxima con la hora local
           dueAt: input.dueDate && input.dueTime ? new Date(`${input.dueDate}T${input.dueTime}`).toISOString() : null,
           reminders: { startDays: input.reminderStartDays ?? null, everyDays: input.reminderEveryDays ?? null, off: input.remindersOff ?? false },
+          repeat: input.repeat ?? null,
+          repeatDone: 0,
+          rotation: input.rotation ?? null,
+          reopenOn: null,
           position: input.position ?? last + 1,
           completedAt: null,
           completedBy: null,
@@ -402,6 +419,12 @@ export class ListsStore {
       () => this.changeCachedItem(listId, itemId, (i) => applyPurchase(i, purchase.amount, purchase.spent, this.me())),
       (res) => this.itemResult(listId, res),
     );
+  }
+
+  /** Saltar esta vez (necesita conexión: la siguiente fecha la calcula el servidor) */
+  async skip(listId: string, itemId: string): Promise<ListItem> {
+    const res = await this.track(firstValueFrom(this.http.post<{ item: ListItem }>(`/api/lists/${listId}/items/${itemId}/skip`, {})));
+    return this.itemResult(listId, res);
   }
 
   private me() {

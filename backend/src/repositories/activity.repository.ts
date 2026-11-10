@@ -41,6 +41,25 @@ export interface ActivityFilters {
 }
 
 export const activityRepository = {
+  /**
+   * Lo que el grupo suele agregar en listas de un tipo (para sugerirlo al crear otra):
+   * los textos más usados y recientes, solo de listas compartidas y sin subtareas.
+   */
+  async usualItems(familyId: string, type: string, limit = 24, conn: Db = db()): Promise<string[]> {
+    const { rows } = await conn.query<{ text: string }>(
+      `SELECT (array_agg(trim(a.item_text) ORDER BY a.created_at DESC))[1] AS text
+         FROM activity_log a
+         JOIN lists l ON l.id = a.list_id
+        WHERE a.family_id = $1 AND a.action = 'item.created' AND a.private_owner_id IS NULL
+          AND l.type = $2 AND NOT l.is_private AND a.item_text IS NOT NULL AND a.details ? 'subtaskOf' IS NOT TRUE
+        GROUP BY lower(trim(a.item_text))
+        ORDER BY count(*) DESC, max(a.created_at) DESC
+        LIMIT $3`,
+      [familyId, type, limit],
+    );
+    return rows.map((r) => r.text);
+  },
+
   add: (e: ActivityInput, conn: Db = db()) =>
     conn.query(
       `INSERT INTO activity_log

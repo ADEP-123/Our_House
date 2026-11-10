@@ -3,12 +3,15 @@ import { z } from 'zod';
 import { activityController } from '../controllers/activity.controller.js';
 import { itemsController } from '../controllers/items.controller.js';
 import { listsController, secretsController } from '../controllers/lists.controller.js';
-import { LIST_COLORS, LIST_FEATURES, LIST_ICONS, LIST_TYPES, SECRET_FIELD_KINDS } from '../lib/lists.js';
+import { LIST_COLORS, LIST_FEATURES, LIST_TYPES, SECRET_FIELD_KINDS, isListIcon } from '../lib/lists.js';
+import { REPEAT_FREQS } from '../lib/recurrence.js';
 import { checkIds } from '../lib/route-ids.js';
 import { requireAuth } from '../middlewares/auth.js';
 import { validateBody } from '../middlewares/validate.js';
 
 const listName = z.string().trim().min(1, 'LIST_NAME_REQUIRED').max(80, 'LIST_NAME_TOO_LONG');
+/** Uno de los íconos con nombre o cualquier emoji */
+const listIcon = z.string().trim().refine(isListIcon, 'ICON_INVALID');
 /** Id generado por el cliente (opcional): permite crear sin conexión sin duplicar al reenviar */
 const clientId = z.uuid().optional();
 /** Opciones de los elementos (sin repetir); si no vienen al crear, las del tipo */
@@ -21,6 +24,7 @@ const features = z
 export const familyListsRoutes = Router({ mergeParams: true });
 familyListsRoutes.use(requireAuth, checkIds);
 familyListsRoutes.get('/', listsController.listForFamily);
+familyListsRoutes.get('/suggestions', listsController.suggestions);
 familyListsRoutes.post(
   '/',
   validateBody(
@@ -29,7 +33,7 @@ familyListsRoutes.post(
       name: listName,
       type: z.enum(LIST_TYPES),
       color: z.enum(LIST_COLORS).default('blue'),
-      icon: z.enum(LIST_ICONS).default('check'),
+      icon: listIcon.default('check'),
       isPrivate: z.boolean().default(false),
       features: features.optional(),
     }),
@@ -54,7 +58,7 @@ list.patch(
   '/',
   validateBody(
     z
-      .object({ name: listName, color: z.enum(LIST_COLORS), icon: z.enum(LIST_ICONS), isPrivate: z.boolean(), features })
+      .object({ name: listName, color: z.enum(LIST_COLORS), icon: listIcon, isPrivate: z.boolean(), features })
       .partial(),
   ),
   listsController.update,
@@ -81,7 +85,7 @@ const itemFields = {
   reminderStartDays: z.int('REMINDER_DAYS_INVALID').min(0, 'REMINDER_DAYS_INVALID').max(60, 'REMINDER_DAYS_INVALID').nullable().optional(),
   reminderEveryDays: z.int('REMINDER_EVERY_INVALID').min(1, 'REMINDER_EVERY_INVALID').max(30, 'REMINDER_EVERY_INVALID').nullable().optional(),
   remindersOff: z.boolean().optional(),
-  note: optionalText(500, 'ITEM_NOTE_TOO_LONG'),
+  description: optionalText(2000, 'ITEM_DESCRIPTION_TOO_LONG'),
   amount: z.number('AMOUNT_INVALID').positive('AMOUNT_INVALID').max(1_000_000, 'AMOUNT_INVALID').nullable().optional(),
   unit: optionalText(20, 'ITEM_UNIT_TOO_LONG'),
   category: optionalText(40, 'ITEM_CATEGORY_TOO_LONG'),
@@ -93,6 +97,20 @@ const itemFields = {
     .nullable()
     .optional(),
   position: z.number().finite().optional(),
+  /** Repetición: el inicio lo pone el servidor (la fecha límite o hoy) */
+  repeat: z
+    .strictObject({
+      freq: z.enum(REPEAT_FREQS, 'REPEAT_INVALID'),
+      interval: z.int('REPEAT_INVALID').min(1, 'REPEAT_INVALID').max(365, 'REPEAT_INVALID').default(1),
+      weekdays: z.array(z.int().min(0).max(6)).max(7).optional().transform((d) => (d?.length ? [...new Set(d)].sort() : undefined)),
+      from: z.enum(['schedule', 'completion']).default('schedule'),
+      until: z.iso.date('REPEAT_INVALID').optional(),
+      count: z.int('REPEAT_INVALID').min(1, 'REPEAT_INVALID').max(999, 'REPEAT_INVALID').optional(),
+    })
+    .nullable()
+    .optional(),
+  /** Turnos: personas del grupo en orden */
+  rotation: z.array(z.uuid()).max(20).nullable().optional(),
 };
 const itemText = z.string().trim().min(1, 'ITEM_TEXT_REQUIRED').max(200, 'ITEM_TEXT_TOO_LONG');
 
@@ -104,6 +122,7 @@ list.post(
 list.post('/reset', itemsController.uncheckAll);
 list.post('/clear-completed', itemsController.deleteCompleted);
 list.patch('/items/:itemId', checkIds, validateBody(z.object({ text: itemText.optional(), ...itemFields })), itemsController.update);
+list.post('/items/:itemId/skip', checkIds, itemsController.skip);
 list.put('/items/:itemId/completed', checkIds, validateBody(z.object({ completed: z.boolean() })), itemsController.setCompleted);
 list.delete('/items/:itemId', checkIds, itemsController.remove);
 // ---------- Listas secretas ----------

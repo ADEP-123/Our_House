@@ -7,14 +7,13 @@ import { SyncStatus } from '../../core/offline/sync-status.service';
 import { ConfirmService } from '../../shared/confirm.service';
 import { FamiliesService } from '../families/families.service';
 import { ListCardComponent } from './list-card.component';
-import { ListFormComponent } from './list-form.component';
 import { LIST_TYPES, ListType } from './list-presets';
-import { FamilyLists, ListInput } from './lists.models';
+import { FamilyLists } from './lists.models';
 import { ListsStore } from './lists.store';
 
 @Component({
   selector: 'oh-lists-page',
-  imports: [RouterLink, TPipe, ListCardComponent, ListFormComponent],
+  imports: [RouterLink, TPipe, ListCardComponent],
   templateUrl: './lists.page.html',
   styleUrl: './lists.page.scss',
 })
@@ -31,8 +30,6 @@ export class ListsPage implements OnInit {
   protected readonly data = signal<FamilyLists | null>(null);
   protected readonly filter = signal<ListType | 'all'>('all');
   protected readonly archived = signal(false);
-  protected readonly creating = signal(false);
-  protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
 
   protected readonly visible = computed(() => {
@@ -52,7 +49,7 @@ export class ListsPage implements OnInit {
     // Resúmenes al día: cada 15 segundos y al volver a la app
     const refresh = () => {
       const family = this.family();
-      const idle = !this.creating() && this.sync.queued() === 0;
+      const idle = this.sync.queued() === 0;
       if (family && document.visibilityState === 'visible' && idle) void this.load(family.id, this.archived());
     };
     // Al terminar de enviar los cambios hechos sin conexión, se trae la versión del servidor
@@ -77,22 +74,6 @@ export class ListsPage implements OnInit {
       this.error.set(null);
     } catch (err) {
       this.error.set(this.i18n.error(toApiError(err).code));
-    }
-  }
-
-  async create(input: ListInput): Promise<void> {
-    const family = this.family();
-    if (!family) return;
-    this.busy.set(true);
-    this.error.set(null);
-    try {
-      const list = await this.store.create(family.id, input);
-      this.creating.set(false);
-      await this.router.navigate(['/listas', list.id]);
-    } catch (err) {
-      this.error.set(this.i18n.error(toApiError(err).code));
-    } finally {
-      this.busy.set(false);
     }
   }
 

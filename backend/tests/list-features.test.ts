@@ -8,8 +8,8 @@ describe('opciones de las listas', () => {
 
   it('cada tipo nace con sus opciones; "Otra" sin ninguna salvo las elegidas', async () => {
     const { familyId, users } = await setupFamily(['ana']);
-    expect((await createList(users.ana!, familyId, { type: 'shopping' })).features).toEqual(['quantity', 'category', 'purchases']);
-    expect((await createList(users.ana!, familyId, { type: 'todo' })).features).toEqual(['assignee', 'due', 'subtasks']);
+    expect((await createList(users.ana!, familyId, { type: 'shopping' })).features).toEqual(['quantity', 'category', 'purchases', 'repeat']);
+    expect((await createList(users.ana!, familyId, { type: 'todo' })).features).toEqual(['assignee', 'due', 'subtasks', 'repeat']);
     expect((await createList(users.ana!, familyId, { type: 'other' })).features).toEqual([]);
     const mixed = await createList(users.ana!, familyId, { type: 'other', features: ['quantity', 'assignee', 'due', 'quantity'] });
     expect(mixed.features).toEqual(['quantity', 'assignee', 'due']);

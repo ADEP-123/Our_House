@@ -1,10 +1,11 @@
 import { db, type Db } from '../config/database.js';
+import type { RepeatRule } from '../lib/recurrence.js';
 import { ITEM_SELECT, type ItemRow } from './lists.repository.js';
 
 /** Campos que se pueden escribir al crear o editar un ítem, con su columna. */
 const COLUMNS = {
   text: 'text',
-  note: 'note',
+  description: 'description',
   amount: 'amount',
   unit: 'unit',
   category: 'category',
@@ -15,13 +16,24 @@ const COLUMNS = {
   reminderStartDays: 'reminder_start_days',
   reminderEveryDays: 'reminder_every_days',
   remindersOff: 'reminders_off',
+  repeat: 'repeat',
+  rotation: 'rotation',
+  rotationIndex: 'rotation_index',
   position: 'position',
   parentId: 'parent_id',
 } as const;
 
+export interface ReopenedItem {
+  id: string;
+  list_id: string;
+  family_id: string;
+  rotation: string[] | null;
+  rotation_index: number;
+}
+
 export type ItemFields = {
   text?: string;
-  note?: string | null;
+  description?: string | null;
   amount?: number | null;
   unit?: string | null;
   category?: string | null;
@@ -35,6 +47,11 @@ export type ItemFields = {
   reminderStartDays?: number | null;
   reminderEveryDays?: number | null;
   remindersOff?: boolean;
+  /** Repetición (null = no se repite) */
+  repeat?: RepeatRule | null;
+  /** Turnos entre personas (null = sin turnos) */
+  rotation?: string[] | null;
+  rotationIndex?: number;
   position?: number;
   /** Solo al crear: la tarea de la que es subtarea */
   parentId?: string | null;
@@ -102,7 +119,8 @@ export const itemsRepository = {
     } else {
       await conn.query(
         `UPDATE list_items
-            SET completed_at = NULL, completed_by = NULL, purchased = NULL, spent = NULL, last_purchase_id = NULL, updated_at = now()
+            SET completed_at = NULL, completed_by = NULL, purchased = NULL, spent = NULL, last_purchase_id = NULL,
+                reopen_on = NULL, updated_at = now()
           WHERE id = $1`,
         [itemId],
       );
@@ -157,6 +175,58 @@ export const itemsRepository = {
       [userId],
     );
     return rows;
+  },
+
+  // ---------- Repetición ----------
+
+  /**
+   * Siguiente vez de una tarea con fecha: queda pendiente en su nueva fecha, sin lo comprado,
+   * con sus subtareas desmarcadas y, si hay turnos, con el responsable que sigue.
+   */
+  async advance(
+    itemId: string,
+    listId: string,
+    data: { dueDate: string; countDone: boolean; assigneeId?: string | null; rotationIndex?: number },
+    conn: Db = db(),
+  ): Promise<void> {
+    await conn.query(
+      `UPDATE list_items
+          SET due_date = $2, completed_at = NULL, completed_by = NULL, purchased = NULL, spent = NULL, last_purchase_id = NULL,
+              repeat_done = repeat_done + CASE WHEN $3 THEN 1 ELSE 0 END,
+              assignee_id = CASE WHEN $4 THEN $5::uuid ELSE assignee_id END,
+              rotation_index = COALESCE($6, rotation_index),
+              reopen_on = NULL, updated_at = now()
+        WHERE id = $1`,
+      [itemId, data.dueDate, data.countDone, data.assigneeId !== undefined, data.assigneeId ?? null, data.rotationIndex ?? null],
+    );
+    await conn.query('UPDATE list_items SET completed_at = NULL, completed_by = NULL, updated_at = now() WHERE parent_id = $1', [itemId]);
+    await touchList(listId, conn);
+  },
+
+  /** Sin fecha: queda hecha y vuelve a aparecer ese día. null = no vuelve (se terminó la repetición) */
+  async scheduleReopen(itemId: string, reopenOn: string | null, conn: Db = db()): Promise<void> {
+    await conn.query('UPDATE list_items SET reopen_on = $2, repeat_done = repeat_done + 1 WHERE id = $1', [itemId, reopenOn]);
+  },
+
+  /** Vuelven a pendiente las que ya cumplieron su plazo (con su siguiente turno). Devuelve las reabiertas. */
+  async reopenDue(conn: Db = db()): Promise<ReopenedItem[]> {
+    const { rows } = await conn.query<ReopenedItem>(
+      `UPDATE list_items i
+          SET completed_at = NULL, completed_by = NULL, purchased = NULL, spent = NULL, last_purchase_id = NULL,
+              reopen_on = NULL, updated_at = now()
+         FROM lists l
+        WHERE l.id = i.list_id AND i.reopen_on IS NOT NULL AND i.reopen_on <= current_date
+        RETURNING i.id, i.list_id, l.family_id, i.rotation, i.rotation_index`,
+    );
+    for (const r of rows) {
+      await conn.query('UPDATE list_items SET completed_at = NULL, completed_by = NULL WHERE parent_id = $1', [r.id]);
+      await touchList(r.list_id, conn);
+    }
+    return rows;
+  },
+
+  async setTurn(itemId: string, assigneeId: string | null, rotationIndex: number, conn: Db = db()): Promise<void> {
+    await conn.query('UPDATE list_items SET assignee_id = $2, rotation_index = $3 WHERE id = $1', [itemId, assigneeId, rotationIndex]);
   },
 
   // ---------- Subtareas ----------
