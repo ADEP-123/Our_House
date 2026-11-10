@@ -22,8 +22,8 @@
       @if (family()?.role === 'leader') {
         <a class="oh-btn oh-btn--text" [routerLink]="['/familias', family()!.id, 'bitacora']">{{ 'activity.title' | t }}</a>
       }
-      @if (family() && !archived() && !creating()) {
-        <button type="button" class="oh-btn oh-btn--filled" (click)="creating.set(true)">+ {{ 'lists.newList' | t }}</button>
+      @if (family() && !archived()) {
+        <a class="oh-btn oh-btn--filled" routerLink="/listas/nueva" [queryParams]="{ familia: family()!.id }">+ {{ 'lists.newList' | t }}</a>
       }
     </div>
   </header>
@@ -57,19 +57,7 @@
     <a class="oh-btn oh-btn--filled" routerLink="/familias">{{ 'lists.goFamilies' | t }}</a>
   </section>
 } @else {
-  @if (creating()) {
-    <div class="oh-panel form-panel">
-      <oh-list-form
-        [supervised]="family()?.role === 'supervised'"
-        [busy]="busy()"
-        [error]="error()"
-        (saved)="create($event)"
-        (cancelled)="creating.set(false)"
-      />
-    </div>
-  }
-
-  @if (error() && !creating()) {
+  @if (error()) {
     <p class="oh-alert is-error" role="alert">{{ error() }}</p>
   }
 

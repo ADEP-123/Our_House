@@ -1,0 +1,153 @@
+<a class="back" [routerLink]="id() ? ['/listas', id()] : '/listas'"
+  >← {{ (id() ? 'lists.detail.back' : 'lists.title') | t }}</a
+>
+
+@if (id()) {
+  <!-- Editar -->
+  <div class="page narrow">
+    @if (list(); as l) {
+      <h1>{{ 'lists.form.editTitle' | t }}</h1>
+      <div class="oh-panel">
+        <oh-list-form
+          [showTitle]="false"
+          [initial]="{
+            name: l.name,
+            type: l.type,
+            features: l.features,
+            color: l.color,
+            icon: l.icon,
+            isPrivate: l.isPrivate,
+            canChangePrivacy: l.permissions.canChangePrivacy,
+          }"
+          [supervised]="supervisedIn(l.familyId)"
+          [busy]="busy()"
+          [error]="error()"
+          (saved)="save($event)"
+          (cancelled)="cancel()"
+        />
+      </div>
+    } @else if (error(); as err) {
+      <p class="oh-alert is-error" role="alert">{{ err }}</p>
+    } @else {
+      <p class="oh-muted" role="status">{{ 'common.loading' | t }}</p>
+    }
+  </div>
+} @else {
+  <!-- Crear -->
+  <div class="page">
+    <header class="head">
+      <h1>{{ 'lists.form.createTitle' | t }}</h1>
+      @if ((families.families()?.length ?? 0) > 1) {
+        <label class="family-select">
+          <span class="oh-sr-only">{{ 'lists.screen.group' | t }}</span>
+          <select class="oh-input" (change)="familyId.set($any($event.target).value)">
+            @for (f of families.families(); track f.id) {
+              <option [value]="f.id" [selected]="f.id === familyId()">{{ f.name }}</option>
+            }
+          </select>
+        </label>
+      } @else if (family(); as f) {
+        <p class="oh-muted">{{ 'lists.screen.in' | t: { family: f.name } }}</p>
+      }
+    </header>
+
+    <section class="templates" aria-labelledby="templates-title">
+      <h2 id="templates-title">{{ 'lists.screen.templates' | t }}</h2>
+      <div class="template-row" role="group" aria-labelledby="templates-title">
+        @for (t of templates; track t.id) {
+          <button
+            type="button"
+            class="template"
+            [attr.aria-pressed]="template().id === t.id"
+            (click)="choose(t)"
+          >
+            <span class="template-icon" aria-hidden="true">{{
+              t.id === 'blank' ? '📝' : iconOf(t.icon)
+            }}</span>
+            <span>{{ templateName(t) }}</span>
+          </button>
+        }
+      </div>
+    </section>
+
+    <div class="oh-panel">
+      <oh-list-form
+        [showTitle]="false"
+        [preset]="preset()"
+        [supervised]="family()?.role === 'supervised'"
+        [busy]="busy()"
+        [error]="error()"
+        (typeChanged)="type.set($event)"
+        (saved)="create($event)"
+        (cancelled)="cancel()"
+      >
+        @if (type() !== 'secret') {
+          <fieldset class="starter">
+            <legend>{{ 'lists.screen.starter' | t }}</legend>
+            <p class="oh-hint">{{ 'lists.screen.starterHint' | t }}</p>
+            @if (starter().length) {
+              <ul class="starter-list">
+                @for (s of starter(); track $index; let i = $index) {
+                  <li>
+                    <label class="starter-item" [class.off]="!s.on">
+                      <input type="checkbox" [checked]="s.on" (change)="toggleStarter(i)" />
+                      <span>{{ s.text }}</span>
+                    </label>
+                  </li>
+                }
+              </ul>
+            }
+            @if (template().repeat && starter().length) {
+              <p class="oh-hint">🔁 {{ 'lists.screen.repeatNote' | t }}</p>
+            }
+            @if (canRotate()) {
+              <label class="starter-item rotate">
+                <input type="checkbox" [checked]="rotate()" (change)="rotate.set(!rotate())" />
+                <span>{{ 'lists.screen.rotate' | t: { names: rotationNames() } }}</span>
+              </label>
+            }
+            <div class="own">
+              <label class="oh-sr-only" for="starter-own">{{ 'lists.screen.addOwn' | t }}</label>
+              <input
+                id="starter-own"
+                class="oh-input"
+                maxlength="200"
+                autocomplete="off"
+                [placeholder]="'lists.screen.addOwn' | t"
+                [value]="ownText()"
+                (input)="ownText.set($any($event.target).value)"
+                (keydown.enter)="$event.preventDefault(); addOwn()"
+              />
+              <button
+                type="button"
+                class="oh-btn oh-btn--outline"
+                [disabled]="!ownText().trim()"
+                (click)="addOwn()"
+              >
+                {{ 'lists.screen.add' | t }}
+              </button>
+            </div>
+
+            @if (suggestions().length) {
+              <div class="suggestions">
+                <h3>{{ 'lists.screen.suggestions' | t }}</h3>
+                <div class="chips">
+                  @for (s of suggestions(); track s) {
+                    <button
+                      type="button"
+                      class="chip"
+                      [attr.aria-label]="'lists.screen.suggestionAdd' | t: { text: s }"
+                      (click)="addStarter(s)"
+                    >
+                      + {{ s }}
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </fieldset>
+        }
+      </oh-list-form>
+    </div>
+  </div>
+}

@@ -7,6 +7,7 @@ import { OfflineDb } from '../../core/offline/offline-db.service';
 import { SyncStatus } from '../../core/offline/sync-status.service';
 import { applyPurchase, applyToggle, removeItem, syncParent } from './item-logic';
 import { FamilyLists, ListDetail, ListInput, ListItem, ListSummary, MyTask } from './lists.models';
+import type { ListType } from './list-presets';
 
 export type ItemChanges = Partial<
   Pick<ListItem, 'text' | 'description' | 'amount' | 'unit' | 'category' | 'assigneeId' | 'dueDate' | 'dueTime' | 'position' | 'repeat' | 'rotation'>
@@ -272,6 +273,16 @@ export class ListsStore {
   }
 
   // Estas acciones necesitan conexión (afectan a todo el grupo o requieren confirmación del servidor)
+
+  /** Lo que el grupo suele agregar en ese tipo de lista (sin conexión: nada) */
+  async suggestions(familyId: string, type: ListType): Promise<string[]> {
+    try {
+      const res = await firstValueFrom(this.http.get<{ suggestions: string[] }>(`/api/families/${familyId}/lists/suggestions`, { params: { type } }));
+      return res.suggestions;
+    } catch {
+      return [];
+    }
+  }
 
   async update(listId: string, changes: Partial<ListInput>): Promise<ListDetail> {
     return (await firstValueFrom(this.http.patch<{ list: ListDetail }>(`/api/lists/${listId}`, changes))).list;

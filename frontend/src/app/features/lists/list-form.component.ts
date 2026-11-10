@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TPipe } from '../../core/i18n/t.pipe';
 import { DEFAULT_FEATURES, LIST_COLORS, LIST_FEATURES, LIST_ICONS, LIST_TYPES, ListFeature, ListType } from './list-presets';
@@ -10,7 +10,9 @@ import { ListInput } from './lists.models';
   imports: [ReactiveFormsModule, TPipe],
   template: `
     <form class="oh-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      <h2>{{ (initial() ? 'lists.form.editTitle' : 'lists.form.createTitle') | t }}</h2>
+      @if (showTitle()) {
+        <h2>{{ (initial() ? 'lists.form.editTitle' : 'lists.form.createTitle') | t }}</h2>
+      }
 
       <div class="oh-field">
         <label for="list-name">{{ 'lists.form.name' | t }}</label>
@@ -83,6 +85,9 @@ import { ListInput } from './lists.models';
           <p class="oh-alert" role="note">🔎 {{ 'lists.form.supervisedNotice' | t }}</p>
         }
       }
+
+      <!-- Lo que agrega la pantalla (elementos para empezar) va antes de los botones -->
+      <ng-content />
 
       @if (error(); as err) {
         <p class="oh-alert is-error" role="alert">{{ err }}</p>
@@ -220,8 +225,13 @@ export class ListFormComponent implements OnInit {
   readonly supervised = input(false);
   readonly busy = input(false);
   readonly error = input<string | null>(null);
+  /** Al crear: datos de una plantilla para llenar el formulario */
+  readonly preset = input<Omit<ListInput, 'isPrivate' | 'features'> & { features?: ListFeature[] } | null>(null);
+  readonly showTitle = input(true);
   readonly saved = output<ListInput>();
   readonly cancelled = output<void>();
+  /** El tipo elegido cambió (para traer sugerencias de ese tipo) */
+  readonly typeChanged = output<ListType>();
 
   protected readonly types = LIST_TYPES;
   protected readonly featureOptions = LIST_FEATURES;
@@ -239,6 +249,23 @@ export class ListFormComponent implements OnInit {
   private readonly iconTouched = signal(false);
   protected readonly showPrivacy = computed(() => !this.initial() || this.initial()!.canChangePrivacy);
 
+  constructor() {
+    // Elegir una plantilla llena el formulario; el nombre solo si todavía no se escribió otro
+    effect(() => {
+      const preset = this.preset();
+      if (!preset || this.initial()) return;
+      untracked(() => {
+        const name = this.form.controls.name;
+        if (preset.name || !name.dirty) name.setValue(preset.name);
+        this.form.patchValue({ type: preset.type, color: preset.color }, { emitEvent: false });
+        this.form.controls.icon.setValue(preset.icon, { emitEvent: false });
+        this.iconTouched.set(false);
+        this.features.set(new Set(preset.features ?? DEFAULT_FEATURES[preset.type]));
+        this.typeChanged.emit(preset.type);
+      });
+    });
+  }
+
   ngOnInit(): void {
     const initial = this.initial();
     if (initial) {
@@ -251,6 +278,7 @@ export class ListFormComponent implements OnInit {
   /** Al cambiar de tipo sugiere su ícono, salvo que el usuario ya haya elegido otro */
   onType(type: ListType): void {
     this.features.set(new Set(DEFAULT_FEATURES[type]));
+    this.typeChanged.emit(type);
     if (!this.iconTouched()) this.form.controls.icon.setValue(LIST_TYPES.find((t) => t.id === type)!.defaultIcon, { emitEvent: false });
   }
 

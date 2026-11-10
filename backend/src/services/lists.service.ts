@@ -148,6 +148,13 @@ export const listsService = {
   },
 
   /** Borrado definitivo de las archivadas vencidas. Se ejecuta al consultar las listas del grupo. */
+  /** Sugerencias para una lista nueva: lo que el grupo ya agregó antes en listas de ese tipo */
+  async suggestions(familyId: string, userId: string, type: ListType) {
+    await requireMember(familyId, userId);
+    if (type === 'secret') return [];
+    return activityRepository.usualItems(familyId, type);
+  },
+
   async purgeExpired(familyId: string) {
     const purged = await listsRepository.purgeArchived(familyId, env.listArchiveRetentionDays);
     for (const list of purged) {

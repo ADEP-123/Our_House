@@ -22,6 +22,7 @@ const features = z
 export const familyListsRoutes = Router({ mergeParams: true });
 familyListsRoutes.use(requireAuth, checkIds);
 familyListsRoutes.get('/', listsController.listForFamily);
+familyListsRoutes.get('/suggestions', listsController.suggestions);
 familyListsRoutes.post(
   '/',
   validateBody(
