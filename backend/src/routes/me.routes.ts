@@ -4,7 +4,8 @@ import { itemsController } from '../controllers/items.controller.js';
 import { profileController } from '../controllers/profile.controller.js';
 import { MAX_AVATAR_BYTES, USER_AVATAR_PRESETS } from '../lib/avatars.js';
 import { passwordSchema } from '../lib/password.js';
-import { THEME_PRESETS } from '../lib/themes.js';
+import { isSingleEmoji } from '../lib/lists.js';
+import { PATTERN_CHOICES, PATTERN_INTENSITIES, THEME_PRESETS } from '../lib/themes.js';
 import { emailSchema, localeSchema, nicknameSchema, timezoneSchema } from '../lib/schemas.js';
 import { requireAuth } from '../middlewares/auth.js';
 import { validateBody } from '../middlewares/validate.js';
@@ -101,6 +102,16 @@ const themeSchema = z.object({
     success: hex,
     error: hex,
   }),
+  /** Patrón de fondo: el del tema, ninguno, uno de la lista o un emoji propio */
+  pattern: z
+    .strictObject({
+      id: z.enum(PATTERN_CHOICES),
+      emoji: z.string().refine(isSingleEmoji, 'ICON_INVALID').optional(),
+      intensity: z.enum(PATTERN_INTENSITIES),
+    })
+    .refine((p) => p.id !== 'emoji' || !!p.emoji, { message: 'ICON_INVALID', path: ['emoji'] })
+    .transform((p) => (p.id === 'emoji' ? p : { id: p.id, intensity: p.intensity }))
+    .optional(),
 });
 
 meRoutes.put('/theme', validateBody(z.object({ theme: themeSchema.nullable() })), profileController.setTheme);
