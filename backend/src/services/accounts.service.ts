@@ -41,6 +41,15 @@ function computeAccess(a: AccountViewRow, role: FamilyRole, userId: string) {
 const isSupervisedPrivate = (a: AccountViewRow, role: FamilyRole, userId: string) =>
   a.view_mode === 'private' && role === 'leader' && a.owner_role === 'supervised' && a.owner_id !== userId;
 
+/** Ids de las cuentas del grupo (activas y archivadas) que el usuario puede ver normalmente. */
+export async function visibleAccountIds(familyId: string, userId: string, role: FamilyRole): Promise<Set<string>> {
+  const rows = [
+    ...(await accountsRepository.listForFamily(familyId, userId, false)),
+    ...(await accountsRepository.listForFamily(familyId, userId, true)),
+  ];
+  return new Set(rows.filter((a) => computeAccess(a, role, userId).canView).map((a) => a.id));
+}
+
 /** @param supervision el líder confirmó el aviso para ver la cuenta privada de un supervisado */
 export async function getAccountAccess(id: string, userId: string, supervision = false, conn?: Db): Promise<AccountAccess> {
   const account = await accountsRepository.find(id, userId, conn);
