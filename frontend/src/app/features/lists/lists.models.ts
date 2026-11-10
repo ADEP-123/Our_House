@@ -34,7 +34,8 @@ export interface ListItem {
   /** Tarea de la que es subtarea (un solo nivel) */
   parentId: string | null;
   text: string;
-  note: string | null;
+  /** Descripción de varias líneas (opcional) */
+  description: string | null;
   /** Cantidad pedida (compras) */
   amount: number | null;
   unit: string | null;

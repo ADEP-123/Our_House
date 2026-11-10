@@ -8,7 +8,7 @@ import { SyncStatus } from '../../core/offline/sync-status.service';
 import { applyPurchase, applyToggle, removeItem, syncParent } from './item-logic';
 import { FamilyLists, ListDetail, ListInput, ListItem, ListSummary, MyTask } from './lists.models';
 
-export type ItemChanges = Partial<Pick<ListItem, 'text' | 'note' | 'amount' | 'unit' | 'category' | 'assigneeId' | 'dueDate' | 'dueTime' | 'position'>> & {
+export type ItemChanges = Partial<Pick<ListItem, 'text' | 'description' | 'amount' | 'unit' | 'category' | 'assigneeId' | 'dueDate' | 'dueTime' | 'position'>> & {
   reminderStartDays?: number | null;
   reminderEveryDays?: number | null;
   remindersOff?: boolean;
@@ -334,7 +334,7 @@ export class ListsStore {
           id,
           parentId: input.parentId ?? null,
           text: input.text,
-          note: input.note ?? null,
+          description: input.description ?? null,
           amount: input.amount ?? null,
           unit: input.unit ?? null,
           purchased: null,
