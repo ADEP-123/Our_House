@@ -21,11 +21,31 @@ export function seasonalBase(preset: string): SeasonalId | null {
 }
 export const isDarkVariant = (preset: string) => preset.endsWith('-oscuro');
 
+export type Hemisphere = 'north' | 'south';
+
+/** Modo automático: el tema cambia solo según la estación o la fiesta del día (ver seasons.ts) */
+export interface AutoSetting {
+  enabled: boolean;
+  hemisphere: Hemisphere;
+  /** Versión oscura de cada tema */
+  dark: boolean;
+}
+
+export const DEFAULT_AUTO: AutoSetting = { enabled: false, hemisphere: 'north', dark: false };
+
+export const sameAuto = (a: AutoSetting | undefined, b: AutoSetting | undefined): boolean => {
+  const x = a ?? DEFAULT_AUTO;
+  const y = b ?? DEFAULT_AUTO;
+  return x.enabled === y.enabled && (!x.enabled || (x.hemisphere === y.hemisphere && x.dark === y.dark));
+};
+
 export interface Theme {
   preset: PresetId | 'custom';
   colors: ThemeColors;
   /** Patrón de fondo (sin dato: el del tema, suave) */
   pattern?: PatternSetting;
+  /** Modo automático por temporada (sin dato: apagado) */
+  auto?: AutoSetting;
 }
 
 /** Variable CSS de cada color (ver styles.scss) */
@@ -135,7 +155,8 @@ export const DEFAULT_THEME: Theme = { preset: 'claro', colors: PRESETS.claro };
 export const sameTheme = (a: Theme, b: Theme): boolean =>
   a.preset === b.preset &&
   COLOR_TOKENS.every((t) => a.colors[t].toLowerCase() === b.colors[t].toLowerCase()) &&
-  samePattern(a.pattern, b.pattern);
+  samePattern(a.pattern, b.pattern) &&
+  sameAuto(a.auto, b.auto);
 
 // ---------- Contraste (WCAG 2.x) ----------
 

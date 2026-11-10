@@ -60,6 +60,25 @@ h2 {
 }
 
 /* ---------- Temporadas ---------- */
+.auto-box {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--oh-radius);
+  border: 1px solid var(--oh-border);
+  background: var(--oh-surface);
+
+  .oh-hint,
+  .intensity {
+    margin: 0;
+  }
+}
+
+.auto-now {
+  margin: 0;
+  font-weight: 600;
+}
+
 .section-head {
   display: flex;
   flex-wrap: wrap;

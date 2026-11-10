@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { TPipe } from '../../core/i18n/t.pipe';
+import { ThemeService } from '../../core/theme/theme.service';
 import { LangSwitchComponent } from '../../shared/lang-switch.component';
 
 /**
@@ -12,7 +13,8 @@ import { LangSwitchComponent } from '../../shared/lang-switch.component';
   imports: [RouterOutlet, RouterLink, TPipe, LangSwitchComponent],
   template: `
     <div class="auth">
-      <aside class="brand">
+      <!-- Con el patrón de la temporada (copos en invierno, calabazas en Halloween…) -->
+      <aside class="brand" [style.background-image]="theme.brandPattern()">
         <svg class="roof" viewBox="0 0 120 40" aria-hidden="true"><path d="M4 36 60 6l56 30" /></svg>
         <p class="word" aria-hidden="true">Our<br />House</p>
         <p class="tagline">{{ 'auth.tagline' | t }}</p>
@@ -81,7 +83,8 @@ import { LangSwitchComponent } from '../../shared/lang-switch.component';
         flex-direction: column;
         justify-content: flex-end;
         padding: 56px;
-        background: var(--oh-primary);
+        background-color: var(--oh-primary);
+        background-size: 160px 160px;
         color: var(--oh-on-primary);
       }
       .roof {
@@ -117,4 +120,6 @@ import { LangSwitchComponent } from '../../shared/lang-switch.component';
     }
   `,
 })
-export class AuthLayoutComponent {}
+export class AuthLayoutComponent {
+  protected readonly theme = inject(ThemeService);
+}
