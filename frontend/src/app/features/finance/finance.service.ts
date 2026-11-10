@@ -4,6 +4,11 @@ import { firstValueFrom } from 'rxjs';
 import {
   Account,
   AccountInput,
+  AccountMovements,
+  MovementColumn,
+  MovementHistoryEntry,
+  MovementInput,
+  MovementSuggestion,
   Category,
   CategoryInput,
   CategoryMovement,
@@ -98,5 +103,67 @@ export class FinanceService {
     overrides: { movementId: string; categoryId: string }[] = [],
   ): Promise<unknown> {
     return firstValueFrom(this.http.post(`/api/categories/${id}/delete`, { moveTo, overrides }));
+  }
+
+  // ---------- Movimientos ----------
+
+  movements(accountId: string, supervision = false): Promise<AccountMovements> {
+    const params: Record<string, string> = supervision ? { supervision: 'true' } : {};
+    return firstValueFrom(
+      this.http.get<AccountMovements>(`/api/accounts/${accountId}/movements`, { params }),
+    );
+  }
+
+  addMovement(accountId: string, input: MovementInput): Promise<{ id: string }> {
+    return firstValueFrom(
+      this.http.post<{ id: string }>(`/api/accounts/${accountId}/movements`, input),
+    );
+  }
+
+  updateMovement(id: string, changes: Partial<Omit<MovementInput, 'id'>>): Promise<{ id: string }> {
+    return firstValueFrom(this.http.patch<{ id: string }>(`/api/movements/${id}`, changes));
+  }
+
+  deleteMovement(id: string): Promise<unknown> {
+    return firstValueFrom(this.http.delete(`/api/movements/${id}`));
+  }
+
+  restoreMovement(id: string): Promise<unknown> {
+    return firstValueFrom(this.http.post(`/api/movements/${id}/restore`, {}));
+  }
+
+  async movementHistory(id: string, supervision = false): Promise<MovementHistoryEntry[]> {
+    const params: Record<string, string> = supervision ? { supervision: 'true' } : {};
+    return (
+      await firstValueFrom(
+        this.http.get<{ history: MovementHistoryEntry[] }>(`/api/movements/${id}/history`, {
+          params,
+        }),
+      )
+    ).history;
+  }
+
+  adjustBalance(
+    accountId: string,
+    input: { id?: string; balance: number; date: string; description: string },
+  ): Promise<{ id: string }> {
+    return firstValueFrom(
+      this.http.post<{ id: string }>(`/api/accounts/${accountId}/adjust`, input),
+    );
+  }
+
+  async suggestions(familyId: string, q: string): Promise<MovementSuggestion[]> {
+    return (
+      await firstValueFrom(
+        this.http.get<{ suggestions: MovementSuggestion[] }>(
+          `/api/families/${familyId}/movement-suggestions`,
+          { params: { q } },
+        ),
+      )
+    ).suggestions;
+  }
+
+  setHiddenColumns(accountId: string, hiddenColumns: MovementColumn[]): Promise<unknown> {
+    return firstValueFrom(this.http.put(`/api/accounts/${accountId}/prefs`, { hiddenColumns }));
   }
 }

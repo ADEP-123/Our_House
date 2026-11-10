@@ -84,3 +84,58 @@ export interface CategoryMovement {
   date: string;
   description: string;
 }
+
+export type MovementKind = 'opening' | 'in' | 'out' | 'adjust';
+
+/** Columnas de la tabla de una cuenta (cada persona puede ocultar las que quiera, menos la descripción) */
+export type MovementColumn =
+  'code' | 'date' | 'description' | 'category' | 'amount' | 'balance' | 'createdBy';
+
+export interface Movement {
+  id: string;
+  /** ID visible: prefijo + número (T0001) */
+  code: string;
+  number: number;
+  kind: MovementKind;
+  amount: number;
+  /** Con signo: las salidas en negativo */
+  signedAmount: number;
+  date: string;
+  description: string;
+  category: { id: string; name: string; icon: string; color: string } | null;
+  createdBy: { id: string; nickname: string | null } | null;
+  edited: boolean;
+  /** Saldo de la cuenta hasta este movimiento */
+  balance: number;
+  createdAt: string;
+}
+
+export interface AccountMovements {
+  movements: Movement[];
+  hiddenColumns: MovementColumn[];
+}
+
+export interface MovementInput {
+  id?: string;
+  kind: 'in' | 'out';
+  amount: number;
+  date: string;
+  description: string;
+  categoryId: string;
+}
+
+export interface MovementSuggestion {
+  description: string;
+  kind: MovementKind;
+  categoryId: string | null;
+}
+
+export interface MovementHistoryEntry {
+  id: string;
+  action: 'created' | 'updated' | 'deleted' | 'restored';
+  changes: Partial<
+    Record<'kind' | 'amount' | 'date' | 'description' | 'category', [unknown, unknown]>
+  > | null;
+  actor: { id: string; nickname: string | null } | null;
+  at: string;
+}
