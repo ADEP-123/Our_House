@@ -4,6 +4,7 @@ import { ConfirmDialogComponent } from './shared/confirm-dialog.component';
 import { ToastComponent } from './shared/toast.component';
 import { AppUpdateService } from './core/offline/app-update.service';
 import { ThemeService } from './core/theme/theme.service';
+import { OverdueBadgeService } from './features/tasks/overdue-badge.service';
 
 @Component({
   selector: 'app-root',
@@ -16,5 +17,7 @@ export class App {
 
   constructor() {
     inject(AppUpdateService).start();
+    // Tareas vencidas en el título de la pestaña y en el ícono de la app instalada
+    inject(OverdueBadgeService).start();
   }
 }
