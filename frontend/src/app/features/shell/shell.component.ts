@@ -29,6 +29,7 @@ export class ShellComponent {
     { path: '/inicio', label: 'shell.home', icon: 'home' },
     { path: '/mis-tareas', label: 'shell.myTasks', icon: 'task' },
     { path: '/listas', label: 'shell.lists', icon: 'list' },
+    { path: '/finanzas', label: 'shell.finance', icon: 'wallet' },
     { path: '/familias', label: 'shell.families', icon: 'family' },
     { path: '/apariencia', label: 'shell.appearance', icon: 'palette' },
     { path: '/perfil', label: 'shell.profile', icon: 'user' },
