@@ -4,6 +4,7 @@ import { itemsController } from '../controllers/items.controller.js';
 import { profileController } from '../controllers/profile.controller.js';
 import { MAX_AVATAR_BYTES, USER_AVATAR_PRESETS } from '../lib/avatars.js';
 import { passwordSchema } from '../lib/password.js';
+import { THEME_PRESETS } from '../lib/themes.js';
 import { emailSchema, localeSchema, nicknameSchema, timezoneSchema } from '../lib/schemas.js';
 import { requireAuth } from '../middlewares/auth.js';
 import { validateBody } from '../middlewares/validate.js';
@@ -89,7 +90,7 @@ meRoutes.put(
 
 const hex = z.string().regex(/^#[0-9a-f]{6}$/i, 'COLOR_INVALID').transform((v) => v.toLowerCase());
 const themeSchema = z.object({
-  preset: z.enum(['claro', 'oscuro', 'bosque', 'oceano', 'lavanda', 'custom']),
+  preset: z.enum(THEME_PRESETS),
   colors: z.strictObject({
     primary: hex,
     onPrimary: hex,

@@ -26,6 +26,38 @@
     </section>
 
     <section>
+      <div class="section-head">
+        <h2>{{ 'appearance.seasonalTitle' | t }}</h2>
+        <label class="switch-label">
+          <input type="checkbox" role="switch" [checked]="darkSeasonal()" (change)="toggleDarkSeasonal()" />
+          <span>🌙 {{ 'appearance.darkVersion' | t }}</span>
+        </label>
+      </div>
+      @for (group of seasonalGroups; track group.label) {
+        <h3 class="group-title">{{ group.label | t }}</h3>
+        <div class="presets" role="radiogroup" [attr.aria-label]="group.label | t">
+          @for (id of group.ids; track id) {
+            @let colors = seasonalColors(id);
+            <button
+              type="button"
+              role="radio"
+              class="preset"
+              [attr.aria-checked]="seasonalSelected() === id"
+              (click)="chooseSeasonal(id)"
+            >
+              <span class="swatch" [style.background]="colors.background" aria-hidden="true">
+                <span [style.background]="colors.primary"></span>
+                <span [style.background]="colors.secondary"></span>
+                <span [style.background]="colors.surface"></span>
+              </span>
+              <span class="preset-name">{{ presetLabel(id) | t }}</span>
+            </button>
+          }
+        </div>
+      }
+    </section>
+
+    <section>
       <h2>{{ 'appearance.colorsTitle' | t }}</h2>
       @if (draft().preset === 'custom') {
         <p class="oh-hint">{{ 'appearance.customHint' | t }}</p>

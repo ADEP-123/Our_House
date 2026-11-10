@@ -1,4 +1,4 @@
-import { contrastIssues, contrastRatio, PRESETS, sameTheme } from './themes';
+import { contrastIssues, contrastRatio, FESTIVITIES, isDark, PRESETS, sameTheme, seasonalBase, seasonalPreset, SEASONS } from './themes';
 
 describe('temas', () => {
   it('calcula el contraste como WCAG (negro sobre blanco = 21)', () => {
@@ -21,5 +21,14 @@ describe('temas', () => {
     const reordered = Object.fromEntries(Object.entries(PRESETS.oscuro).reverse()) as typeof PRESETS.oscuro;
     expect(sameTheme({ preset: 'oscuro', colors: PRESETS.oscuro }, { preset: 'oscuro', colors: reordered })).toBe(true);
     expect(sameTheme({ preset: 'oscuro', colors: PRESETS.oscuro }, { preset: 'claro', colors: PRESETS.claro })).toBe(false);
+  });
+
+  it('cada temporada y fiesta tiene versión clara y oscura', () => {
+    for (const id of [...SEASONS, ...FESTIVITIES]) {
+      expect(isDark(PRESETS[seasonalPreset(id, false)])).toBe(false);
+      expect(isDark(PRESETS[seasonalPreset(id, true)])).toBe(true);
+      expect(seasonalBase(seasonalPreset(id, true))).toBe(id);
+    }
+    expect(seasonalBase('oscuro')).toBeNull();
   });
 });
