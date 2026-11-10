@@ -163,6 +163,14 @@ Cómo funciona: cada tarea con fecha aparece en el calendario "Our House" de su 
 - **Cómo se protege:** cada elemento se cifra con AES-256-GCM y una clave propia derivada de `SECRETS_KEY` (HKDF con un valor aleatorio por elemento, ligada a su lista y elemento). Ver los valores pide un código de 6 dígitos al correo (vence en 10 minutos, un uso, 5 intentos). El desbloqueo vive solo en la pantalla abierta y se pierde al salir. Nada de una lista secreta se guarda en el dispositivo.
 - **Borrado:** borrar un elemento o una lista secreta la elimina de la base de datos en el acto. Neon puede conservar un historial interno de unas horas para recuperación, siempre cifrado.
 
+## 10. Mejoras diarias (fase 5)
+
+- **Migraciones:** `017_descripcion` (la nota de cada elemento pasa a ser su descripción, hasta 2000 caracteres) y `018_repeticion` (repetición, turnos y la opción **Repetir**, que queda activada en las listas de compras y de tareas que ya existen). Las aplica el workflow **Migraciones** al llegar a `main`. No hay variables nuevas.
+- **Tareas que se repiten:** al completarla pasa a su siguiente fecha (fechas fijas o "desde el día en que se hace"), con las subtareas desmarcadas y, si tiene turnos, con la siguiente persona como responsable (le llega el correo de asignación). Las que no tienen fecha, como "Leche cada semana", quedan hechas hasta que les vuelve a tocar: reaparecen al abrir las listas, en Mis tareas y en el envío de cada hora (el mismo workflow de recordatorios).
+- **Google Calendar:** el evento de la vez que se completó queda como "✓ tarea" y se crea uno nuevo para la siguiente fecha. "Saltar esta vez" mueve el mismo evento.
+- **Ícono de la app:** los archivos de `frontend/public/icons/` y `favicon.ico` salen del dibujo de `frontend/src/app/core/brand/app-icon.ts`, con el color de siempre. La app instalada mantiene ese ícono; el de la pestaña del navegador toma el color principal de la paleta de cada persona. Si el teléfono ya tenía la app instalada, el ícono nuevo aparece cuando el sistema actualiza la app (en Android puede tardar un día; reinstalarla lo cambia al momento).
+- **Tareas vencidas:** el título de la pestaña muestra cuántas tareas tuyas están vencidas, por ejemplo "(2) Our House". En la app instalada aparece además como globito sobre el ícono donde el sistema lo permite (Chrome y Edge en escritorio y Android, Safari en iOS 16.4 o más con la app agregada a la pantalla de inicio).
+
 ## Desarrollo local
 
 ```bash
