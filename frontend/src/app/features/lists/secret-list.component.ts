@@ -206,19 +206,34 @@ export class SecretListComponent {
 
   // ---------- Agregar y editar ----------
 
+  /** Campos ocultos (contraseña, PIN) que se están viendo mientras se escribe */
+  protected readonly shownInputs = signal<ReadonlySet<number>>(new Set());
+
+  protected toggleInput(index: number): void {
+    this.shownInputs.update((s) => {
+      const next = new Set(s);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  }
+
   startAdd(): void {
+    this.shownInputs.set(new Set());
     this.editingId.set(null);
     this.draft.set(this.emptyDraft());
     this.adding.set(true);
   }
 
   startEdit(item: SecretSummary): void {
+    this.shownInputs.set(new Set());
     this.adding.set(false);
     this.draft.set({ title: item.title, fields: this.fieldsOf(item).map((f) => ({ ...f })) });
     this.editingId.set(item.id);
   }
 
   cancelEdit(): void {
+    this.shownInputs.set(new Set());
     this.adding.set(false);
     this.editingId.set(null);
   }
@@ -243,6 +258,8 @@ export class SecretListComponent {
   }
 
   protected removeField(index: number): void {
+    // Los campos se corren de lugar: todos vuelven a quedar ocultos
+    this.shownInputs.set(new Set());
     this.draft.update((d) => ({ ...d, fields: d.fields.filter((_, i) => i !== index) }));
   }
 
