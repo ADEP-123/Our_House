@@ -201,39 +201,7 @@
               </div>
             }
 
-            <section class="movements" aria-labelledby="movements-title">
-              <h3 id="movements-title">{{ 'finance.movements.title' | t }}</h3>
-              @if (a.opening; as o) {
-                <div class="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th scope="col">{{ 'finance.movements.id' | t }}</th>
-                        <th scope="col">{{ 'finance.movements.date' | t }}</th>
-                        <th scope="col">{{ 'finance.movements.description' | t }}</th>
-                        <th scope="col" class="num">{{ 'finance.movements.amount' | t }}</th>
-                        <th scope="col" class="num">{{ 'finance.movements.balance' | t }}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td class="code">{{ code(a, o.number) }}</td>
-                        <td>{{ date(o.date) }}</td>
-                        <td>{{ 'finance.movements.opening' | t }}</td>
-                        <td class="num" [class.negative]="o.amount < 0">
-                          {{ money(o.amount, a) }}
-                        </td>
-                        <td class="num" [class.negative]="o.amount < 0">
-                          {{ money(o.amount, a) }}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              } @else {
-                <p class="oh-muted">{{ 'finance.movements.empty' | t }}</p>
-              }
-            </section>
+            <oh-movements [account]="a" (changed)="refreshAccounts()" />
           </div>
         }
       </section>

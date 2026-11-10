@@ -4,6 +4,7 @@ import { accountsController } from '../controllers/accounts.controller.js';
 import { checkIds } from '../lib/route-ids.js';
 import { requireAuth } from '../middlewares/auth.js';
 import { validateBody } from '../middlewares/validate.js';
+import { mountAccountMovements } from './movements.routes.js';
 
 const ROLES = ['leader', 'member', 'supervised'] as const;
 const MAX_MONEY = 100_000_000_000;
@@ -60,3 +61,6 @@ account.put('/', validateBody(accountBody), accountsController.update);
 account.post('/archive', accountsController.archive);
 account.post('/restore', accountsController.restore);
 account.delete('/', accountsController.remove);
+
+// Movimientos, ajuste de saldo y columnas ocultas de la cuenta
+mountAccountMovements(account);

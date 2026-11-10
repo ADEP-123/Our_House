@@ -26,7 +26,7 @@ export interface CategoryMovementRow {
 }
 
 const SELECT = `
-  SELECT c.*, (SELECT count(*)::int FROM account_movements m WHERE m.category_id = c.id) AS usage
+  SELECT c.*, (SELECT count(*)::int FROM account_movements m WHERE m.category_id = c.id AND m.deleted_at IS NULL) AS usage
     FROM movement_categories c`;
 
 export const categoriesRepository = {
@@ -85,7 +85,7 @@ export const categoriesRepository = {
     const { rows } = await db().query<CategoryMovementRow>(
       `SELECT m.id, m.account_id, a.name AS account_name, a.prefix, m.number, m.kind, m.amount, m.date, m.description
          FROM account_movements m JOIN accounts a ON a.id = m.account_id
-        WHERE m.category_id = $1
+        WHERE m.category_id = $1 AND m.deleted_at IS NULL
         ORDER BY m.date DESC, m.created_at DESC`,
       [categoryId],
     );
@@ -103,6 +103,10 @@ export const categoriesRepository = {
   async moveAll(fromId: string, toId: string, conn: Db): Promise<void> {
     await conn.query('UPDATE account_movements SET category_id = $2, updated_at = now() WHERE category_id = $1', [fromId, toId]);
   },
+
+  /** Los movimientos borrados (con Deshacer vencido) dejan de apuntar a la categoría que se borra */
+  releaseDeleted: (categoryId: string, conn: Db) =>
+    conn.query('UPDATE account_movements SET category_id = NULL WHERE category_id = $1 AND deleted_at IS NOT NULL', [categoryId]),
 
   delete: (id: string, conn: Db) => conn.query('DELETE FROM movement_categories WHERE id = $1', [id]),
 };

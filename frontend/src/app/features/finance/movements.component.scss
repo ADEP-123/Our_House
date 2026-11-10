@@ -1,0 +1,359 @@
+.movements {
+  display: grid;
+  gap: 12px;
+  padding-top: 18px;
+  border-top: 1px solid var(--oh-border);
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+  }
+}
+
+.bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.columns {
+  position: relative;
+
+  summary {
+    list-style: none;
+    cursor: pointer;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+  }
+}
+
+.columns-menu {
+  position: absolute;
+  z-index: 3;
+  right: 0;
+  top: calc(100% + 4px);
+  display: grid;
+  gap: 4px;
+  min-width: 200px;
+  padding: 10px 14px;
+  background: var(--oh-surface);
+  border: 1px solid var(--oh-border-strong);
+  border-radius: var(--oh-radius);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.15);
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 36px;
+    cursor: pointer;
+  }
+
+  input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--oh-primary);
+  }
+}
+
+/* ---------- Filtros ---------- */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+
+  .oh-input {
+    min-height: 40px;
+  }
+
+  select.oh-input {
+    width: auto;
+    max-width: 200px;
+  }
+}
+
+.search {
+  flex: 1 1 200px;
+}
+
+.dates {
+  display: flex;
+  gap: 8px;
+}
+
+.date {
+  display: grid;
+  gap: 2px;
+  font-size: 0.75rem;
+  color: var(--oh-text-muted);
+
+  input {
+    width: auto;
+  }
+}
+
+.seg {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid var(--oh-border);
+
+  button {
+    min-height: 32px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--oh-text-muted);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  [aria-pressed='true'] {
+    background: var(--oh-secondary-soft);
+    color: var(--oh-secondary);
+  }
+}
+
+/* ---------- Totales de lo que se ve ---------- */
+
+.totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--oh-radius);
+  background: color-mix(in srgb, var(--oh-text) 4%, var(--oh-surface));
+
+  div {
+    display: grid;
+  }
+
+  dt {
+    font-size: 0.75rem;
+    color: var(--oh-text-muted);
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.positive {
+  color: var(--oh-success);
+}
+
+.negative {
+  color: var(--oh-error);
+}
+
+/* ---------- Tabla ---------- */
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+th,
+td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--oh-border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+th {
+  color: var(--oh-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+tbody tr {
+  cursor: pointer;
+
+  &:hover {
+    background: color-mix(in srgb, var(--oh-primary) 5%, transparent);
+  }
+}
+
+.special .desc {
+  font-style: italic;
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.amount {
+  font-weight: 600;
+}
+
+.code,
+.by {
+  color: var(--oh-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.desc {
+  white-space: normal;
+  min-width: 180px;
+}
+
+.row-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.edited {
+  margin-left: 6px;
+  font-size: 0.75rem;
+  color: var(--oh-text-muted);
+}
+
+.chip {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  background: color-mix(in srgb, var(--cat) 16%, var(--oh-surface));
+}
+
+.sort {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.more {
+  justify-self: center;
+}
+
+.empty {
+  margin: 8px 0;
+}
+
+/* Celular: cada movimiento es una fila de dos líneas (descripción y monto; datos y saldo) */
+@media (max-width: 639px) {
+  thead {
+    display: none;
+  }
+
+  tbody tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 10px;
+    padding: 10px 2px;
+    border-bottom: 1px solid var(--oh-border);
+  }
+
+  td {
+    padding: 0;
+    border: 0;
+  }
+
+  .desc {
+    order: 1;
+    flex: 1 1 55%;
+    min-width: 0;
+    font-weight: 600;
+  }
+
+  .amount {
+    order: 2;
+    margin-left: auto;
+  }
+
+  .code,
+  .date-cell,
+  .cat,
+  .by {
+    order: 3;
+    font-size: 0.8125rem;
+    color: var(--oh-text-muted);
+  }
+
+  .chip {
+    padding: 0 8px;
+  }
+
+  .balance {
+    order: 4;
+    margin-left: auto;
+    font-size: 0.8125rem;
+    color: var(--oh-text-muted);
+  }
+
+  .dates {
+    flex: 1 1 100%;
+  }
+
+  .filters .date {
+    flex: 1;
+
+    input {
+      width: 100%;
+    }
+  }
+}
+
+/* ---------- Botón flotante (con navegación inferior) ---------- */
+
+.fab {
+  position: fixed;
+  z-index: 3;
+  right: 18px;
+  bottom: calc(88px + env(safe-area-inset-bottom));
+  width: 60px;
+  height: 60px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--oh-primary);
+  color: var(--oh-on-primary);
+  font-size: 2rem;
+  line-height: 1;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.25);
+  cursor: pointer;
+
+  @media (min-width: 840px) {
+    display: none;
+  }
+}
+
+@media (max-width: 839px) {
+  .add-desktop {
+    display: none;
+  }
+}

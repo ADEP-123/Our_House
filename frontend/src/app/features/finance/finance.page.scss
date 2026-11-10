@@ -62,9 +62,7 @@
 // Las cifras se alinean como en una hoja de cálculo
 .tab-balance,
 .figure-value,
-.credit-facts dd,
-.num,
-.code {
+.credit-facts dd {
   font-variant-numeric: tabular-nums;
 }
 
@@ -267,54 +265,6 @@
 
 .delete {
   color: var(--oh-error);
-}
-
-.movements {
-  display: grid;
-  gap: 10px;
-  padding-top: 18px;
-  border-top: 1px solid var(--oh-border);
-
-  h3 {
-    margin: 0;
-    font-size: 1rem;
-  }
-
-  p {
-    margin: 0;
-  }
-}
-
-.table-wrap {
-  overflow-x: auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9375rem;
-}
-
-th,
-td {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--oh-border);
-  text-align: left;
-  white-space: nowrap;
-}
-
-th {
-  color: var(--oh-text-muted);
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
-
-.num {
-  text-align: right;
-}
-
-.code {
-  color: var(--oh-text-muted);
 }
 
 /* ---------- Vacío y supervisados ---------- */

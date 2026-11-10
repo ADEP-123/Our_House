@@ -145,6 +145,7 @@ export const categoriesService = {
     await withTransaction(async (conn) => {
       for (const [target, ids] of byTarget) await categoriesRepository.moveMovements(id, ids, target, conn);
       if (body.moveTo) await categoriesRepository.moveAll(id, body.moveTo, conn);
+      await categoriesRepository.releaseDeleted(id, conn);
       await categoriesRepository.delete(id, conn);
     });
   },
