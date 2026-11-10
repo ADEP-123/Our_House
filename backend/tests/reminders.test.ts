@@ -51,7 +51,7 @@ describe('envío de recordatorios', () => {
     const list = await createList(users.ana!, familyId, { name: 'Casa', type: 'todo' });
     const add = (body: Record<string, unknown>) => users.ana!.agent.post(`/api/lists/${list.id}/items`).send(body).expect(201);
     const beto = users.beto!.user.id;
-    await add({ text: 'Pagar luz', assigneeId: beto, dueDate: '2026-11-20' });
+    await add({ text: 'Pagar luz', description: 'Con la tarjeta azul', assigneeId: beto, dueDate: '2026-11-20' });
     await add({ text: 'Apagada', assigneeId: beto, dueDate: '2026-11-20', remindersOff: true });
     await add({ text: 'Sin fecha', assigneeId: beto });
     const hecha = (await add({ text: 'Hecha', assigneeId: beto, dueDate: '2026-11-20' })).body.item;
@@ -63,6 +63,7 @@ describe('envío de recordatorios', () => {
     const sent = mail.sent.slice(before);
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({ to: 'beto@test.com', content: { subject: 'Recordatorio: «Pagar luz» vence mañana' } });
+    expect(sent[0]!.content.text).toContain('Con la tarjeta azul');
   });
 
   it('cada tarea puede cambiar desde cuándo y cada cuánto; sin responsable, recibe quien la creó', async () => {
