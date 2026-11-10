@@ -112,6 +112,8 @@ const themeSchema = z.object({
     .refine((p) => p.id !== 'emoji' || !!p.emoji, { message: 'ICON_INVALID', path: ['emoji'] })
     .transform((p) => (p.id === 'emoji' ? p : { id: p.id, intensity: p.intensity }))
     .optional(),
+  /** Modo automático: el tema de la estación o fiesta de cada día */
+  auto: z.strictObject({ enabled: z.boolean(), hemisphere: z.enum(['north', 'south']), dark: z.boolean() }).optional(),
 });
 
 meRoutes.put('/theme', validateBody(z.object({ theme: themeSchema.nullable() })), profileController.setTheme);
