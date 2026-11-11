@@ -1,0 +1,172 @@
+@if (config(); as c) {
+  <!-- Filtros en una fila: período, frecuencia, cuentas y vista -->
+  <div class="controls" role="group" [attr.aria-label]="'finance.summary.controls' | t">
+    <div class="seg" role="group" [attr.aria-label]="'finance.summary.period' | t">
+      <button type="button" [attr.aria-pressed]="c.mode === 'month'" (click)="setMode('month')">
+        {{ 'finance.summary.mode.month' | t }}
+      </button>
+      <button type="button" [attr.aria-pressed]="c.mode === 'year'" (click)="setMode('year')">
+        {{ 'finance.summary.mode.year' | t }}
+      </button>
+      <button type="button" [attr.aria-pressed]="c.mode === 'range'" (click)="setMode('range')">
+        {{ 'finance.summary.mode.range' | t }}
+      </button>
+    </div>
+
+    @if (c.mode === 'month') {
+      <label class="field">
+        <span class="oh-sr-only">{{ 'finance.summary.mode.month' | t }}</span>
+        <input
+          class="oh-input"
+          type="month"
+          [value]="c.month"
+          (change)="set({ month: $any($event.target).value })"
+        />
+      </label>
+    } @else if (c.mode === 'year') {
+      <label class="field">
+        <span class="oh-sr-only">{{ 'finance.summary.mode.year' | t }}</span>
+        <select class="oh-input" (change)="set({ year: +$any($event.target).value })">
+          @for (y of years(); track y) {
+            <option [value]="y" [selected]="y === c.year">{{ y }}</option>
+          }
+        </select>
+      </label>
+    } @else {
+      <label class="field labeled">
+        <span>{{ 'finance.movements.from' | t }}</span>
+        <input
+          class="oh-input"
+          type="date"
+          [value]="range()?.from"
+          (change)="set({ from: $any($event.target).value })"
+        />
+      </label>
+      <label class="field labeled">
+        <span>{{ 'finance.movements.to' | t }}</span>
+        <input
+          class="oh-input"
+          type="date"
+          [value]="range()?.to"
+          (change)="set({ to: $any($event.target).value })"
+        />
+      </label>
+    }
+
+    <label class="field labeled">
+      <span>{{ 'finance.summary.frequency' | t }}</span>
+      <select class="oh-input" (change)="set({ freq: $any($event.target).value })">
+        @for (f of allowedFreqs(); track f) {
+          <option [value]="f" [selected]="f === c.freq">{{ freqLabel(f) }}</option>
+        }
+      </select>
+    </label>
+
+    <details class="accounts">
+      <summary class="oh-btn oh-btn--outline">{{ accountsText() }}</summary>
+      <div class="menu">
+        @for (a of data()?.available ?? []; track a.id) {
+          <label>
+            <input type="checkbox" [checked]="included(a.id)" (change)="toggleAccount(a.id)" />
+            {{ kindIcon(a.kind) }} {{ a.name }}
+            @if (a.archived) {
+              <small>({{ 'finance.summary.archivedTag' | t }})</small>
+            }
+          </label>
+        }
+        @if (c.accounts.length) {
+          <button type="button" class="oh-btn oh-btn--text" (click)="set({ accounts: [] })">
+            {{ 'finance.summary.useAll' | t }}
+          </button>
+        }
+      </div>
+    </details>
+
+    <div class="seg" role="group" [attr.aria-label]="'finance.summary.viewLabel' | t">
+      <button
+        type="button"
+        [attr.aria-pressed]="c.view === 'combined'"
+        (click)="set({ view: 'combined' })"
+      >
+        {{ viewLabel('combined') }}
+      </button>
+      <button
+        type="button"
+        [attr.aria-pressed]="c.view === 'separate'"
+        (click)="set({ view: 'separate' })"
+      >
+        {{ viewLabel('separate') }}
+      </button>
+      <button type="button" [attr.aria-pressed]="c.view === 'both'" (click)="set({ view: 'both' })">
+        {{ viewLabel('both') }}
+      </button>
+    </div>
+  </div>
+
+  @if (error()) {
+    <p class="oh-alert is-error" role="alert">{{ error() }}</p>
+  }
+
+  @if (data(); as d) {
+    <p class="period" [class.loading]="loading()">
+      {{ 'finance.summary.periodText' | t: { from: dateLabel(d.from), to: dateLabel(d.to) } }}
+    </p>
+
+    @if (!d.accounts.length) {
+      <p class="empty">{{ 'finance.summary.noAccounts' | t }}</p>
+    } @else {
+      <!-- Saldos al cierre del período -->
+      <dl class="balances">
+        <div>
+          <dt>{{ 'finance.summary.real' | t }}</dt>
+          <dd class="big">{{ money(d.balances.real) }}</dd>
+          <dd class="hint">{{ 'finance.summary.realHint' | t }}</dd>
+        </div>
+        <div>
+          <dt>{{ 'finance.summary.debt' | t }}</dt>
+          <dd class="big">{{ money(d.balances.debt) }}</dd>
+          <dd class="hint">{{ 'finance.summary.debtHint' | t }}</dd>
+        </div>
+        <div>
+          <dt>{{ 'finance.summary.complete' | t }}</dt>
+          <dd class="big">{{ money(d.balances.complete) }}</dd>
+          <dd class="hint">{{ 'finance.summary.completeHint' | t }}</dd>
+        </div>
+      </dl>
+
+      @if (showCombined()) {
+        <section class="block">
+          <h3>
+            {{
+              (d.accounts.length > 1
+                ? 'finance.summary.combinedTitle'
+                : 'finance.summary.singleTitle'
+              ) | t: { name: d.accounts[0]!.name }
+            }}
+          </h3>
+          <oh-summary-block [block]="d.combined" [freq]="d.freq" [currency]="d.currency" />
+        </section>
+      }
+
+      @if (showSeparate()) {
+        @for (b of d.byAccount; track b.accountId) {
+          <section class="block account">
+            <h3>
+              {{ kindIcon(accountName(b.accountId)!.kind) }} {{ accountName(b.accountId)!.name }}
+            </h3>
+            <oh-summary-block
+              [block]="b"
+              [freq]="d.freq"
+              [currency]="d.currency"
+              [compact]="true"
+            />
+          </section>
+        }
+      }
+    }
+  } @else if (!error()) {
+    <p class="oh-muted" role="status">{{ 'common.loading' | t }}</p>
+  }
+} @else {
+  <p class="oh-muted" role="status">{{ 'common.loading' | t }}</p>
+}

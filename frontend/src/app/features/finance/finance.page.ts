@@ -21,15 +21,18 @@ import { creditUsage, kindIcon } from './finance-logic';
 import { Account, FamilyAccounts } from './finance.models';
 import { FinanceService } from './finance.service';
 import { FinanceStore } from './finance.store';
+import { SummaryComponent } from './summary.component';
 import { MovementsComponent } from './movements.component';
 
 /**
  * Finanzas: una pestaña por cuenta, como las hojas de un Excel.
  * /finanzas?cuenta=… abre esa pestaña; con &supervision=1 un líder ve la cuenta privada de un supervisado.
  */
+const SUMMARY_TAB = 'resumen';
+
 @Component({
   selector: 'oh-finance-page',
-  imports: [RouterLink, TPipe, MovementsComponent],
+  imports: [RouterLink, TPipe, MovementsComponent, SummaryComponent],
   templateUrl: './finance.page.html',
   styleUrl: './finance.page.scss',
 })
@@ -58,9 +61,15 @@ export class FinancePage implements OnInit {
   protected readonly supervised = signal<Account | null>(null);
   private readonly nicknames = signal<Map<string, string>>(new Map());
 
+  /** Pestaña Resumen (?cuenta=resumen): solo en la vista de cuentas activas */
+  protected readonly showSummary = computed(
+    () => this.cuenta() === SUMMARY_TAB && !this.supervised() && !this.archived(),
+  );
+
   protected readonly selected = computed<Account | null>(() => {
     const supervised = this.supervised();
     if (supervised) return supervised;
+    if (this.showSummary()) return null;
     const accounts = this.data()?.accounts ?? [];
     return accounts.find((a) => a.id === this.cuenta()) ?? accounts[0] ?? null;
   });
@@ -144,18 +153,24 @@ export class FinancePage implements OnInit {
 
   /** Flechas, Inicio y Fin entre pestañas (patrón de pestañas de WAI-ARIA) */
   protected onTabKey(event: KeyboardEvent, index: number): void {
-    const accounts = this.data()?.accounts ?? [];
+    const ids = this.tabIds();
     const moves: Record<string, number> = {
       ArrowRight: index + 1,
       ArrowLeft: index - 1,
       Home: 0,
-      End: accounts.length - 1,
+      End: ids.length - 1,
     };
-    if (!(event.key in moves) || !accounts.length) return;
+    if (!(event.key in moves) || !ids.length) return;
     event.preventDefault();
-    const next = (moves[event.key]! + accounts.length) % accounts.length;
-    this.open(accounts[next]!.id);
-    queueMicrotask(() => document.getElementById(`tab-${accounts[next]!.id}`)?.focus());
+    const next = ids[(moves[event.key]! + ids.length) % ids.length]!;
+    this.open(next);
+    queueMicrotask(() => document.getElementById(`tab-${next}`)?.focus());
+  }
+
+  /** Pestañas en orden: las cuentas y, en la vista de activas, el resumen al final */
+  private tabIds(): string[] {
+    const ids = (this.data()?.accounts ?? []).map((a) => a.id);
+    return this.archived() || !ids.length ? ids : [...ids, SUMMARY_TAB];
   }
 
   protected setArchivedView(value: boolean): void {

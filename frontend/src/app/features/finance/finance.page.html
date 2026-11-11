@@ -92,6 +92,30 @@
                 }}</span>
               </button>
             }
+            @if (!archived()) {
+              <button
+                type="button"
+                role="tab"
+                class="tab tab--summary"
+                id="tab-resumen"
+                [attr.aria-selected]="showSummary()"
+                aria-controls="sheet-resumen"
+                [tabIndex]="showSummary() ? 0 : -1"
+                (click)="open('resumen')"
+                (keydown)="onTabKey($event, d.accounts.length)"
+              >
+                <span class="tab-name"
+                  ><span aria-hidden="true">📊</span> {{ 'finance.summary.tab' | t }}</span
+                >
+                <span class="tab-balance">{{ 'finance.summary.tabHint' | t }}</span>
+              </button>
+            }
+          </div>
+        }
+
+        @if (showSummary() && family(); as f) {
+          <div class="sheet" id="sheet-resumen" role="tabpanel" aria-labelledby="tab-resumen">
+            <oh-finance-summary [familyId]="f.id" />
           </div>
         }
 
