@@ -1,0 +1,165 @@
+:host {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+
+  // La tabla ancha se desplaza dentro de su caja, sin estirar la página
+  > *,
+  .block > * {
+    min-width: 0;
+  }
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px 10px;
+}
+
+.field .oh-input {
+  min-height: 40px;
+  width: auto;
+}
+
+.labeled {
+  display: grid;
+  gap: 2px;
+  font-size: 0.75rem;
+  color: var(--oh-text-muted);
+}
+
+.seg {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid var(--oh-border);
+
+  button {
+    min-height: 32px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--oh-text-muted);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  [aria-pressed='true'] {
+    background: var(--oh-secondary-soft);
+    color: var(--oh-secondary);
+  }
+}
+
+.accounts {
+  position: relative;
+
+  summary {
+    list-style: none;
+    min-height: 40px;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+  }
+}
+
+.menu {
+  position: absolute;
+  z-index: 3;
+  top: calc(100% + 4px);
+  left: 0;
+  display: grid;
+  gap: 4px;
+  min-width: 220px;
+  padding: 10px 14px;
+  background: var(--oh-surface);
+  border: 1px solid var(--oh-border-strong);
+  border-radius: var(--oh-radius);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.15);
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    cursor: pointer;
+  }
+
+  input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--oh-primary);
+  }
+
+  small {
+    color: var(--oh-text-muted);
+  }
+}
+
+.period {
+  margin: 0;
+  color: var(--oh-text-muted);
+
+  &.loading {
+    opacity: 0.6;
+  }
+}
+
+/* Saldos al cierre */
+.balances {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  margin: 0;
+
+  div {
+    display: grid;
+    gap: 2px;
+    padding: 14px 16px;
+    border-radius: var(--oh-radius);
+    border: 1px solid var(--oh-border);
+  }
+
+  dt {
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+
+  dd {
+    margin: 0;
+  }
+}
+
+.big {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: var(--oh-text-muted);
+}
+
+.block {
+  display: grid;
+  gap: 12px;
+  padding-top: 18px;
+  border-top: 1px solid var(--oh-border);
+
+  h3 {
+    margin: 0;
+    font-size: 1.0625rem;
+  }
+}
+
+.empty {
+  padding: 24px;
+  border: 1px dashed var(--oh-border-strong);
+  border-radius: var(--oh-radius-lg);
+  color: var(--oh-text-muted);
+}

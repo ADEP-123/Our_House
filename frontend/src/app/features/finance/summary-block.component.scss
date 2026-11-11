@@ -1,0 +1,184 @@
+:host {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+
+  > *,
+  .charts > * {
+    min-width: 0;
+  }
+
+  --series-expense: light-dark(#eb6834, #d95926);
+}
+
+/* ---------- Cifras clave ---------- */
+
+.kpis {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin: 0;
+}
+
+.kpi {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  padding: 12px 14px;
+  border-radius: var(--oh-radius);
+  background: color-mix(in srgb, var(--oh-text) 4%, var(--oh-surface));
+
+  dt {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--oh-text-muted);
+  }
+
+  dd {
+    margin: 0;
+  }
+
+  &.aside {
+    background: transparent;
+    border: 1px dashed var(--oh-border-strong);
+  }
+}
+
+.value {
+  font-size: 1.375rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.delta {
+  font-size: 0.8125rem;
+  color: var(--oh-text-muted);
+}
+
+/* ---------- Gráficos ---------- */
+
+.charts {
+  display: grid;
+  gap: 18px 28px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+}
+
+.chart h4 {
+  margin: 0 0 8px;
+  font-size: 0.9375rem;
+}
+
+.chart .oh-hint {
+  margin: 6px 0 0;
+}
+
+/* Gastos por categoría: barras horizontales de un solo color, de mayor a menor */
+.bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+
+  li {
+    display: grid;
+    grid-template-columns: minmax(96px, 34%) 1fr auto;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.875rem;
+  }
+}
+
+.bar-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-track {
+  height: 12px;
+}
+
+.bar {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: 0 4px 4px 0;
+  background: var(--series-expense);
+}
+
+.bar-value {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+
+  small {
+    margin-left: 4px;
+    color: var(--oh-text-muted);
+  }
+}
+
+/* ---------- Tabla categoría × período ---------- */
+
+.table-block summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  min-width: 100%;
+}
+
+th,
+td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--oh-border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+thead th {
+  color: var(--oh-text-muted);
+  font-weight: 600;
+}
+
+// La primera columna queda fija al desplazar de lado
+tbody th[scope='row'],
+thead th:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--oh-surface);
+  font-weight: 500;
+}
+
+.section th {
+  padding-top: 14px;
+  font-weight: 700;
+  color: var(--oh-text-muted);
+  border-bottom: 0;
+}
+
+.total th,
+.total td {
+  font-weight: 700;
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.zero {
+  color: var(--oh-text-muted);
+}
+
+.strong {
+  font-weight: 700;
+}

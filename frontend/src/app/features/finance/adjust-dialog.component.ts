@@ -132,8 +132,14 @@ export class AdjustDialogComponent {
     this.date.set(localToday());
     this.error.set(null);
     this.dialog().nativeElement.showModal();
-    // El saldo actual queda seleccionado: lo que se escriba lo reemplaza
-    setTimeout(() => this.input()?.nativeElement.select());
+    // El saldo actual queda seleccionado de inmediato: lo que se escriba lo reemplaza,
+    // aunque se empiece a escribir antes de que la pantalla se actualice
+    const input = this.input()?.nativeElement;
+    if (input) {
+      input.value = this.text();
+      input.focus();
+      input.select();
+    }
   }
 
   close(): void {

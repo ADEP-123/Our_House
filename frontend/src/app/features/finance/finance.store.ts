@@ -14,6 +14,9 @@ import {
   MovementColumn,
   MovementInput,
   MovementSuggestion,
+  Summary,
+  SummaryConfig,
+  SummaryFreq,
   TransferInput,
 } from './finance.models';
 import { recomputeBalances, signOf, withBalance } from './movement-logic';
@@ -95,6 +98,36 @@ export class FinanceStore {
       this.queue.has((m) => m.accountIds.includes(accountId)),
       request,
     );
+  }
+
+  /** Resumen del período (sin conexión: el último que se vio con esas mismas opciones) */
+  summary(
+    familyId: string,
+    q: { from: string; to: string; freq: SummaryFreq; accounts: string[] },
+  ): Promise<Summary> {
+    const params: Record<string, string> = { from: q.from, to: q.to, freq: q.freq };
+    if (q.accounts.length) params['accounts'] = q.accounts.join(',');
+    const key = `finance:summary:${familyId}:${q.from}:${q.to}:${q.freq}:${q.accounts.join(',')}`;
+    return this.queue.read(key, () =>
+      firstValueFrom(this.http.get<Summary>(`/api/families/${familyId}/summary`, { params })),
+    );
+  }
+
+  async summaryPrefs(familyId: string): Promise<SummaryConfig | null> {
+    const res = await this.queue.read(`finance:summary-prefs:${familyId}`, () =>
+      firstValueFrom(
+        this.http.get<{ config: SummaryConfig | null }>(`/api/families/${familyId}/summary/prefs`),
+      ),
+    );
+    return res.config;
+  }
+
+  /** Recordar la configuración (sin conexión se guarda solo en el dispositivo) */
+  async saveSummaryPrefs(familyId: string, config: SummaryConfig): Promise<void> {
+    await this.queue.save(`finance:summary-prefs:${familyId}`, { config });
+    await firstValueFrom(
+      this.http.put(`/api/families/${familyId}/summary/prefs`, { config }),
+    ).catch(() => undefined);
   }
 
   /** Descripciones ya usadas; sin conexión, las de la copia local de la cuenta */

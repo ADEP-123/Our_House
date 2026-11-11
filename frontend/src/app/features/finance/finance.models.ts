@@ -160,3 +160,67 @@ export interface MovementHistoryEntry {
   actor: { id: string; nickname: string | null } | null;
   at: string;
 }
+
+// ---------- Resumen ----------
+
+export type SummaryFreq = 'week' | 'month' | 'quarter' | 'year';
+export type SummaryView = 'combined' | 'separate' | 'both';
+
+/** Lo que cada persona elige en el resumen (se recuerda en el servidor) */
+export interface SummaryConfig {
+  mode: 'month' | 'year' | 'range';
+  /** AAAA-MM */
+  month?: string;
+  year?: number;
+  from?: string;
+  to?: string;
+  freq: SummaryFreq;
+  /** Vacío: todas las cuentas activas */
+  accounts: string[];
+  view: SummaryView;
+}
+
+export interface SummaryFlow {
+  income: number;
+  expense: number;
+  net: number;
+  adjustments: number;
+  transfersIn: number;
+  transfersOut: number;
+}
+
+export interface SummaryPeriod extends SummaryFlow {
+  start: string;
+  end: string;
+  /** Saldo al cierre del período */
+  balance: number;
+  categories: Record<string, { income: number; expense: number }>;
+}
+
+export interface SummaryBlock extends SummaryFlow {
+  previous: SummaryFlow;
+  openingBalance: number;
+  closingBalance: number;
+  categories: {
+    id: string;
+    name: string | null;
+    icon: string | null;
+    color: string | null;
+    income: number;
+    expense: number;
+  }[];
+  periods: SummaryPeriod[];
+}
+
+export interface Summary {
+  currency: string;
+  from: string;
+  to: string;
+  freq: SummaryFreq;
+  previous: { from: string; to: string };
+  available: { id: string; name: string; kind: AccountKind; archived: boolean }[];
+  accounts: { id: string; name: string; kind: AccountKind }[];
+  balances: { debt: number; real: number; complete: number };
+  combined: SummaryBlock;
+  byAccount: (SummaryBlock & { accountId: string })[];
+}

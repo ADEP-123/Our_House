@@ -1,0 +1,179 @@
+<!-- Cifras clave del período -->
+<dl class="kpis">
+  @for (k of kpis(); track k.key) {
+    <div class="kpi">
+      <dt>{{ kpiLabel(k.key) }}</dt>
+      <dd class="value">{{ format()(k.value) }}</dd>
+      <dd class="delta" [title]="'finance.summary.previousValue' | t: { amount: format()(k.prev) }">
+        {{ deltaText(k.delta) }}
+      </dd>
+    </div>
+  }
+  @if (block().adjustments) {
+    <div class="kpi aside">
+      <dt>{{ 'finance.summary.kpi.adjustments' | t }}</dt>
+      <dd class="value">{{ format()(block().adjustments) }}</dd>
+      <dd class="delta">{{ 'finance.summary.adjustmentsHint' | t }}</dd>
+    </div>
+  }
+  @if (block().transfersIn || block().transfersOut) {
+    <div class="kpi aside">
+      <dt>{{ 'finance.summary.kpi.transfers' | t }}</dt>
+      <dd class="value">
+        {{ format()(block().transfersIn) }} / {{ format()(block().transfersOut) }}
+      </dd>
+      <dd class="delta">{{ 'finance.summary.transfersHint' | t }}</dd>
+    </div>
+  }
+</dl>
+
+<div class="charts" [class.compact]="compact()">
+  <section class="chart">
+    <h4>{{ 'finance.summary.flowTitle' | t }}</h4>
+    @if (block().income || block().expense) {
+      <oh-flow-chart
+        [points]="flowPoints()"
+        [format]="format()"
+        [compact]="compactFormat()"
+        [incomeLabel]="'finance.summary.kpi.income' | t"
+        [expenseLabel]="'finance.summary.kpi.expense' | t"
+        [netLabel]="'finance.summary.kpi.net' | t"
+        [ariaLabel]="'finance.summary.flowTitle' | t"
+      />
+    } @else {
+      <p class="oh-muted">{{ 'finance.summary.noFlow' | t }}</p>
+    }
+  </section>
+
+  @if (!compact()) {
+    <section class="chart">
+      <h4>{{ 'finance.summary.balanceTitle' | t }}</h4>
+      <oh-balance-chart
+        [points]="balancePoints()"
+        [format]="format()"
+        [compact]="compactFormat()"
+        [ariaLabel]="'finance.summary.balanceTitle' | t"
+      />
+      <p class="oh-hint">
+        {{
+          'finance.summary.balanceRange'
+            | t: { from: format()(block().openingBalance), to: format()(block().closingBalance) }
+        }}
+      </p>
+    </section>
+  }
+
+  <section class="chart">
+    <h4>{{ 'finance.summary.byCategory' | t }}</h4>
+    @if (expenseBars().length) {
+      <ul class="bars">
+        @for (c of expenseBars(); track c.id) {
+          <li>
+            <span class="bar-name">{{ c.icon }} {{ c.name }}</span>
+            <span class="bar-track"><span class="bar" [style.width.%]="c.width"></span></span>
+            <span class="bar-value"
+              >{{ format()(c.value) }} <small>{{ c.share }} %</small></span
+            >
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="oh-muted">{{ 'finance.summary.noExpenses' | t }}</p>
+    }
+  </section>
+</div>
+
+<!-- Tabla categoría × período (también es la vista en tabla de los gráficos) -->
+<details class="table-block" [open]="!compact()">
+  <summary>{{ 'finance.summary.tableTitle' | t }}</summary>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">{{ 'finance.movements.category' | t }}</th>
+          @for (l of labels(); track $index) {
+            <th scope="col" class="num">{{ l }}</th>
+          }
+          <th scope="col" class="num">{{ 'finance.summary.total' | t }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (expenseRows().length) {
+          <tr class="section">
+            <th scope="rowgroup" [attr.colspan]="labels().length + 2">
+              {{ 'finance.summary.kpi.expense' | t }}
+            </th>
+          </tr>
+          @for (c of expenseRows(); track c.id) {
+            <tr>
+              <th scope="row">{{ c.icon ? iconOf(c.icon) : '' }} {{ c.name ?? '—' }}</th>
+              @for (p of block().periods; track $index; let i = $index) {
+                <td class="num" [class.zero]="!cell(i, c.id, 'expense')">
+                  {{ cell(i, c.id, 'expense') ? format()(cell(i, c.id, 'expense')) : '–' }}
+                </td>
+              }
+              <td class="num strong">{{ format()(c.expense) }}</td>
+            </tr>
+          }
+          <tr class="total">
+            <th scope="row">{{ 'finance.summary.totalExpense' | t }}</th>
+            @for (p of block().periods; track $index) {
+              <td class="num">{{ format()(p.expense) }}</td>
+            }
+            <td class="num strong">{{ format()(block().expense) }}</td>
+          </tr>
+        }
+        @if (incomeRows().length) {
+          <tr class="section">
+            <th scope="rowgroup" [attr.colspan]="labels().length + 2">
+              {{ 'finance.summary.kpi.income' | t }}
+            </th>
+          </tr>
+          @for (c of incomeRows(); track c.id) {
+            <tr>
+              <th scope="row">{{ c.icon ? iconOf(c.icon) : '' }} {{ c.name ?? '—' }}</th>
+              @for (p of block().periods; track $index; let i = $index) {
+                <td class="num" [class.zero]="!cell(i, c.id, 'income')">
+                  {{ cell(i, c.id, 'income') ? format()(cell(i, c.id, 'income')) : '–' }}
+                </td>
+              }
+              <td class="num strong">{{ format()(c.income) }}</td>
+            </tr>
+          }
+          <tr class="total">
+            <th scope="row">{{ 'finance.summary.totalIncome' | t }}</th>
+            @for (p of block().periods; track $index) {
+              <td class="num">{{ format()(p.income) }}</td>
+            }
+            <td class="num strong">{{ format()(block().income) }}</td>
+          </tr>
+        }
+        <tr class="total">
+          <th scope="row">{{ 'finance.summary.kpi.net' | t }}</th>
+          @for (p of block().periods; track $index) {
+            <td class="num">{{ format()(p.net) }}</td>
+          }
+          <td class="num strong">{{ format()(block().net) }}</td>
+        </tr>
+        @if (block().adjustments) {
+          <tr>
+            <th scope="row">{{ 'finance.summary.kpi.adjustments' | t }}</th>
+            @for (p of block().periods; track $index) {
+              <td class="num" [class.zero]="!p.adjustments">
+                {{ p.adjustments ? format()(p.adjustments) : '–' }}
+              </td>
+            }
+            <td class="num strong">{{ format()(block().adjustments) }}</td>
+          </tr>
+        }
+        <tr>
+          <th scope="row">{{ 'finance.summary.closing' | t }}</th>
+          @for (p of block().periods; track $index) {
+            <td class="num">{{ format()(p.balance) }}</td>
+          }
+          <td class="num strong">{{ format()(block().closingBalance) }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</details>
