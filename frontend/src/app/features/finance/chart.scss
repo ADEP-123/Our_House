@@ -1,0 +1,125 @@
+// Colores de los gráficos (paleta validada para daltonismo y contraste, clara y oscura).
+// Entradas y salidas son series, no estados: por eso azul y naranja, no verde y rojo.
+:host {
+  display: block;
+  --series-income: light-dark(#2a78d6, #3987e5);
+  --series-expense: light-dark(#eb6834, #d95926);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-bottom: 6px;
+  font-size: 0.8125rem;
+  color: var(--oh-text-muted);
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+.sw {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+
+  &.income {
+    background: var(--series-income);
+  }
+
+  &.expense {
+    background: var(--series-expense);
+  }
+}
+
+.wrap {
+  position: relative;
+}
+
+svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.grid {
+  stroke: var(--oh-border);
+  stroke-width: 1;
+
+  &.zero {
+    stroke: var(--oh-border-strong);
+  }
+}
+
+.base {
+  stroke: var(--oh-border-strong);
+  stroke-width: 1;
+}
+
+.axis {
+  fill: var(--oh-text-muted);
+  // Unidades del viewBox (640 de ancho): se ve de 9 a 13 px según el ancho del gráfico
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.income {
+  fill: var(--series-income);
+}
+
+.expense {
+  fill: var(--series-expense);
+}
+
+.line {
+  fill: none;
+  stroke: var(--series-income);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.cross {
+  stroke: var(--oh-text-muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.dot {
+  fill: var(--series-income);
+  stroke: var(--oh-surface);
+  stroke-width: 2;
+}
+
+.hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.tip {
+  position: absolute;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  gap: 2px;
+  min-width: 140px;
+  padding: 8px 10px;
+  border-radius: var(--oh-radius-sm, 8px);
+  background: var(--oh-surface);
+  border: 1px solid var(--oh-border-strong);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.15);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
