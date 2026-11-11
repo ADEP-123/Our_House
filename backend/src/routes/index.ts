@@ -8,6 +8,7 @@ import { googleRoutes } from './google.routes.js';
 import { healthRoutes } from './health.routes.js';
 import { familyActivityRoutes, familyListsRoutes, listsRoutes } from './lists.routes.js';
 import { meRoutes } from './me.routes.js';
+import { familySummaryRoutes } from './summary.routes.js';
 import { familyMovementsRoutes, movementsRoutes, transfersRoutes } from './movements.routes.js';
 
 /** Punto único donde se registran las rutas de cada módulo (tareas, calendario, finanzas...). */
@@ -21,6 +22,7 @@ apiRouter.use('/families/:familyId/activity', familyActivityRoutes);
 apiRouter.use('/families/:familyId/accounts', familyAccountsRoutes);
 apiRouter.use('/families/:familyId/categories', familyCategoriesRoutes);
 apiRouter.use('/families/:familyId/movement-suggestions', familyMovementsRoutes);
+apiRouter.use('/families/:familyId/summary', familySummaryRoutes);
 apiRouter.use('/families', familiesRoutes);
 apiRouter.use('/lists', listsRoutes);
 apiRouter.use('/accounts', accountsRoutes);
