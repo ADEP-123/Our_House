@@ -29,7 +29,7 @@ export interface AccountAccess {
   canAdmin: boolean;
 }
 
-function computeAccess(a: AccountViewRow, role: FamilyRole, userId: string) {
+export function computeAccess(a: AccountViewRow, role: FamilyRole, userId: string) {
   const isOwner = a.owner_id === userId;
   const canAdmin = isOwner || (a.owner_id === null && role === 'leader');
   const canView = canAdmin || a.view_mode === 'family' || (a.view_mode === 'members' && a.my_view);

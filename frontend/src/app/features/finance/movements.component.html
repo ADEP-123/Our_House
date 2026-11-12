@@ -36,6 +36,13 @@
           }
         </div>
       </details>
+      @if (!account().permissions.supervision) {
+        <oh-export-menu
+          [familyId]="account().familyId"
+          [accounts]="[account().id]"
+          [subject]="account().name"
+        />
+      }
       @if (canEdit()) {
         <button type="button" class="oh-btn oh-btn--filled add-desktop" (click)="openNew()">
           + {{ 'finance.movements.add' | t }}

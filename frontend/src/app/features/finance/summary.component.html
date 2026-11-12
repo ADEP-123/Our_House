@@ -101,6 +101,20 @@
         {{ viewLabel('both') }}
       </button>
     </div>
+
+    @if (data(); as d) {
+      @if (d.accounts.length) {
+        <oh-export-menu
+          class="export"
+          [familyId]="familyId()"
+          [accounts]="accountIds()"
+          [from]="d.from"
+          [to]="d.to"
+          [subject]="exportSubject()"
+          [summary]="d"
+        />
+      }
+    }
   </div>
 
   @if (error()) {

@@ -14,6 +14,7 @@ import { toApiError } from '../../core/api/api-error';
 import { I18n, TranslationKey } from '../../core/i18n/i18n.service';
 import { TPipe } from '../../core/i18n/t.pipe';
 import { ToastService } from '../../shared/toast.service';
+import { ExportMenuComponent } from './export-menu.component';
 import { formatMoney } from '../lists/item-logic';
 import { colorOf, iconOf } from '../lists/list-presets';
 import { AdjustDialogComponent } from './adjust-dialog.component';
@@ -38,7 +39,7 @@ const PAGE = 150;
  */
 @Component({
   selector: 'oh-movements',
-  imports: [TPipe, MovementDialogComponent, AdjustDialogComponent, TransferDialogComponent],
+  imports: [TPipe, MovementDialogComponent, AdjustDialogComponent, TransferDialogComponent, ExportMenuComponent],
   templateUrl: './movements.component.html',
   styleUrl: './movements.component.scss',
 })

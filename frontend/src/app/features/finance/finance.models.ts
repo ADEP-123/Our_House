@@ -224,3 +224,92 @@ export interface Summary {
   combined: SummaryBlock;
   byAccount: (SummaryBlock & { accountId: string })[];
 }
+
+// ---------- Importar / exportar (formato v1) ----------
+
+export type IoKind = 'in' | 'out' | 'transfer' | 'opening' | 'adjust';
+
+/** Lo que devuelve /export: movimientos de las cuentas elegidas, sus cuentas y las categorías */
+export interface ExportData {
+  currency: string;
+  from: string | null;
+  to: string | null;
+  accounts: {
+    name: string;
+    prefix: string;
+    kind: AccountKind;
+    description: string | null;
+    creditLimit: number | null;
+    balance: number;
+    archived: boolean;
+  }[];
+  categories: { name: string; icon: string; color: string; active: boolean }[];
+  movements: {
+    code: string;
+    /** null: la cuenta de origen de una transferencia que la persona no ve */
+    account: string | null;
+    date: string;
+    description: string;
+    category: string | null;
+    kind: IoKind;
+    amount: number;
+    destination: string | null;
+  }[];
+}
+
+export interface ImportAccountRow {
+  row: number;
+  name: string;
+  prefix: string | null;
+  kind: AccountKind;
+  description: string | null;
+  creditLimit: number | null;
+}
+
+export interface ImportCategoryRow {
+  row: number;
+  name: string;
+  icon: string | null;
+  color: string | null;
+  active: boolean | null;
+}
+
+export interface ImportMovementRow {
+  row: number;
+  code: string | null;
+  account: string;
+  date: string;
+  description: string;
+  category: string | null;
+  kind: IoKind;
+  amount: number;
+  destination: string | null;
+}
+
+export interface ImportPayload {
+  accounts: ImportAccountRow[];
+  categories: ImportCategoryRow[];
+  movements: ImportMovementRow[];
+}
+
+export type ImportStatus = 'create' | 'update' | 'unchanged' | 'skipped' | 'error';
+
+export interface ImportRowResult {
+  row: number;
+  status: ImportStatus;
+  code?: string;
+  params?: Record<string, string | number>;
+  ref?: string;
+  changes?: Record<string, [unknown, unknown]>;
+}
+
+export type ImportCounts = Record<ImportStatus, number>;
+
+export interface ImportReport {
+  dryRun: boolean;
+  currency: string;
+  counts: { accounts: ImportCounts; categories: ImportCounts; movements: ImportCounts };
+  accounts: ImportRowResult[];
+  categories: ImportRowResult[];
+  movements: ImportRowResult[];
+}

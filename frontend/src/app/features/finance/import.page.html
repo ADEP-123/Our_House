@@ -1,0 +1,203 @@
+<a class="back" routerLink="/finanzas">← {{ 'finance.title' | t }}</a>
+
+<div class="page">
+  <header class="head">
+    <div>
+      <h1>{{ 'finance.io.importTitle' | t }}</h1>
+      @if (family(); as f) {
+        <p class="oh-muted">{{ 'finance.of' | t: { family: f.name } }}</p>
+      }
+    </div>
+    <button
+      type="button"
+      class="oh-btn oh-btn--outline"
+      [disabled]="busy() !== null || !family() || !sync.online()"
+      (click)="downloadTemplate()"
+    >
+      {{ (busy() === 'template' ? 'finance.io.exporting' : 'finance.io.template') | t }}
+    </button>
+  </header>
+
+  @if (!sync.online()) {
+    <p class="oh-alert is-error" role="alert">{{ 'finance.io.offline' | t }}</p>
+  }
+  @if (error()) {
+    <p class="oh-alert is-error" role="alert">{{ error() }}</p>
+  }
+
+  @if (result(); as r) {
+    <!-- Listo -->
+    <section class="done" role="status">
+      <h2>✅ {{ 'finance.io.done' | t }}</h2>
+      <p>{{ doneText() }}</p>
+      @if (counts().error) {
+        <p class="oh-hint">{{ 'finance.io.skippedNote' | t: { n: counts().error } }}</p>
+      }
+      <div class="actions">
+        <a class="oh-btn oh-btn--filled" routerLink="/finanzas">{{ 'finance.io.goFinance' | t }}</a>
+        <button type="button" class="oh-btn oh-btn--text" (click)="reset()">
+          {{ 'finance.io.another' | t }}
+        </button>
+      </div>
+    </section>
+  } @else if (!fileName()) {
+    <!-- Elegir archivo -->
+    <p class="intro">{{ 'finance.io.importIntro' | t }}</p>
+    <label
+      class="drop"
+      [class.dragging]="dragging()"
+      [class.disabled]="!sync.online() || !family()"
+      (dragover)="onDragOver($event)"
+      (dragleave)="dragging.set(false)"
+      (drop)="onDrop($event)"
+    >
+      <input
+        type="file"
+        accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+        [disabled]="!sync.online() || !family()"
+        (change)="onPick($event)"
+      />
+      <span class="drop-icon" aria-hidden="true">📄</span>
+      <strong>{{ 'finance.io.drop' | t }}</strong>
+      <small>{{ 'finance.io.dropHint' | t }}</small>
+    </label>
+    <p class="oh-hint">{{ 'finance.io.templateHint' | t }}</p>
+  } @else {
+    <!-- Vista previa -->
+    <section class="file">
+      <p>
+        📄 <strong>{{ fileName() }}</strong>
+        @if (busy() === 'reading' || busy() === 'checking') {
+          <span class="oh-muted" role="status"> · {{ busyText() }}</span>
+        }
+      </p>
+      <button
+        type="button"
+        class="oh-btn oh-btn--text"
+        [disabled]="busy() !== null"
+        (click)="reset()"
+      >
+        {{ 'finance.io.changeFile' | t }}
+      </button>
+    </section>
+
+    @for (issue of fileIssues(); track issue) {
+      <p class="oh-alert is-error" role="alert">{{ issue }}</p>
+    }
+
+    @if (preview()) {
+      <div class="sections">
+        @for (s of sections(); track s.sheet) {
+          <section class="section">
+            <h2>{{ sheetLabel(s.sheet) }}</h2>
+            <dl>
+              @if (s.counts.create) {
+                <div class="create">
+                  <dt>{{ statusLabel('create') }}</dt>
+                  <dd>{{ s.counts.create }}</dd>
+                </div>
+              }
+              @if (s.counts.update) {
+                <div class="update">
+                  <dt>{{ statusLabel('update') }}</dt>
+                  <dd>{{ s.counts.update }}</dd>
+                </div>
+              }
+              @if (s.counts.unchanged) {
+                <div>
+                  <dt>{{ statusLabel('unchanged') }}</dt>
+                  <dd>{{ s.counts.unchanged }}</dd>
+                </div>
+              }
+              @if (s.counts.skipped) {
+                <div>
+                  <dt>{{ statusLabel('skipped') }}</dt>
+                  <dd>{{ s.counts.skipped }}</dd>
+                </div>
+              }
+              @if (s.counts.error) {
+                <div class="error">
+                  <dt>{{ statusLabel('error') }}</dt>
+                  <dd>{{ s.counts.error }}</dd>
+                </div>
+              }
+            </dl>
+          </section>
+        }
+      </div>
+
+      <div class="confirm">
+        <button
+          type="button"
+          class="oh-btn oh-btn--filled"
+          [disabled]="!changes() || busy() !== null || !sync.online()"
+          (click)="confirmImport()"
+        >
+          {{
+            (busy() === 'importing' ? 'finance.io.importing' : 'finance.io.confirm')
+              | t: { n: changes() }
+          }}
+        </button>
+        @if (!changes()) {
+          <span class="oh-hint">{{ 'finance.io.nothing' | t }}</span>
+        } @else if (counts().error) {
+          <span class="oh-hint">{{ 'finance.io.skippedNote' | t: { n: counts().error } }}</span>
+        }
+      </div>
+    }
+
+    @if (rows().length) {
+      <div class="filters" role="group" [attr.aria-label]="'finance.io.filterLabel' | t">
+        @for (f of filters; track f) {
+          @if (f === 'all' || counts()[f]) {
+            <button
+              type="button"
+              [attr.aria-pressed]="filter() === f"
+              [class]="'chip ' + f"
+              (click)="setFilter(f)"
+            >
+              {{ statusLabel(f) }} <span>{{ counts()[f] }}</span>
+            </button>
+          }
+        }
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{{ 'finance.io.cols.sheet' | t }}</th>
+              <th scope="col" class="num">{{ 'finance.io.cols.row' | t }}</th>
+              <th scope="col">{{ 'finance.io.cols.result' | t }}</th>
+              <th scope="col">ID</th>
+              <th scope="col">{{ 'finance.io.cols.detail' | t }}</th>
+              <th scope="col" class="num">{{ 'finance.io.fields.amount' | t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of visibleRows().slice(0, limit()); track r.key) {
+              <tr [class]="r.status">
+                <td>{{ sheetLabel(r.sheet) }}</td>
+                <td class="num">{{ r.row }}</td>
+                <td>
+                  <span class="badge">{{ statusLabel(r.status) }}</span>
+                  @if (r.message) {
+                    <span class="message">{{ r.message }}</span>
+                  }
+                </td>
+                <td class="ref">{{ r.ref }}</td>
+                <td class="detail">{{ r.detail }}</td>
+                <td class="num">{{ r.amount }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (visibleRows().length > limit()) {
+        <button type="button" class="oh-btn oh-btn--text more" (click)="limit.set(limit() + 150)">
+          {{ 'finance.io.showMore' | t: { n: visibleRows().length - limit() } }}
+        </button>
+      }
+    }
+  }
+</div>
