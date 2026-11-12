@@ -10,6 +10,7 @@ const OPTIONS: { key: keyof UserNotifications; label: TranslationKey; hint: Tran
   { key: 'assignments', label: 'profile.notifications.assignments', hint: 'profile.notifications.assignmentsHint' },
   { key: 'reminders', label: 'profile.notifications.reminders', hint: 'profile.notifications.remindersHint' },
   { key: 'secretViews', label: 'profile.notifications.secretViews', hint: 'profile.notifications.secretViewsHint' },
+  { key: 'finance', label: 'profile.notifications.finance', hint: 'profile.notifications.financeHint' },
 ];
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
@@ -168,6 +169,7 @@ export class ProfileNotificationsComponent {
     assignments: true,
     reminders: true,
     secretViews: true,
+    finance: true,
     ...this.auth.user()?.notifications,
   }));
   private readonly saved = computed<ReminderDefaults>(() => ({ hour: 8, startDays: 3, everyDays: 1, ...this.auth.user()?.reminders }));
