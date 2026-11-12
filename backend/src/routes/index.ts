@@ -10,6 +10,7 @@ import { familyActivityRoutes, familyListsRoutes, listsRoutes } from './lists.ro
 import { meRoutes } from './me.routes.js';
 import { familySummaryRoutes } from './summary.routes.js';
 import { familyFinanceIoRoutes } from './finance-io.routes.js';
+import { categoryBudgetRoute, familyBudgetsRoutes, familySavingsRoutes, savingsRoutes } from './savings.routes.js';
 import { familyMovementsRoutes, movementsRoutes, transfersRoutes } from './movements.routes.js';
 
 /** Punto único donde se registran las rutas de cada módulo (tareas, calendario, finanzas...). */
@@ -24,11 +25,15 @@ apiRouter.use('/families/:familyId/accounts', familyAccountsRoutes);
 apiRouter.use('/families/:familyId/categories', familyCategoriesRoutes);
 apiRouter.use('/families/:familyId/movement-suggestions', familyMovementsRoutes);
 apiRouter.use('/families/:familyId/summary', familySummaryRoutes);
+apiRouter.use('/families/:familyId/savings', familySavingsRoutes);
+apiRouter.use('/families/:familyId/budgets', familyBudgetsRoutes);
 apiRouter.use('/families/:familyId', familyFinanceIoRoutes);
 apiRouter.use('/families', familiesRoutes);
 apiRouter.use('/lists', listsRoutes);
 apiRouter.use('/accounts', accountsRoutes);
+apiRouter.use('/categories/:categoryId/budget', categoryBudgetRoute);
 apiRouter.use('/categories', categoriesRoutes);
+apiRouter.use('/savings', savingsRoutes);
 apiRouter.use('/movements', movementsRoutes);
 apiRouter.use('/transfers', transfersRoutes);
 apiRouter.use('/invitations', invitationsRoutes);
