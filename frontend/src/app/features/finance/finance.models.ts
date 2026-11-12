@@ -17,6 +17,10 @@ export interface Account {
   credit: { limit: number; debt: number; available: number; overLimit: boolean } | null;
   /** En tarjetas, la deuda inicial va en negativo. number: número del movimiento (para su ID visible) */
   opening: { amount: number; date: string; number: number } | null;
+  /** Saldo · Ahorro · Disponible: lo apartado para proyectos de ahorro */
+  savings: AccountSavings;
+  /** Aviso cuando el disponible baja de este monto */
+  lowBalanceThreshold: number | null;
   viewMode: ViewMode;
   editMode: EditMode;
   editRoles: FamilyRole[];
@@ -26,6 +30,12 @@ export interface Account {
   archivedAt: string | null;
   createdAt: string;
   permissions: { canEdit: boolean; canAdmin: boolean; supervision: boolean };
+}
+
+export interface AccountSavings {
+  total: number;
+  available: number;
+  projects: { id: string; name: string; icon: string; amount: number }[];
 }
 
 export interface FamilyAccounts {
@@ -48,6 +58,7 @@ export interface AccountInput {
   editRoles: FamilyRole[];
   viewers: string[];
   editors: string[];
+  lowBalanceThreshold?: number | null;
 }
 
 /** Categoría de los movimientos (el "Tipo" del Excel), del grupo */
@@ -117,6 +128,8 @@ export interface Movement {
     accountName: string | null;
     code: string | null;
   } | null;
+  /** Salida pagada con el ahorro de un proyecto */
+  savings?: { id: string; name: string | null; icon: string | null } | null;
 }
 
 /** Transferencia entre dos cuentas; los ids los genera el dispositivo (funciona sin conexión) */
@@ -143,6 +156,8 @@ export interface MovementInput {
   date: string;
   description: string;
   categoryId: string;
+  /** Pagar con el ahorro de este proyecto (solo salidas) */
+  savingsProjectId?: string | null;
 }
 
 export interface MovementSuggestion {
@@ -312,4 +327,65 @@ export interface ImportReport {
   accounts: ImportRowResult[];
   categories: ImportRowResult[];
   movements: ImportRowResult[];
+}
+
+// ---------- Ahorros y presupuesto ----------
+
+export interface SavingsProject {
+  id: string;
+  name: string;
+  icon: string;
+  goal: number | null;
+  targetDate: string | null;
+  closedAt: string | null;
+  createdBy: { id: string; nickname: string | null } | null;
+  canManage: boolean;
+  /** Apartado hoy (sin lo gastado) */
+  saved: number;
+  /** Gastado del ahorro */
+  spent: number;
+  /** accountId null: lo apartado en cuentas que la persona no ve */
+  accounts: { accountId: string | null; name: string | null; amount: number }[];
+}
+
+export interface SavingsData {
+  currency: string;
+  projects: SavingsProject[];
+  /** Cuentas donde se puede apartar (no tarjetas) */
+  accounts: { id: string; name: string; kind: AccountKind; balance: number; saved: number; available: number; canEdit: boolean }[];
+}
+
+export interface SavingsProjectInput {
+  id?: string;
+  name: string;
+  icon: string;
+  goal: number | null;
+  targetDate: string | null;
+}
+
+export interface SavingsHistoryEntry {
+  kind: 'set_aside' | 'release' | 'spend';
+  amount: number;
+  account: { id: string; name: string } | null;
+  actor: { id: string; nickname: string | null } | null;
+  description: string | null;
+  date: string | null;
+  at: string;
+}
+
+export interface Budget {
+  categoryId: string;
+  name: string;
+  icon: string;
+  color: string;
+  disabled: boolean;
+  limit: number;
+  spent: number;
+  pct: number;
+}
+
+export interface BudgetsData {
+  month: string;
+  canManage: boolean;
+  budgets: Budget[];
 }
