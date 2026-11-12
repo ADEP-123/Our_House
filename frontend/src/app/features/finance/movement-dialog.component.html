@@ -140,6 +140,42 @@
         </div>
       </div>
 
+      <!-- Pagar con el ahorro de un proyecto (solo salidas en cuentas con ahorro) -->
+      @if (showSavings()) {
+        <div class="oh-field">
+          <label for="movement-savings">{{ 'finance.savings.payWith' | t }}</label>
+          <select
+            id="movement-savings"
+            class="oh-input"
+            [disabled]="readOnly()"
+            (change)="savingsProjectId.set($any($event.target).value)"
+          >
+            <option value="" [selected]="!savingsProjectId()">
+              {{ 'finance.savings.payWithNone' | t }}
+            </option>
+            @for (p of savingsOptions(); track p.id) {
+              <option [value]="p.id" [selected]="p.id === savingsProjectId()">
+                {{ iconOf(p.icon) }} {{ p.name }} · {{ money(p.amount) }}
+              </option>
+            }
+          </select>
+        </div>
+      }
+      @if (reminder(); as r) {
+        <p class="oh-alert savings-reminder" role="status">
+          💡
+          {{
+            'finance.savings.reminder'
+              | t
+                : {
+                    saved: money(r.saved),
+                    detail: reminderDetail(r.projects),
+                    available: money(r.available),
+                  }
+          }}
+        </p>
+      }
+
       @if (error(); as e) {
         <p class="oh-alert is-error" role="alert">{{ e }}</p>
       }

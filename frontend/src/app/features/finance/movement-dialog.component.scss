@@ -215,3 +215,10 @@ form {
   color: var(--oh-error);
   padding-inline: 0;
 }
+
+.savings-reminder {
+  margin: 0;
+  font-size: 0.875rem;
+  background: var(--oh-secondary-soft);
+  color: var(--oh-text);
+}

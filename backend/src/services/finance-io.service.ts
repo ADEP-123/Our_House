@@ -7,6 +7,7 @@ import { categoriesRepository } from '../repositories/categories.repository.js';
 import { familiesRepository, type FamilyRole } from '../repositories/families.repository.js';
 import { financeIoRepository } from '../repositories/finance-io.repository.js';
 import { computeAccess } from './accounts.service.js';
+import { financeAlerts } from './finance-alerts.service.js';
 import { requireMember } from './families.service.js';
 
 const code = (prefix: string, n: number) => `${prefix}${String(n).padStart(4, '0')}`;
@@ -61,6 +62,7 @@ async function apply(familyId: string, userId: string, plan: ImportPlan, conn: D
         viewMode: 'family',
         editMode: 'roles',
         editRoles: ['leader', 'member'],
+        lowBalanceThreshold: null,
       },
       conn,
     );
@@ -126,6 +128,11 @@ export const financeIoService = {
       await financeIoRepository.lockFamily(familyId, conn);
       const plan = planImport(input, await loadState(familyId, userId, role, conn), randomUUID);
       await apply(familyId, userId, plan, conn);
+      return plan;
+    }).then((plan) => {
+      // Después de guardar: disponible bajo y presupuesto del mes
+      const touched = new Set([...plan.newMovements.map((m) => m.accountId)]);
+      financeAlerts.afterChange(familyId, [...touched], userId);
       return report(plan, false, currency);
     });
   },

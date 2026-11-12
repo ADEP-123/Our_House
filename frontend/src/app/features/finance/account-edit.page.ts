@@ -87,6 +87,7 @@ export class AccountEditPage implements OnInit {
     kind: ['bank' as AccountKind],
     prefix: ['', [Validators.required, Validators.pattern(/^[A-Z0-9]{1,4}$/)]],
     creditLimit: [null as number | null],
+    lowBalanceThreshold: [null as number | null],
     openingAmount: [null as number | null],
     openingDate: [localToday()],
     viewMode: ['family' as ViewMode],
@@ -148,6 +149,7 @@ export class AccountEditPage implements OnInit {
         kind: a.kind,
         prefix: a.prefix,
         creditLimit: a.credit?.limit ?? null,
+        lowBalanceThreshold: a.lowBalanceThreshold ?? null,
         // En tarjetas se escribe la deuda en positivo
         openingAmount: a.opening ? (credit ? -a.opening.amount : a.opening.amount) : null,
         openingDate: a.opening?.date ?? localToday(),
@@ -233,6 +235,7 @@ export class AccountEditPage implements OnInit {
       kind: v.kind,
       prefix: v.prefix,
       creditLimit: credit ? (v.creditLimit ?? null) : null,
+      lowBalanceThreshold: credit ? null : (v.lowBalanceThreshold ?? null),
       opening,
       viewMode: v.viewMode,
       editMode: v.editMode,

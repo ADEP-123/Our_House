@@ -38,6 +38,20 @@
           (input)="setDraft({ name: $any($event.target).value })"
         />
       </div>
+      <div class="oh-field">
+        <label for="category-budget">{{ 'finance.budget.field' | t }}</label>
+        <input
+          id="category-budget"
+          class="oh-input budget-input"
+          inputmode="decimal"
+          autocomplete="off"
+          [placeholder]="'finance.savings.optional' | t"
+          [value]="budgetText()"
+          (input)="budgetText.set($any($event.target).value)"
+          aria-describedby="category-budget-hint"
+        />
+        <p id="category-budget-hint" class="oh-hint">{{ 'finance.budget.fieldHint' | t }}</p>
+      </div>
       <fieldset>
         <legend>{{ 'lists.form.color' | t }}</legend>
         <div class="swatches">
@@ -90,6 +104,9 @@
       <span class="cat-text">
         <span class="cat-name">{{ c.name }}</span>
         <span class="cat-usage">{{ usage(c) }}</span>
+        @if (budgetOf(c.id); as b) {
+          <span class="cat-usage" [class.over]="b.pct >= 100">{{ budgetText_(b) }}</span>
+        }
       </span>
       @if (data()?.canManage) {
         <span class="cat-actions">

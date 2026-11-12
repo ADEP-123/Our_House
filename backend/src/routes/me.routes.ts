@@ -57,6 +57,7 @@ meRoutes.patch(
         reminderEveryDays: z.int('REMINDER_EVERY_INVALID').min(1, 'REMINDER_EVERY_INVALID').max(30, 'REMINDER_EVERY_INVALID'),
         calendarPromptDismissed: z.boolean(),
         secretViews: z.boolean(),
+        finance: z.boolean(),
       })
       .partial()
       .refine((v) => Object.keys(v).length > 0, 'SETTINGS_EMPTY'),

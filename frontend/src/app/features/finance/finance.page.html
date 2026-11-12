@@ -26,7 +26,12 @@
         <a class="oh-btn oh-btn--text" routerLink="/finanzas/categorias">{{
           'finance.categories.link' | t
         }}</a>
-        <a class="oh-btn oh-btn--text" routerLink="/finanzas/importar">{{ 'finance.io.import' | t }}</a>
+        <a class="oh-btn oh-btn--text" routerLink="/finanzas/ahorros">{{
+          'finance.savings.link' | t
+        }}</a>
+        <a class="oh-btn oh-btn--text" routerLink="/finanzas/importar">{{
+          'finance.io.import' | t
+        }}</a>
         <div class="switch" role="group">
           <button type="button" [attr.aria-pressed]="!archived()" (click)="setArchivedView(false)">
             {{ 'finance.active' | t }}
@@ -173,6 +178,27 @@
                   <p class="figure-value" [class.negative]="a.balance < 0">
                     {{ money(a.balance, a) }}
                   </p>
+                  <!-- Saldo · Ahorro · Disponible -->
+                  @if (a.savings.total > 0) {
+                    <dl class="savings-facts">
+                      <div>
+                        <dt>{{ 'finance.savings.saved' | t }}</dt>
+                        <dd>{{ money(a.savings.total, a) }}</dd>
+                      </div>
+                      <div>
+                        <dt>{{ 'finance.savings.available' | t }}</dt>
+                        <dd [class.negative]="a.savings.available < 0">
+                          {{ money(a.savings.available, a) }}
+                        </dd>
+                      </div>
+                    </dl>
+                    <a class="savings-list" routerLink="/finanzas/ahorros">
+                      @for (p of a.savings.projects; track p.id; let last = $last) {
+                        {{ iconOf(p.icon) }} {{ p.name }} {{ money(p.amount, a)
+                        }}{{ last ? '' : ' · ' }}
+                      }
+                    </a>
+                  }
                 </div>
               }
             </header>

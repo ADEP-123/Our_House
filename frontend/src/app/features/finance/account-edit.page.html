@@ -106,6 +106,24 @@
               <p class="oh-error">{{ e }}</p>
             }
           </div>
+        } @else {
+          <div class="oh-field">
+            <label for="account-threshold">{{ 'finance.form.lowBalance' | t }}</label>
+            <input
+              id="account-threshold"
+              class="oh-input"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              step="0.01"
+              formControlName="lowBalanceThreshold"
+              aria-describedby="threshold-hint"
+            />
+            <p id="threshold-hint" class="oh-hint">{{ 'finance.form.lowBalanceHint' | t }}</p>
+            @if (fieldError('lowBalanceThreshold'); as e) {
+              <p class="oh-error">{{ e }}</p>
+            }
+          </div>
         }
       </div>
 

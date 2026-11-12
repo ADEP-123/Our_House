@@ -167,3 +167,90 @@
 .export {
   margin-left: auto;
 }
+
+/* Presupuesto del mes */
+.budget {
+  display: grid;
+  gap: 8px;
+
+  h3 {
+    margin: 0;
+    font-size: 1.0625rem;
+  }
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+  }
+
+  li {
+    display: grid;
+    grid-template-columns: minmax(110px, 180px) 1fr auto;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.875rem;
+  }
+
+  .oh-hint {
+    margin: 0;
+  }
+}
+
+.budget-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.budget-track {
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--oh-text) 10%, transparent);
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: 0 4px 4px 0;
+    background: var(--oh-primary);
+  }
+}
+
+.warn .budget-track span {
+  background: var(--oh-warning, #b7791f);
+}
+
+.over {
+  .budget-track span {
+    background: var(--oh-error);
+  }
+
+  small {
+    color: var(--oh-error);
+    font-weight: 600;
+  }
+}
+
+.budget-value {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  small {
+    margin-left: 4px;
+    color: var(--oh-text-muted);
+  }
+}
+
+@media (max-width: 599px) {
+  .budget li {
+    grid-template-columns: 1fr auto;
+
+    .budget-track {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+  }
+}

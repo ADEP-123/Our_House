@@ -24,6 +24,7 @@ export function mountAccountMovements(account: Router): void {
         date,
         description,
         categoryId: z.uuid('CATEGORY_REQUIRED'),
+        savingsProjectId: z.uuid('SAVINGS_NOT_FOUND').nullable().optional(),
       }),
     ),
     movementsController.create,
@@ -69,6 +70,7 @@ movement.patch(
         date,
         description,
         categoryId: z.uuid('CATEGORY_REQUIRED'),
+        savingsProjectId: z.uuid('SAVINGS_NOT_FOUND').nullable().optional(),
       })
       .partial(),
   ),

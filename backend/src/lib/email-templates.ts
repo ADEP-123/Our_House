@@ -232,4 +232,75 @@ export const emailTemplates = {
           action: { label: 'Ver invitación', url: p.url },
         });
   },
+
+  /** Una categoría llegó al 80 % o al 100 % de su presupuesto del mes */
+  budgetAlert(
+    locale: Locale,
+    p: { category: string; pct: number; threshold: 80 | 100; spent: string; limit: string; month: string; family: string; url: string; settingsUrl: string },
+  ): EmailContent {
+    if (locale === 'en') {
+      const over = p.threshold === 100;
+      return render(`${p.category}: ${over ? 'budget used up' : `${p.pct}% of the budget`} in ${p.month}`, {
+        heading: over ? `You reached the ${p.category} budget` : `${p.category} is at ${p.pct}% of its budget`,
+        paragraphs: [
+          `In ${p.family}, ${p.spent} of ${p.limit} has been spent on ${p.category} in ${p.month}.`,
+          over ? 'From now on, every expense in this category goes over the budget.' : 'There is still room, but it is getting close.',
+        ],
+        action: { label: 'See summary', url: p.url },
+        footnote: settingsNote(locale, p.settingsUrl),
+      });
+    }
+    const over = p.threshold === 100;
+    return render(`${p.category}: ${over ? 'se acabó el presupuesto' : `${p.pct} % del presupuesto`} de ${p.month}`, {
+      heading: over ? `Llegaron al presupuesto de ${p.category}` : `${p.category} va en ${p.pct} % del presupuesto`,
+      paragraphs: [
+        `En ${p.family} se llevan ${p.spent} de ${p.limit} en ${p.category} durante ${p.month}.`,
+        over ? 'Desde ahora, cada gasto en esta categoría queda por encima del presupuesto.' : 'Todavía queda margen, pero ya está cerca.',
+      ],
+      action: { label: 'Ver resumen', url: p.url },
+      footnote: settingsNote(locale, p.settingsUrl),
+    });
+  },
+
+  /** Un proyecto de ahorro llegó a su meta */
+  savingsGoal(locale: Locale, p: { project: string; saved: string; goal: string; family: string; url: string; settingsUrl: string }): EmailContent {
+    if (locale === 'en') {
+      return render(`🎯 “${p.project}” reached its goal`, {
+        heading: `Goal reached: ${p.project}`,
+        paragraphs: [`In ${p.family}, ${p.saved} has been set aside for “${p.project}” (goal: ${p.goal}).`, 'You can keep saving or close the project to release the money.'],
+        action: { label: 'See savings', url: p.url },
+        footnote: settingsNote(locale, p.settingsUrl),
+      });
+    }
+    return render(`🎯 «${p.project}» llegó a la meta`, {
+      heading: `Meta cumplida: ${p.project}`,
+      paragraphs: [`En ${p.family} ya hay ${p.saved} apartados para «${p.project}» (meta: ${p.goal}).`, 'Puedes seguir ahorrando o cerrar el proyecto para liberar el dinero.'],
+      action: { label: 'Ver ahorros', url: p.url },
+      footnote: settingsNote(locale, p.settingsUrl),
+    });
+  },
+
+  /** El disponible de una cuenta (saldo menos ahorro) bajó del umbral */
+  lowBalance(locale: Locale, p: { account: string; available: string; threshold: string; saved: string | null; url: string; settingsUrl: string }): EmailContent {
+    if (locale === 'en') {
+      return render(`${p.account}: available balance below ${p.threshold}`, {
+        heading: `${p.account} is running low`,
+        paragraphs: [
+          `The available balance of ${p.account} is ${p.available}, below the ${p.threshold} you set.`,
+          ...(p.saved ? [`It does not count the ${p.saved} set aside for savings.`] : []),
+        ],
+        action: { label: 'Open account', url: p.url },
+        footnote: settingsNote(locale, p.settingsUrl),
+      });
+    }
+    return render(`${p.account}: el disponible bajó de ${p.threshold}`, {
+      heading: `A ${p.account} le queda poco`,
+      paragraphs: [
+        `El disponible de ${p.account} es ${p.available}, por debajo de los ${p.threshold} que definiste.`,
+        ...(p.saved ? [`No cuenta los ${p.saved} apartados para ahorros.`] : []),
+      ],
+      action: { label: 'Abrir cuenta', url: p.url },
+      footnote: settingsNote(locale, p.settingsUrl),
+    });
+  },
 };

@@ -148,6 +148,32 @@
         </div>
       </dl>
 
+      <!-- Presupuesto del mes: lo gastado frente al límite de cada categoría -->
+      @if (budgets(); as b) {
+        <section class="budget" [attr.aria-label]="'finance.budget.title' | t">
+          <h3>{{ 'finance.budget.title' | t }}</h3>
+          <ul>
+            @for (x of b.budgets; track x.categoryId) {
+              <li [class.warn]="x.pct >= 80 && x.pct < 100" [class.over]="x.pct >= 100">
+                <span class="budget-name">{{ iconOf(x.icon) }} {{ x.name }}</span>
+                <span class="budget-track"><span [style.width.%]="budgetWidth(x.pct)"></span></span>
+                <span class="budget-value">
+                  {{ money(x.spent) }} / {{ money(x.limit) }}
+                  <small>
+                    @if (x.pct >= 100) {
+                      ⚠ {{ 'finance.budget.over' | t: { pct: x.pct } }}
+                    } @else {
+                      {{ x.pct }} %
+                    }
+                  </small>
+                </span>
+              </li>
+            }
+          </ul>
+          <p class="oh-hint">{{ 'finance.budget.hint' | t }}</p>
+        </section>
+      }
+
       @if (showCombined()) {
         <section class="block">
           <h3>

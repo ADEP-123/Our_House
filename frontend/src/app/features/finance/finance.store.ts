@@ -7,6 +7,7 @@ import { OfflineQueue, QueuedRequest } from '../../core/offline/offline-queue';
 import {
   Account,
   AccountMovements,
+  BudgetsData,
   Category,
   FamilyAccounts,
   FamilyCategories,
@@ -130,6 +131,17 @@ export class FinanceStore {
     ).catch(() => undefined);
   }
 
+  /**
+   * Presupuestos del mes con lo gastado (sin conexión: lo último que se vio).
+   * Sin mes: el actual en la zona de la persona.
+   */
+  budgets(familyId: string, month?: string): Promise<BudgetsData> {
+    const params: Record<string, string> = month ? { month } : {};
+    return this.queue.read(`finance:budgets:${familyId}:${month ?? 'current'}`, () =>
+      firstValueFrom(this.http.get<BudgetsData>(`/api/families/${familyId}/budgets`, { params })),
+    );
+  }
+
   /** Descripciones ya usadas; sin conexión, las de la copia local de la cuenta */
   async suggestions(familyId: string, accountId: string, q: string): Promise<MovementSuggestion[]> {
     try {
@@ -240,6 +252,7 @@ export class FinanceStore {
             date: input.date,
             description: input.description,
             category: this.categoryView(category),
+            savings: this.savingsView(account, input.savingsProjectId),
             createdBy: this.me(),
             edited: false,
             balance: 0,
@@ -268,6 +281,10 @@ export class FinanceStore {
         amount,
         signedAmount: signOf(kind, amount),
         category: changes.categoryId ? this.categoryView(category) : m.category,
+        savings:
+          changes.savingsProjectId === undefined
+            ? m.savings
+            : this.savingsView(account, changes.savingsProjectId),
         edited: !m.pending || m.edited,
         pending: true,
       };
@@ -306,6 +323,13 @@ export class FinanceStore {
       },
       async () => undefined,
     );
+  }
+
+  /** Proyecto de ahorro de una salida, para mostrarlo en la copia local */
+  private savingsView(account: Account, projectId: string | null | undefined): Movement['savings'] {
+    if (!projectId) return null;
+    const p = account.savings?.projects.find((x) => x.id === projectId);
+    return { id: projectId, name: p?.name ?? null, icon: p?.icon ?? null };
   }
 
   deleteMovement(account: Account, movement: Movement): Promise<void> {

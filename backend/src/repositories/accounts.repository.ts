@@ -18,6 +18,7 @@ export interface AccountRow {
   edit_mode: EditMode;
   edit_roles: FamilyRole[];
   last_number: number;
+  low_balance_threshold: number | null;
   archived_at: Date | null;
   created_at: Date;
   updated_at: Date;
@@ -47,6 +48,8 @@ export interface AccountFields {
   viewMode: ViewMode;
   editMode: EditMode;
   editRoles: FamilyRole[];
+  /** Aviso cuando el disponible baja de este monto (null: sin aviso) */
+  lowBalanceThreshold: number | null;
 }
 
 /** $2 = usuario que consulta */
@@ -92,10 +95,10 @@ export const accountsRepository = {
   /** Crea la cuenta; si el id ya existe (reenvío) no hace nada y devuelve false. */
   async create(id: string, familyId: string, ownerId: string, f: AccountFields, conn: Db): Promise<boolean> {
     const { rowCount } = await conn.query(
-      `INSERT INTO accounts (id, family_id, owner_id, name, description, kind, prefix, credit_limit, view_mode, edit_mode, edit_roles)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      `INSERT INTO accounts (id, family_id, owner_id, name, description, kind, prefix, credit_limit, view_mode, edit_mode, edit_roles, low_balance_threshold)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        ON CONFLICT (id) DO NOTHING`,
-      [id, familyId, ownerId, f.name, f.description, f.kind, f.prefix, f.creditLimit, f.viewMode, f.editMode, f.editRoles],
+      [id, familyId, ownerId, f.name, f.description, f.kind, f.prefix, f.creditLimit, f.viewMode, f.editMode, f.editRoles, f.lowBalanceThreshold],
     );
     return !!rowCount;
   },
@@ -103,9 +106,12 @@ export const accountsRepository = {
   async update(id: string, f: AccountFields, conn: Db): Promise<void> {
     await conn.query(
       `UPDATE accounts SET name = $2, description = $3, kind = $4, prefix = $5, credit_limit = $6,
-              view_mode = $7, edit_mode = $8, edit_roles = $9, updated_at = now()
+              view_mode = $7, edit_mode = $8, edit_roles = $9,
+              -- Cambiar el umbral vuelve a permitir el aviso
+              low_balance_notified_at = CASE WHEN low_balance_threshold IS DISTINCT FROM $10 THEN NULL ELSE low_balance_notified_at END,
+              low_balance_threshold = $10, updated_at = now()
         WHERE id = $1`,
-      [id, f.name, f.description, f.kind, f.prefix, f.creditLimit, f.viewMode, f.editMode, f.editRoles],
+      [id, f.name, f.description, f.kind, f.prefix, f.creditLimit, f.viewMode, f.editMode, f.editRoles, f.lowBalanceThreshold],
     );
   },
 

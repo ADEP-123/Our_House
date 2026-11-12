@@ -216,6 +216,12 @@
                   @if (m.kind === 'adjust') {
                     <span class="edited">{{ 'finance.movements.adjustTag' | t }}</span>
                   }
+                  @if (m.savings; as s) {
+                    <span class="edited link">{{
+                      'finance.savings.paidWith'
+                        | t: { name: iconOf(s.icon ?? '🎯') + ' ' + (s.name ?? '') }
+                    }}</span>
+                  }
                 </td>
                 @if (show('category')) {
                   <td class="cat">

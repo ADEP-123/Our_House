@@ -18,6 +18,7 @@ import { ToastService } from '../../shared/toast.service';
 import { FamiliesService } from '../families/families.service';
 import { formatMoney } from '../lists/item-logic';
 import { creditUsage, kindIcon } from './finance-logic';
+import { iconOf } from '../lists/list-presets';
 import { Account, FamilyAccounts } from './finance.models';
 import { FinanceService } from './finance.service';
 import { FinanceStore } from './finance.store';
@@ -52,6 +53,7 @@ export class FinancePage implements OnInit {
   private readonly i18n = inject(I18n);
 
   protected readonly kindIcon = kindIcon;
+  protected readonly iconOf = iconOf;
   protected readonly family = this.families.active;
   protected readonly data = signal<FamilyAccounts | null>(null);
   protected readonly archived = signal(false);
