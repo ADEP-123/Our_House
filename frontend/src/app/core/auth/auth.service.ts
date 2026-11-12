@@ -31,6 +31,7 @@ export interface UserNotifications {
   reminders: boolean;
   secretViews: boolean;
   finance: boolean;
+  scheduled: boolean;
 }
 
 export interface ReminderDefaults {
