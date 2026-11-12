@@ -66,6 +66,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/finance/savings.page').then((m) => m.SavingsPage),
       },
       {
+        path: 'finanzas/programados',
+        loadComponent: () => import('./features/finance/scheduled.page').then((m) => m.ScheduledPage),
+      },
+      {
         path: 'finanzas/importar',
         loadComponent: () => import('./features/finance/import.page').then((m) => m.ImportPage),
       },

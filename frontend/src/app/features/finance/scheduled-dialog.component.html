@@ -1,0 +1,299 @@
+<dialog #dialog aria-labelledby="scheduled-title">
+  <form (submit)="$event.preventDefault(); save()" novalidate>
+    <h2 id="scheduled-title">
+      {{ (editing() ? 'finance.scheduled.editTitle' : 'finance.scheduled.newTitle') | t }}
+    </h2>
+
+    <!-- Qué se registra -->
+    <div class="seg" role="group" [attr.aria-label]="'finance.scheduled.kindLabel' | t">
+      @for (k of kinds; track k) {
+        <button type="button" [attr.aria-pressed]="kind() === k" (click)="setKind(k)">
+          {{ kindLabel(k) }}
+        </button>
+      }
+    </div>
+
+    <div class="row">
+      <div class="oh-field">
+        <label for="scheduled-account">{{
+          (kind() === 'transfer' ? 'finance.transfers.from' : 'finance.scheduled.account') | t
+        }}</label>
+        <select
+          id="scheduled-account"
+          class="oh-input"
+          (change)="accountId.set($any($event.target).value)"
+        >
+          @for (a of accountOptions(); track a.id) {
+            <option [value]="a.id" [selected]="a.id === accountId()">{{ a.name }}</option>
+          }
+        </select>
+      </div>
+      @if (kind() === 'transfer') {
+        <div class="oh-field">
+          <label for="scheduled-to">{{ 'finance.transfers.to' | t }}</label>
+          <select
+            id="scheduled-to"
+            class="oh-input"
+            (change)="toAccountId.set($any($event.target).value)"
+          >
+            @for (a of toOptions(); track a.id) {
+              <option [value]="a.id" [selected]="a.id === toAccountId()">{{ a.name }}</option>
+            }
+          </select>
+        </div>
+      } @else if (kind() === 'set_aside') {
+        <div class="oh-field">
+          <label for="scheduled-project">{{ 'finance.scheduled.project' | t }}</label>
+          <select
+            id="scheduled-project"
+            class="oh-input"
+            (change)="projectId.set($any($event.target).value)"
+          >
+            @for (p of projectOptions(); track p.id) {
+              <option [value]="p.id" [selected]="p.id === projectId()">
+                {{ iconOf(p.icon) }} {{ p.name }}
+              </option>
+            }
+          </select>
+          @if (!projectOptions().length) {
+            <p class="oh-hint">{{ 'finance.scheduled.noProjects' | t }}</p>
+          }
+        </div>
+      } @else {
+        <div class="oh-field">
+          <label for="scheduled-category">{{ 'finance.movements.category' | t }}</label>
+          <select
+            id="scheduled-category"
+            class="oh-input"
+            (change)="categoryId.set($any($event.target).value)"
+          >
+            <option value="" [selected]="!categoryId()" disabled>
+              {{ 'finance.movements.chooseCategory' | t }}
+            </option>
+            @for (c of categoryOptions(); track c.id) {
+              <option [value]="c.id" [selected]="c.id === categoryId()">
+                {{ iconOf(c.icon) }} {{ c.name }}
+              </option>
+            }
+          </select>
+        </div>
+      }
+    </div>
+
+    <div class="row">
+      <div class="oh-field">
+        <label for="scheduled-amount">{{
+          (mode() === 'confirm' ? 'finance.scheduled.estimated' : 'finance.savings.amount') | t
+        }}</label>
+        <input
+          id="scheduled-amount"
+          class="oh-input big"
+          inputmode="decimal"
+          autocomplete="off"
+          [value]="amountText()"
+          (input)="amountText.set($any($event.target).value)"
+        />
+      </div>
+      <div class="oh-field">
+        <label for="scheduled-description">{{ 'finance.movements.description' | t }}</label>
+        <input
+          id="scheduled-description"
+          class="oh-input"
+          maxlength="200"
+          autocomplete="off"
+          [placeholder]="'finance.scheduled.descriptionPlaceholder' | t"
+          [value]="description()"
+          (input)="description.set($any($event.target).value)"
+        />
+      </div>
+    </div>
+
+    <!-- Cada cuánto -->
+    <fieldset>
+      <legend>{{ 'finance.scheduled.when' | t }}</legend>
+      <div class="when">
+        <select
+          id="scheduled-freq"
+          class="oh-input"
+          [attr.aria-label]="'finance.scheduled.when' | t"
+          (change)="setFrequency($any($event.target).value)"
+        >
+          @for (f of frequencies(); track f.value) {
+            <option [value]="f.value" [selected]="f.value === freq() + ':' + interval()">
+              {{ f.label }}
+            </option>
+          }
+        </select>
+        @if (freq() === 'monthly') {
+          <label class="inline">
+            <span>{{ 'finance.scheduled.day' | t }}</span>
+            <input
+              id="scheduled-day"
+              class="oh-input tiny"
+              type="number"
+              min="1"
+              max="31"
+              [value]="day()"
+              (change)="day.set(int($any($event.target).value, 1, 31))"
+            />
+          </label>
+        } @else {
+          <label class="inline">
+            <span>{{ 'finance.scheduled.from' | t }}</span>
+            <input
+              id="scheduled-start"
+              class="oh-input"
+              type="date"
+              [value]="startDate()"
+              (change)="startDate.set($any($event.target).value)"
+            />
+          </label>
+        }
+      </div>
+      @if (freq() === 'weekly') {
+        <div class="days" role="group" [attr.aria-label]="'lists.repeat.weekdays' | t">
+          @for (d of weekdayList(); track d.day) {
+            <button
+              type="button"
+              [attr.aria-pressed]="weekdays().has(d.day)"
+              (click)="toggleDay(d.day)"
+            >
+              {{ d.name }}
+            </button>
+          }
+        </div>
+      }
+      @if (showThisMonth()) {
+        <label class="check">
+          <input
+            type="checkbox"
+            [checked]="includeThisMonth()"
+            (change)="includeThisMonth.set($any($event.target).checked)"
+          />
+          {{ 'finance.scheduled.thisMonth' | t }}
+        </label>
+      }
+      <p class="oh-hint first">{{ 'finance.scheduled.first' | t: { date: dateLabel(start()) } }}</p>
+      @if (start() < today()) {
+        <p class="oh-hint">{{ 'finance.scheduled.pastHint' | t }}</p>
+      }
+    </fieldset>
+
+    <fieldset>
+      <legend>{{ 'lists.repeat.ends' | t }}</legend>
+      <div class="when">
+        <select
+          class="oh-input"
+          [attr.aria-label]="'lists.repeat.ends' | t"
+          (change)="end.set($any($event.target).value)"
+        >
+          <option value="never" [selected]="end() === 'never'">
+            {{ 'lists.repeat.never' | t }}
+          </option>
+          <option value="until" [selected]="end() === 'until'">
+            {{ 'lists.repeat.until' | t }}
+          </option>
+          <option value="count" [selected]="end() === 'count'">
+            {{ 'finance.scheduled.afterCount' | t }}
+          </option>
+        </select>
+        @if (end() === 'until') {
+          <input
+            class="oh-input"
+            type="date"
+            [min]="start()"
+            [value]="until()"
+            (change)="until.set($any($event.target).value)"
+            [attr.aria-label]="'lists.repeat.untilDate' | t"
+          />
+        } @else if (end() === 'count') {
+          <label class="inline">
+            <input
+              class="oh-input tiny"
+              type="number"
+              min="1"
+              max="999"
+              [value]="count()"
+              (change)="count.set(int($any($event.target).value, 1, 999))"
+              [attr.aria-label]="'finance.scheduled.afterCount' | t"
+            />
+            <span>{{ 'lists.repeat.times' | t }}</span>
+          </label>
+        }
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>{{ 'finance.scheduled.howTitle' | t }}</legend>
+      <label class="check radio">
+        <input
+          type="radio"
+          name="scheduled-mode"
+          [checked]="mode() === 'auto'"
+          (change)="mode.set('auto')"
+        />
+        <span
+          ><strong>{{ 'finance.scheduled.auto' | t }}</strong> ·
+          {{ 'finance.scheduled.autoHint' | t }}</span
+        >
+      </label>
+      <label class="check radio">
+        <input
+          type="radio"
+          name="scheduled-mode"
+          [checked]="mode() === 'confirm'"
+          (change)="mode.set('confirm')"
+        />
+        <span
+          ><strong>{{ 'finance.scheduled.confirm' | t }}</strong> ·
+          {{ 'finance.scheduled.confirmHint' | t }}</span
+        >
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>{{ 'finance.scheduled.alerts' | t }}</legend>
+      <label class="check">
+        <input
+          type="checkbox"
+          [checked]="remind()"
+          (change)="remind.set($any($event.target).checked)"
+        />
+        <span>{{ 'finance.scheduled.remindBefore' | t }}</span>
+        <input
+          class="oh-input tiny"
+          type="number"
+          min="1"
+          max="30"
+          [disabled]="!remind()"
+          [value]="remindDays()"
+          (change)="remindDays.set(int($any($event.target).value, 1, 30))"
+          [attr.aria-label]="'finance.scheduled.remindDays' | t"
+        />
+        <span>{{ 'finance.scheduled.daysBefore' | t }}</span>
+      </label>
+      @if (mode() === 'auto') {
+        <label class="check">
+          <input
+            type="checkbox"
+            [checked]="notifyDone()"
+            (change)="notifyDone.set($any($event.target).checked)"
+          />
+          <span>{{ 'finance.scheduled.notifyDone' | t }}</span>
+        </label>
+      }
+    </fieldset>
+
+    @if (error(); as e) {
+      <p class="oh-alert is-error" role="alert">{{ e }}</p>
+    }
+    <div class="actions">
+      <button type="button" class="oh-btn oh-btn--text" (click)="close()">
+        {{ 'finance.cancel' | t }}
+      </button>
+      <button type="submit" class="oh-btn oh-btn--filled" [disabled]="!canSave()">
+        {{ 'finance.scheduled.save' | t }}
+      </button>
+    </div>
+  </form>
+</dialog>

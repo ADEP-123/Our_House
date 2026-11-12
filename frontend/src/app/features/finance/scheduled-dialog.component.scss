@@ -1,0 +1,134 @@
+dialog {
+  width: min(94vw, 560px);
+  max-height: 92vh;
+  padding: 22px;
+  border: 0;
+  border-radius: var(--oh-radius-lg);
+  background: var(--oh-surface);
+  color: var(--oh-text);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.25);
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 0.4);
+}
+
+form {
+  display: grid;
+  gap: 14px;
+}
+
+h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.big {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+fieldset {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+legend {
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.when {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+
+  .oh-input {
+    width: auto;
+  }
+}
+
+.inline,
+.check {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  font-size: 0.9375rem;
+}
+
+.check {
+  min-height: 36px;
+
+  input[type='checkbox'],
+  input[type='radio'] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--oh-primary);
+  }
+}
+
+.tiny {
+  width: 72px !important;
+}
+
+.first {
+  margin: 0;
+  font-weight: 600;
+  color: var(--oh-text);
+}
+
+.seg,
+.days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+
+  button {
+    min-height: 34px;
+    padding: 0 12px;
+    border: 1px solid var(--oh-border-strong);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--oh-text);
+    font: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  [aria-pressed='true'] {
+    background: var(--oh-secondary-soft);
+    border-color: transparent;
+    color: var(--oh-secondary);
+    font-weight: 600;
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+// La opción y su explicación en la misma fila (el texto se acomoda al lado)
+.radio {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+
+  input {
+    flex: none;
+    margin-top: 2px;
+  }
+}
