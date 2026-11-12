@@ -130,6 +130,8 @@ export interface Movement {
   } | null;
   /** Salida pagada con el ahorro de un proyecto */
   savings?: { id: string; name: string | null; icon: string | null } | null;
+  /** Creado por un movimiento programado */
+  scheduled?: boolean;
 }
 
 /** Transferencia entre dos cuentas; los ids los genera el dispositivo (funciona sin conexión) */
@@ -388,4 +390,91 @@ export interface BudgetsData {
   month: string;
   canManage: boolean;
   budgets: Budget[];
+}
+
+// ---------- Movimientos programados ----------
+
+export type ScheduledKind = 'in' | 'out' | 'transfer' | 'set_aside';
+
+export interface ScheduledRule {
+  freq: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  interval: number;
+  weekdays?: number[];
+  /** Primera fecha (fija el día del mes o de la semana) */
+  start: string;
+  until?: string | null;
+  count?: number | null;
+}
+
+export interface Scheduled {
+  id: string;
+  kind: ScheduledKind;
+  account: { id: string; name: string };
+  /** Transferencias: la cuenta destino (sin nombre si la persona no la ve) */
+  toAccount: { id: string; name: string | null } | null;
+  category: { id: string; name: string | null; icon: string | null; color: string | null } | null;
+  project: { id: string; name: string | null; icon: string | null } | null;
+  amount: number;
+  description: string;
+  mode: 'auto' | 'confirm';
+  rule: ScheduledRule;
+  nextDate: string | null;
+  timesDone: number;
+  remindDays: number | null;
+  notifyDone: boolean;
+  paused: { reason: 'manual' | 'archived' | 'permission' | 'missing' } | null;
+  ended: boolean;
+  canManage: boolean;
+  createdBy: { id: string; nickname: string | null } | null;
+}
+
+export interface ScheduledPending {
+  id: string;
+  scheduleId: string;
+  dueDate: string;
+  amount: number | null;
+}
+
+export interface ScheduledData {
+  currency: string;
+  items: Scheduled[];
+  pending: ScheduledPending[];
+}
+
+export interface ScheduledInput {
+  id?: string;
+  accountId: string;
+  kind: ScheduledKind;
+  toAccountId: string | null;
+  savingsProjectId: string | null;
+  categoryId: string | null;
+  amount: number;
+  description: string;
+  mode: 'auto' | 'confirm';
+  rule: ScheduledRule;
+  remindDays: number | null;
+  notifyDone: boolean;
+}
+
+export interface UpcomingItem {
+  scheduleId: string;
+  date: string;
+  kind: ScheduledKind;
+  amount: number;
+  description: string;
+  mode: 'auto' | 'confirm';
+  accountId: string;
+  accountName: string;
+  toAccountId: string | null;
+  toAccountName: string | null;
+}
+
+export interface ScheduledSuggestion {
+  accountId: string;
+  accountName: string;
+  description: string;
+  categoryId: string | null;
+  amount: number;
+  day: number;
+  months: number;
 }
