@@ -13,6 +13,8 @@ export interface MovementRow {
   category_id: string | null;
   /** Enlaza la salida y la entrada de una transferencia */
   transfer_id: string | null;
+  /** Salida pagada con el ahorro de un proyecto */
+  savings_project_id: string | null;
   created_by: string | null;
   updated_by: string | null;
   deleted_at: Date | null;
@@ -33,6 +35,8 @@ export interface MovementViewRow extends MovementRow {
   counterpart_account_name: string | null;
   counterpart_prefix: string | null;
   counterpart_number: number | null;
+  savings_project_name: string | null;
+  savings_project_icon: string | null;
 }
 
 export interface HistoryRow {
@@ -58,6 +62,7 @@ export const movementsRepository = {
               u.nickname AS created_by_nickname,
               t.account_id AS counterpart_account_id, ta.name AS counterpart_account_name,
               ta.prefix AS counterpart_prefix, t.number AS counterpart_number,
+              sp.name AS savings_project_name, sp.icon AS savings_project_icon,
               EXISTS (SELECT 1 FROM account_movement_history h WHERE h.movement_id = m.id AND h.action = 'updated') AS edited,
               sum(${SIGNED}) OVER (ORDER BY m.date, m.created_at, m.number ROWS UNBOUNDED PRECEDING) AS balance
          FROM account_movements m
@@ -65,6 +70,7 @@ export const movementsRepository = {
          LEFT JOIN users u ON u.id = m.created_by
          LEFT JOIN account_movements t ON t.transfer_id = m.transfer_id AND t.id <> m.id
          LEFT JOIN accounts ta ON ta.id = t.account_id
+         LEFT JOIN savings_projects sp ON sp.id = m.savings_project_id
         WHERE m.account_id = $1 AND m.deleted_at IS NULL
         ORDER BY m.date, m.created_at, m.number`,
       [accountId],
@@ -89,28 +95,29 @@ export const movementsRepository = {
       categoryId: string | null;
       userId: string;
       transferId?: string | null;
+      savingsProjectId?: string | null;
     },
     conn: Db,
   ): Promise<boolean> {
     const { rowCount } = await conn.query(
-      `INSERT INTO account_movements (id, account_id, number, kind, amount, date, description, category_id, created_by, transfer_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT (id) DO NOTHING`,
-      [m.id, m.accountId, m.number, m.kind, m.amount, m.date, m.description, m.categoryId, m.userId, m.transferId ?? null],
+      `INSERT INTO account_movements (id, account_id, number, kind, amount, date, description, category_id, created_by, transfer_id, savings_project_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT (id) DO NOTHING`,
+      [m.id, m.accountId, m.number, m.kind, m.amount, m.date, m.description, m.categoryId, m.userId, m.transferId ?? null, m.savingsProjectId ?? null],
     );
     return !!rowCount;
   },
 
   async update(
     id: string,
-    f: { kind: MovementKind; amount: number; date: string; description: string; categoryId: string | null },
+    f: { kind: MovementKind; amount: number; date: string; description: string; categoryId: string | null; savingsProjectId?: string | null },
     userId: string,
     conn: Db,
   ): Promise<void> {
     await conn.query(
       `UPDATE account_movements SET kind = $2, amount = $3, date = $4, description = $5, category_id = $6,
-              updated_by = $7, updated_at = now()
+              savings_project_id = $8, updated_by = $7, updated_at = now()
         WHERE id = $1`,
-      [id, f.kind, f.amount, f.date, f.description, f.categoryId, userId],
+      [id, f.kind, f.amount, f.date, f.description, f.categoryId, userId, f.savingsProjectId ?? null],
     );
   },
 

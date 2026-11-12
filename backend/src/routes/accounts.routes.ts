@@ -25,6 +25,7 @@ const accountBody = z.object({
     .trim()
     .toUpperCase()
     .regex(/^[A-Z0-9]{1,4}$/, 'ACCOUNT_PREFIX_INVALID'),
+  lowBalanceThreshold: z.number('LOW_BALANCE_INVALID').min(0, 'LOW_BALANCE_INVALID').max(MAX_MONEY, 'LOW_BALANCE_INVALID').nullable().optional(),
   creditLimit: z.number('CREDIT_LIMIT_INVALID').min(0, 'CREDIT_LIMIT_INVALID').max(MAX_MONEY, 'CREDIT_LIMIT_INVALID').nullable().optional(),
   opening: z
     .strictObject({

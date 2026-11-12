@@ -10,6 +10,8 @@ import {
   type ViewMode,
 } from '../repositories/accounts.repository.js';
 import { familiesRepository, type FamilyRole } from '../repositories/families.repository.js';
+import { savingsByAccount } from '../lib/savings.js';
+import { savingsRepository } from '../repositories/savings.repository.js';
 import { requireMember } from './families.service.js';
 
 /**
@@ -70,7 +72,14 @@ function requireAdmin(access: AccountAccess): void {
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-export function toAccountView(a: AccountViewRow, access: Pick<AccountAccess, 'canEdit' | 'canAdmin' | 'supervision'>) {
+/** Ahorro apartado en la cuenta (total y por proyecto) */
+export type AccountSavings = { total: number; projects: { id: string; name: string; icon: string; amount: number }[] };
+
+export function toAccountView(
+  a: AccountViewRow,
+  access: Pick<AccountAccess, 'canEdit' | 'canAdmin' | 'supervision'>,
+  savings: AccountSavings = { total: 0, projects: [] },
+) {
   const balance = round2(a.balance);
   const debt = round2(Math.max(0, -balance));
   return {
@@ -87,6 +96,9 @@ export function toAccountView(a: AccountViewRow, access: Pick<AccountAccess, 'ca
       a.kind === 'credit'
         ? { limit: a.credit_limit ?? 0, debt, available: round2((a.credit_limit ?? 0) - debt), overLimit: debt > (a.credit_limit ?? 0) }
         : null,
+    // Saldo · Ahorro · Disponible
+    savings: { total: savings.total, available: round2(balance - savings.total), projects: savings.projects },
+    lowBalanceThreshold: a.low_balance_threshold,
     opening: a.opening_amount === null ? null : { amount: a.opening_amount, date: a.opening_date, number: a.opening_number },
     viewMode: a.view_mode,
     editMode: a.edit_mode,
@@ -114,6 +126,7 @@ export interface AccountInput {
   editRoles: FamilyRole[];
   viewers: string[];
   editors: string[];
+  lowBalanceThreshold?: number | null;
 }
 
 /** Valida y arma los campos y las personas elegidas. */
@@ -134,6 +147,8 @@ async function prepare(familyId: string, ownerId: string | null, input: AccountI
     viewMode: input.viewMode,
     editMode: input.editMode,
     editRoles: input.editRoles,
+    // Las tarjetas no guardan ahorro ni avisan del disponible
+    lowBalanceThreshold: input.kind === 'credit' ? null : (input.lowBalanceThreshold ?? null),
   };
 
   // Quien administra no necesita estar en la lista; en una privada no hay elegidos
@@ -154,9 +169,15 @@ async function saveOpening(accountId: string, opening: AccountInput['opening'], 
   else await accountsRepository.removeOpening(accountId, conn);
 }
 
+/** Ahorro apartado por cuenta en el grupo */
+async function familySavings(familyId: string) {
+  const [allocations, projects] = await Promise.all([savingsRepository.allocations(familyId), savingsRepository.listForFamily(familyId)]);
+  return savingsByAccount(allocations, projects);
+}
+
 async function view(id: string, userId: string) {
   const access = await getAccountAccess(id, userId);
-  return toAccountView(access.account, access);
+  return toAccountView(access.account, access, (await familySavings(access.account.family_id)).get(id));
 }
 
 export const accountsService = {
@@ -164,11 +185,12 @@ export const accountsService = {
     const role = await requireMember(familyId, userId);
     const rows = await accountsRepository.listForFamily(familyId, userId, archived);
     const family = await familiesRepository.findById(familyId);
+    const savings = await familySavings(familyId);
     const accounts = [];
     const supervisedPrivate = [];
     for (const a of rows) {
       const access = computeAccess(a, role, userId);
-      if (access.canView) accounts.push(toAccountView(a, { ...access, supervision: false }));
+      if (access.canView) accounts.push(toAccountView(a, { ...access, supervision: false }, savings.get(a.id)));
       // Solo el dueño: el nombre y los montos se revelan después del aviso de privacidad
       else if (!archived && isSupervisedPrivate(a, role, userId)) supervisedPrivate.push({ id: a.id, ownerNickname: a.owner_nickname });
     }
@@ -177,7 +199,7 @@ export const accountsService = {
 
   async detail(id: string, userId: string, supervision: boolean) {
     const access = await getAccountAccess(id, userId, supervision);
-    return toAccountView(access.account, access);
+    return toAccountView(access.account, access, (await familySavings(access.account.family_id)).get(id));
   },
 
   async create(familyId: string, userId: string, input: AccountInput) {

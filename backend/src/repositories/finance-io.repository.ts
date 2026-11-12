@@ -49,6 +49,8 @@ export const financeIoRepository = {
     await conn.query(
       `UPDATE account_movements m
           SET kind = x.kind, amount = x.amount, date = x.date, description = x.description, category_id = x.category_id,
+              -- Solo una salida se paga con el ahorro
+              savings_project_id = CASE WHEN x.kind = 'out' THEN m.savings_project_id END,
               updated_by = $2, updated_at = now()
          FROM jsonb_to_recordset($1::jsonb) AS x(id uuid, kind text, amount numeric, date date, description text, category_id uuid)
         WHERE m.id = x.id`,

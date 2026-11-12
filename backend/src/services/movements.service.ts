@@ -6,6 +6,8 @@ import { accountsRepository } from '../repositories/accounts.repository.js';
 import { movementsRepository, type MovementKind, type MovementRow, type MovementViewRow } from '../repositories/movements.repository.js';
 import { getAccountAccess, visibleAccountIds, type AccountAccess } from './accounts.service.js';
 import { requireMember } from './families.service.js';
+import { financeAlerts } from './finance-alerts.service.js';
+import { savingsRepository } from '../repositories/savings.repository.js';
 
 /** Columnas de la tabla de una cuenta que cada persona puede ocultar */
 export const MOVEMENT_COLUMNS = ['code', 'date', 'description', 'category', 'amount', 'balance', 'createdBy'] as const;
@@ -34,6 +36,8 @@ function toMovementView(m: MovementViewRow, prefix: string, visible: Set<string>
     category: m.category_id ? { id: m.category_id, name: m.category_name, icon: m.category_icon, color: m.category_color } : null,
     createdBy: m.created_by ? { id: m.created_by, nickname: m.created_by_nickname } : null,
     edited: m.edited,
+    /** Pagado con el ahorro de un proyecto */
+    savings: m.savings_project_id ? { id: m.savings_project_id, name: m.savings_project_name, icon: m.savings_project_icon } : null,
     balance: round2(m.balance),
     createdAt: m.created_at,
     transfer: m.transfer_id
@@ -73,6 +77,7 @@ async function checkCategory(familyId: string, categoryId: string, currentId: st
 }
 
 const categoryName = async (id: string | null) => (id ? ((await categoriesRepository.find(id))?.name ?? null) : null);
+const projectName = async (id: string | null) => (id ? ((await savingsRepository.find(id))?.name ?? null) : null);
 
 export interface MovementInput {
   id?: string;
@@ -81,6 +86,21 @@ export interface MovementInput {
   date: string;
   description: string;
   categoryId: string;
+  /** Salida pagada con el ahorro de este proyecto */
+  savingsProjectId?: string | null;
+}
+
+/**
+ * Pagar con el ahorro: solo salidas, de un proyecto abierto del grupo y sin pasar de lo apartado en la cuenta.
+ * @param ownAmount al editar, lo que este mismo movimiento ya había gastado de ese proyecto
+ */
+async function checkSavings(familyId: string, accountId: string, projectId: string, amount: number, ownAmount = 0) {
+  const project = await savingsRepository.find(projectId);
+  if (!project || project.family_id !== familyId) throw badRequest('SAVINGS_NOT_FOUND');
+  if (project.closed_at) throw badRequest('SAVINGS_CLOSED');
+  const saved =
+    (await savingsRepository.allocations(familyId)).find((a) => a.project_id === projectId && a.account_id === accountId)?.amount ?? 0;
+  if (amount > round2(saved + ownAmount)) throw badRequest('SAVINGS_SPEND_TOO_MUCH', { saved: round2(saved + ownAmount) });
 }
 
 export const movementsService = {
@@ -105,14 +125,28 @@ export const movementsService = {
       return { id };
     }
     await checkCategory(access.account.family_id, input.categoryId, null);
+    const savingsProjectId = input.kind === 'out' ? (input.savingsProjectId ?? null) : null;
+    if (savingsProjectId) await checkSavings(access.account.family_id, accountId, savingsProjectId, input.amount);
     await withTransaction(async (conn) => {
       const number = await accountsRepository.nextNumber(accountId, conn);
       const created = await movementsRepository.create(
-        { id, accountId, number, kind: input.kind, amount: input.amount, date: input.date, description: input.description, categoryId: input.categoryId, userId },
+        {
+          id,
+          accountId,
+          number,
+          kind: input.kind,
+          amount: input.amount,
+          date: input.date,
+          description: input.description,
+          categoryId: input.categoryId,
+          userId,
+          savingsProjectId,
+        },
         conn,
       );
       if (created) await movementsRepository.addHistory(id, userId, 'created', null, conn);
     });
+    financeAlerts.afterChange(access.account.family_id, [accountId], userId);
     return { id };
   },
 
@@ -129,11 +163,19 @@ export const movementsService = {
       date: changes.date ?? movement.date,
       description: changes.description ?? movement.description,
       categoryId: isAdjust ? null : (changes.categoryId ?? movement.category_id),
+      savingsProjectId: null as string | null,
     };
+    // Pagar con el ahorro: se conserva si no se cambia; una entrada nunca lo lleva
+    const projectId = changes.savingsProjectId === undefined ? movement.savings_project_id : changes.savingsProjectId;
+    next.savingsProjectId = next.kind === 'out' ? projectId : null;
     if (isAdjust ? next.amount === 0 : next.amount <= 0) throw badRequest('MOVEMENT_AMOUNT_INVALID');
     if (!isAdjust) {
       if (!next.categoryId) throw badRequest('CATEGORY_REQUIRED');
       await checkCategory(access.account.family_id, next.categoryId, movement.category_id);
+    }
+    if (next.savingsProjectId) {
+      const own = movement.savings_project_id === next.savingsProjectId ? movement.amount : 0;
+      await checkSavings(access.account.family_id, movement.account_id, next.savingsProjectId, next.amount, own);
     }
 
     // Historial: solo lo que cambió, con el nombre de la categoría para leerlo después
@@ -145,12 +187,16 @@ export const movementsService = {
     if (next.categoryId !== movement.category_id) {
       diff.category = [await categoryName(movement.category_id), await categoryName(next.categoryId)];
     }
+    if (next.savingsProjectId !== movement.savings_project_id) {
+      diff.savings = [await projectName(movement.savings_project_id), await projectName(next.savingsProjectId)];
+    }
     if (!Object.keys(diff).length) return { id };
 
     await withTransaction(async (conn) => {
       await movementsRepository.update(id, next, userId, conn);
       await movementsRepository.addHistory(id, userId, 'updated', diff, conn);
     });
+    financeAlerts.afterChange(access.account.family_id, [movement.account_id], userId);
     return { id };
   },
 
@@ -163,6 +209,7 @@ export const movementsService = {
       await movementsRepository.setDeleted(id, true, userId, conn);
       await movementsRepository.addHistory(id, userId, 'deleted', null, conn);
     });
+    financeAlerts.afterChange(access.account.family_id, [movement.account_id], userId);
   },
 
   /** Deshacer un borrado */
@@ -178,6 +225,7 @@ export const movementsService = {
       await movementsRepository.setDeleted(id, false, userId, conn);
       await movementsRepository.addHistory(id, userId, 'restored', null, conn);
     });
+    financeAlerts.afterChange(access.account.family_id, [movement.account_id], userId);
     return { id };
   },
 
@@ -209,6 +257,7 @@ export const movementsService = {
       );
       await movementsRepository.addHistory(id, userId, 'created', null, conn);
     });
+    financeAlerts.afterChange(access.account.family_id, [accountId], userId);
     return { id };
   },
 
@@ -270,7 +319,7 @@ const transfers = {
   async update(movement: MovementRow, userId: string, changes: Partial<Omit<MovementInput, 'id'>>) {
     if ((changes.kind && changes.kind !== (movement.kind as string)) || changes.categoryId) throw badRequest('TRANSFER_FIELDS_FIXED');
     const { out, inn } = await transfers.pair(movement);
-    await transfers.bothEditable(out.account_id, inn.account_id, userId, true);
+    const both = await transfers.bothEditable(out.account_id, inn.account_id, userId, true);
     const next = {
       amount: changes.amount ?? movement.amount,
       date: changes.date ?? movement.date,
@@ -288,18 +337,20 @@ const transfers = {
         await movementsRepository.addHistory(m.id, userId, 'updated', diff, conn);
       }
     });
+    financeAlerts.afterChange(both.from.account.family_id, [out.account_id, inn.account_id], userId);
     return { id: movement.id };
   },
 
   async setDeleted(movement: MovementRow, userId: string, deleted: boolean) {
     const { out, inn } = await transfers.pair(movement);
-    await transfers.bothEditable(out.account_id, inn.account_id, userId, true);
+    const both = await transfers.bothEditable(out.account_id, inn.account_id, userId, true);
     await withTransaction(async (conn) => {
       for (const m of [out, inn]) {
         await movementsRepository.setDeleted(m.id, deleted, userId, conn);
         await movementsRepository.addHistory(m.id, userId, deleted ? 'deleted' : 'restored', null, conn);
       }
     });
+    financeAlerts.afterChange(both.from.account.family_id, [out.account_id, inn.account_id], userId);
   },
 };
 
@@ -309,7 +360,7 @@ export const transfersService = {
     const transferId = input.id ?? randomUUID();
     const outId = input.outId ?? randomUUID();
     const inId = input.inId ?? randomUUID();
-    await transfers.bothEditable(input.fromAccountId, input.toAccountId, userId);
+    const both = await transfers.bothEditable(input.fromAccountId, input.toAccountId, userId);
 
     // Reenvío de la misma transferencia (cola sin conexión): no se duplica
     const existing = await movementsRepository.find(outId);
@@ -326,6 +377,7 @@ export const transfersService = {
       await movementsRepository.addHistory(outId, userId, 'created', null, conn);
       await movementsRepository.addHistory(inId, userId, 'created', null, conn);
     });
+    financeAlerts.afterChange(both.from.account.family_id, [input.fromAccountId, input.toAccountId], userId);
     return { id: transferId, outId, inId };
   },
 };
