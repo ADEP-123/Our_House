@@ -58,6 +58,7 @@ meRoutes.patch(
         calendarPromptDismissed: z.boolean(),
         secretViews: z.boolean(),
         finance: z.boolean(),
+        scheduled: z.boolean(),
       })
       .partial()
       .refine((v) => Object.keys(v).length > 0, 'SETTINGS_EMPTY'),

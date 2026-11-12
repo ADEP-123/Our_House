@@ -8,6 +8,8 @@ import {
   Account,
   AccountMovements,
   BudgetsData,
+  ScheduledData,
+  UpcomingItem,
   Category,
   FamilyAccounts,
   FamilyCategories,
@@ -140,6 +142,25 @@ export class FinanceStore {
     return this.queue.read(`finance:budgets:${familyId}:${month ?? 'current'}`, () =>
       firstValueFrom(this.http.get<BudgetsData>(`/api/families/${familyId}/budgets`, { params })),
     );
+  }
+
+  /** Programados del grupo (sin conexión: lo último que se vio) */
+  scheduled(familyId: string): Promise<ScheduledData> {
+    return this.queue.read(`finance:scheduled:${familyId}`, () =>
+      firstValueFrom(this.http.get<ScheduledData>(`/api/families/${familyId}/scheduled`)),
+    );
+  }
+
+  /** Próximas fechas de lo programado hasta `to` (sin conexión: lo último que se vio) */
+  async upcoming(familyId: string, to: string): Promise<UpcomingItem[]> {
+    const res = await this.queue.read(`finance:upcoming:${familyId}:${to}`, () =>
+      firstValueFrom(
+        this.http.get<{ items: UpcomingItem[] }>(`/api/families/${familyId}/scheduled/upcoming`, {
+          params: { to },
+        }),
+      ),
+    );
+    return res.items;
   }
 
   /** Descripciones ya usadas; sin conexión, las de la copia local de la cuenta */

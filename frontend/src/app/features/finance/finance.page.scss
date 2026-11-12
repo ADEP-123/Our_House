@@ -306,7 +306,6 @@
   margin-left: auto;
 }
 
-/* Saldo · Ahorro · Disponible */
 .savings-facts {
   display: flex;
   gap: 16px;
@@ -327,8 +326,18 @@
 
 .savings-list {
   display: block;
-  margin-top: 4px;
   font-size: 0.8125rem;
   color: var(--oh-text-muted);
   text-decoration: none;
+}
+
+.scheduled-line {
+  justify-self: start;
+  font-size: 0.875rem;
+}
+
+.pending-tag {
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--oh-secondary-soft);
 }

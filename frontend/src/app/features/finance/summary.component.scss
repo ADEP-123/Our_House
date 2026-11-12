@@ -254,3 +254,52 @@
     }
   }
 }
+
+/* Próximos programados del mes */
+.upcoming {
+  display: grid;
+  gap: 8px;
+
+  h3 {
+    margin: 0;
+    font-size: 1.0625rem;
+  }
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  li {
+    display: grid;
+    grid-template-columns: 64px 1fr auto;
+    gap: 10px;
+    align-items: baseline;
+    padding: 6px 0;
+    font-size: 0.875rem;
+
+    + li {
+      border-top: 1px solid var(--oh-border);
+    }
+  }
+
+  small {
+    display: block;
+    color: var(--oh-text-muted);
+  }
+
+  .when {
+    color: var(--oh-text-muted);
+  }
+
+  .value {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+}
+
+.projection {
+  margin: 0;
+  font-weight: 600;
+}

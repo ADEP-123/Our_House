@@ -2,11 +2,13 @@ import { Component, computed, effect, inject, input, signal, untracked } from '@
 import { toApiError } from '../../core/api/api-error';
 import { I18n } from '../../core/i18n/i18n.service';
 import { TPipe } from '../../core/i18n/t.pipe';
-import { kindIcon } from './finance-logic';
+import { kindIcon, localToday } from './finance-logic';
+import { effectOn, projectBalance } from './scheduled-logic';
 import { iconOf } from '../lists/list-presets';
 import {
   AccountKind,
   BudgetsData,
+  UpcomingItem,
   Summary,
   SummaryConfig,
   SummaryFreq,
@@ -41,6 +43,13 @@ export class SummaryComponent {
   protected readonly data = signal<Summary | null>(null);
   protected readonly loading = signal(false);
   protected readonly budgets = signal<BudgetsData | null>(null);
+  /** Programados que faltan este mes y el saldo proyectado */
+  protected readonly upcoming = signal<{
+    items: UpcomingItem[];
+    today: number;
+    end: number;
+    ids: ReadonlySet<string>;
+  } | null>(null);
   protected readonly iconOf = iconOf;
   protected readonly error = signal<string | null>(null);
 
@@ -115,6 +124,26 @@ export class SummaryComponent {
           ? await this.store.budgets(familyId, range.from.slice(0, 7)).catch(() => null)
           : null;
       if (this.config() === config) this.budgets.set(budgets?.budgets.length ? budgets : null);
+      // Mes en curso: lo programado que falta y el saldo proyectado a fin de mes
+      const today = localToday();
+      const current = config.mode === 'month' && range.from <= today && today <= range.to;
+      const items = current ? await this.store.upcoming(familyId, range.to).catch(() => []) : [];
+      const ids = new Set(summary.accounts.map((a) => a.id));
+      const relevant = items.filter(
+        (i) =>
+          i.date >= today && (ids.has(i.accountId) || (!!i.toAccountId && ids.has(i.toAccountId))),
+      );
+      if (this.config() === config)
+        this.upcoming.set(
+          current && relevant.length
+            ? {
+                items: relevant,
+                today: summary.combined.closingBalance,
+                end: projectBalance(summary.combined.closingBalance, relevant, ids),
+                ids,
+              }
+            : null,
+        );
     } catch (err) {
       this.error.set(this.i18n.error(toApiError(err).code));
     } finally {
@@ -174,6 +203,18 @@ export class SummaryComponent {
 
   protected viewLabel(v: SummaryView): string {
     return this.i18n.t(`finance.summary.view.${v}`);
+  }
+
+  protected upcomingAmount(item: UpcomingItem): string {
+    const effect = effectOn(item, this.upcoming()?.ids ?? new Set<string>());
+    return `${effect > 0 ? '+' : effect < 0 ? '−' : ''}${this.money(Math.abs(item.amount))}`;
+  }
+
+  protected shortDate(iso: string): string {
+    return new Date(`${iso}T12:00:00`).toLocaleDateString(this.i18n.locale(), {
+      day: 'numeric',
+      month: 'short',
+    });
   }
 
   protected budgetWidth(pct: number): number {

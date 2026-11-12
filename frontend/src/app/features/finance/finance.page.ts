@@ -19,7 +19,7 @@ import { FamiliesService } from '../families/families.service';
 import { formatMoney } from '../lists/item-logic';
 import { creditUsage, kindIcon } from './finance-logic';
 import { iconOf } from '../lists/list-presets';
-import { Account, FamilyAccounts } from './finance.models';
+import { Account, FamilyAccounts, ScheduledData } from './finance.models';
 import { FinanceService } from './finance.service';
 import { FinanceStore } from './finance.store';
 import { SummaryComponent } from './summary.component';
@@ -54,6 +54,8 @@ export class FinancePage implements OnInit {
 
   protected readonly kindIcon = kindIcon;
   protected readonly iconOf = iconOf;
+  /** Programados del grupo (para la línea de cada cuenta) */
+  private readonly scheduled = signal<ScheduledData | null>(null);
   protected readonly family = this.families.active;
   protected readonly data = signal<FamilyAccounts | null>(null);
   protected readonly archived = signal(false);
@@ -128,6 +130,7 @@ export class FinancePage implements OnInit {
     try {
       this.data.set(await this.store.accounts(familyId, archived));
       this.error.set(null);
+      this.scheduled.set(await this.store.scheduled(familyId).catch(() => null));
     } catch (err) {
       this.error.set(this.i18n.error(toApiError(err).code));
     }
@@ -143,6 +146,37 @@ export class FinancePage implements OnInit {
 
   protected money(n: number, account: Account | null = this.selected()): string {
     return formatMoney(n, account?.currency ?? this.data()?.currency ?? 'USD', this.i18n.locale());
+  }
+
+  /** "3 programados · próximo: Netflix el 5 dic" (null si la cuenta no tiene) */
+  protected scheduledOf(a: Account): { text: string; pending: number } | null {
+    const data = this.scheduled();
+    if (!data) return null;
+    const items = data.items.filter(
+      (s) => (s.account.id === a.id || s.toAccount?.id === a.id) && !s.ended && !s.paused,
+    );
+    if (!items.length) return null;
+    const next = items
+      .filter((s) => s.nextDate)
+      .sort((x, y) => x.nextDate!.localeCompare(y.nextDate!))[0];
+    const ids = new Set(items.map((s) => s.id));
+    const date = next?.nextDate
+      ? new Date(`${next.nextDate}T12:00:00`).toLocaleDateString(this.i18n.locale(), {
+          day: 'numeric',
+          month: 'short',
+        })
+      : '';
+    return {
+      text: this.i18n.t(
+        next ? 'finance.scheduled.accountLineNext' : 'finance.scheduled.accountLine',
+        {
+          n: items.length,
+          what: next?.description ?? '',
+          date,
+        },
+      ),
+      pending: data.pending.filter((p) => ids.has(p.scheduleId)).length,
+    };
   }
 
   protected kindLabel(a: Account): string {
