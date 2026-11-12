@@ -6,6 +6,7 @@ import { kindIcon } from './finance-logic';
 import { AccountKind, Summary, SummaryConfig, SummaryFreq, SummaryView } from './finance.models';
 import { FinanceStore } from './finance.store';
 import { SummaryBlockComponent } from './summary-block.component';
+import { ExportMenuComponent } from './export-menu.component';
 import { defaultConfig, periodCount, rangeOf, suggestedFreq } from './summary-logic';
 
 const FREQS: SummaryFreq[] = ['week', 'month', 'quarter', 'year'];
@@ -16,7 +17,7 @@ const FREQS: SummaryFreq[] = ['week', 'month', 'quarter', 'year'];
  */
 @Component({
   selector: 'oh-finance-summary',
-  imports: [TPipe, SummaryBlockComponent],
+  imports: [TPipe, SummaryBlockComponent, ExportMenuComponent],
   templateUrl: './summary.component.html',
   styleUrl: './summary.component.scss',
 })
@@ -49,6 +50,13 @@ export class SummaryComponent {
   protected readonly showCombined = computed(() => this.config()?.view !== 'separate');
   protected readonly showSeparate = computed(() => this.config()?.view !== 'combined');
   protected readonly accountName = (id: string) => this.data()?.accounts.find((a) => a.id === id);
+
+  protected readonly accountIds = computed(() => this.data()?.accounts.map((a) => a.id) ?? []);
+  /** Nombre del archivo exportado: "Resumen 2026-11-01 a 2026-11-30" */
+  protected readonly exportSubject = computed(() => {
+    const d = this.data();
+    return d ? this.i18n.t('finance.io.summarySubject', { from: d.from, to: d.to }) : '';
+  });
 
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
 
