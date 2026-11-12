@@ -3,7 +3,15 @@ import { toApiError } from '../../core/api/api-error';
 import { I18n } from '../../core/i18n/i18n.service';
 import { TPipe } from '../../core/i18n/t.pipe';
 import { kindIcon } from './finance-logic';
-import { AccountKind, Summary, SummaryConfig, SummaryFreq, SummaryView } from './finance.models';
+import { iconOf } from '../lists/list-presets';
+import {
+  AccountKind,
+  BudgetsData,
+  Summary,
+  SummaryConfig,
+  SummaryFreq,
+  SummaryView,
+} from './finance.models';
 import { FinanceStore } from './finance.store';
 import { SummaryBlockComponent } from './summary-block.component';
 import { ExportMenuComponent } from './export-menu.component';
@@ -32,6 +40,8 @@ export class SummaryComponent {
   protected readonly config = signal<SummaryConfig | null>(null);
   protected readonly data = signal<Summary | null>(null);
   protected readonly loading = signal(false);
+  protected readonly budgets = signal<BudgetsData | null>(null);
+  protected readonly iconOf = iconOf;
   protected readonly error = signal<string | null>(null);
 
   protected readonly range = computed(() => {
@@ -99,6 +109,12 @@ export class SummaryComponent {
       if (this.config() !== config) return; // llegó una configuración más nueva
       this.data.set(summary);
       this.error.set(null);
+      // Presupuesto: solo al ver un mes
+      const budgets =
+        config.mode === 'month'
+          ? await this.store.budgets(familyId, range.from.slice(0, 7)).catch(() => null)
+          : null;
+      if (this.config() === config) this.budgets.set(budgets?.budgets.length ? budgets : null);
     } catch (err) {
       this.error.set(this.i18n.error(toApiError(err).code));
     } finally {
@@ -158,6 +174,10 @@ export class SummaryComponent {
 
   protected viewLabel(v: SummaryView): string {
     return this.i18n.t(`finance.summary.view.${v}`);
+  }
+
+  protected budgetWidth(pct: number): number {
+    return Math.min(100, pct);
   }
 
   protected dateLabel(iso: string): string {

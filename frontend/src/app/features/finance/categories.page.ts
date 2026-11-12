@@ -12,8 +12,17 @@ import { formatMoney } from '../lists/item-logic';
 import { LIST_COLORS, colorOf, iconOf } from '../lists/list-presets';
 import { buildOverrides } from './finance-logic';
 import { signOf } from './movement-logic';
-import { Category, CategoryInput, CategoryMovement, FamilyCategories } from './finance.models';
+import {
+  Budget,
+  Category,
+  CategoryInput,
+  CategoryMovement,
+  FamilyCategories,
+} from './finance.models';
 import { FinanceService } from './finance.service';
+import { FinanceStore } from './finance.store';
+import { SavingsService } from './savings.service';
+import { amountForInput, parseAmount } from './movement-logic';
 
 interface Removal {
   category: Category;
@@ -37,6 +46,8 @@ interface Removal {
 export class CategoriesPage implements OnInit {
   protected readonly families = inject(FamiliesService);
   private readonly finance = inject(FinanceService);
+  private readonly store = inject(FinanceStore);
+  private readonly savings = inject(SavingsService);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18n);
@@ -54,6 +65,9 @@ export class CategoriesPage implements OnInit {
   protected readonly draft = signal<CategoryInput>({ name: '', icon: '📦', color: 'gray' });
   protected readonly formError = signal<string | null>(null);
   protected readonly removal = signal<Removal | null>(null);
+  /** Presupuesto mensual de cada categoría con lo gastado este mes */
+  protected readonly budgets = signal<Budget[]>([]);
+  protected readonly budgetText = signal('');
 
   protected readonly active = computed(() =>
     (this.data()?.categories ?? []).filter((c) => !c.disabled),
@@ -87,9 +101,24 @@ export class CategoriesPage implements OnInit {
     try {
       this.data.set(await this.finance.categories(familyId));
       this.error.set(null);
+      this.budgets.set((await this.store.budgets(familyId).catch(() => null))?.budgets ?? []);
     } catch (err) {
       this.error.set(this.i18n.error(toApiError(err).code));
     }
+  }
+
+  protected budgetOf(id: string): Budget | undefined {
+    return this.budgets().find((b) => b.categoryId === id);
+  }
+
+  /** "Presupuesto 1.000 al mes · llevas 850 (85 %)" */
+  protected budgetText_(b: Budget): string {
+    const currency = this.family()?.currency ?? 'USD';
+    return this.i18n.t('finance.budget.line', {
+      limit: formatMoney(b.limit, currency, this.i18n.locale()),
+      spent: formatMoney(b.spent, currency, this.i18n.locale()),
+      pct: b.pct,
+    });
   }
 
   protected usage(c: Category): string {
@@ -119,6 +148,7 @@ export class CategoriesPage implements OnInit {
     this.removal.set(null);
     this.formError.set(null);
     this.draft.set({ name: '', icon: '📦', color: 'gray' });
+    this.budgetText.set('');
     this.editing.set('new');
   }
 
@@ -126,6 +156,8 @@ export class CategoriesPage implements OnInit {
     this.removal.set(null);
     this.formError.set(null);
     this.draft.set({ name: c.name, icon: c.icon, color: c.color });
+    const budget = this.budgetOf(c.id);
+    this.budgetText.set(budget ? amountForInput(budget.limit, this.i18n.locale()) : '');
     this.editing.set(c.id);
   }
 
@@ -138,11 +170,21 @@ export class CategoriesPage implements OnInit {
     const editing = this.editing();
     const draft = { ...this.draft(), name: this.draft().name.trim() };
     if (!family || !editing || !draft.name) return;
+    const budgetText = this.budgetText().trim();
+    const budget = budgetText ? parseAmount(budgetText, this.i18n.locale()) : null;
+    if (budgetText && (budget === null || budget <= 0)) {
+      this.formError.set(this.i18n.error('BUDGET_AMOUNT_INVALID'));
+      return;
+    }
     this.busy.set(true);
     this.formError.set(null);
     try {
-      if (editing === 'new') await this.finance.createCategory(family.id, draft);
-      else await this.finance.updateCategory(editing, draft);
+      const id =
+        editing === 'new'
+          ? (await this.finance.createCategory(family.id, draft)).id
+          : (await this.finance.updateCategory(editing, draft)).id;
+      // Presupuesto: solo si cambió
+      if ((this.budgetOf(id)?.limit ?? null) !== budget) await this.savings.setBudget(id, budget);
       this.editing.set(null);
       await this.load(family.id);
     } catch (err) {
