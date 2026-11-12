@@ -18,6 +18,8 @@ import { iconOf } from '../lists/list-presets';
 import { localToday } from './finance-logic';
 import {
   Account,
+  AccountSavings,
+  BudgetsData,
   Category,
   Movement,
   MovementHistoryEntry,
@@ -26,6 +28,8 @@ import {
 import { FinanceService } from './finance.service';
 import { FinanceStore } from './finance.store';
 import { amountForInput, parseAmount } from './movement-logic';
+import { budgetCrossing, savingsReminder } from './savings-logic';
+import { ToastService } from '../../shared/toast.service';
 
 /** null: cerrado; movement null: agregar uno nuevo */
 export interface MovementRequest {
@@ -54,6 +58,7 @@ export class MovementDialogComponent {
   private readonly finance = inject(FinanceService);
   private readonly store = inject(FinanceStore);
   private readonly i18n = inject(I18n);
+  private readonly toast = inject(ToastService);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly amountInput = viewChild<ElementRef<HTMLInputElement>>('amountInput');
 
@@ -68,6 +73,9 @@ export class MovementDialogComponent {
   protected readonly suggestions = signal<MovementSuggestion[]>([]);
   protected readonly history = signal<MovementHistoryEntry[] | null>(null);
   protected readonly addedCount = signal(0);
+  protected readonly savingsProjectId = signal('');
+  /** Presupuestos del mes (para avisar al cruzar el 80 o el 100 %) */
+  private readonly budgets = signal<BudgetsData | null>(null);
   private suggestTimer: ReturnType<typeof setTimeout> | undefined;
 
   protected readonly movement = computed(() => this.request()?.movement ?? null);
@@ -100,6 +108,31 @@ export class MovementDialogComponent {
     const current = this.movement()?.category?.id;
     return this.categories().filter((c) => !c.disabled || c.id === current);
   });
+  /** Proyectos con ahorro en esta cuenta, más el del movimiento aunque ya no le quede */
+  protected readonly savingsOptions = computed(() => {
+    const options = [...this.account().savings.projects];
+    const current = this.movement()?.savings;
+    if (current && !options.some((p) => p.id === current.id))
+      options.push({
+        id: current.id,
+        name: current.name ?? '',
+        icon: current.icon ?? '🎯',
+        amount: 0,
+      });
+    return options;
+  });
+  protected readonly showSavings = computed(
+    () => !this.plain() && this.kind() === 'out' && this.savingsOptions().length > 0,
+  );
+  /** "Recuerda que 8.000 son de ahorro…": la salida se come lo apartado */
+  protected readonly reminder = computed(() => {
+    if (this.plain() || this.kind() !== 'out' || this.savingsProjectId() || this.readOnly())
+      return null;
+    const m = this.movement();
+    const own = m?.kind === 'out' && !m.savings ? m.amount : 0;
+    return savingsReminder(this.account().savings, this.amount(), own);
+  });
+
   protected readonly canSave = computed(() => {
     const amount = this.amount();
     if (this.busy() || !this.description().trim() || !this.date() || amount === null) return false;
@@ -137,7 +170,57 @@ export class MovementDialogComponent {
     this.description.set(m?.description ?? '');
     this.categoryId.set(m?.category?.id ?? '');
     this.date.set(keep?.date ?? m?.date ?? localToday());
+    this.savingsProjectId.set(m?.savings?.id ?? '');
     if (!m && !keep) this.addedCount.set(0);
+    if (!keep) this.loadBudgets();
+  }
+
+  /** Las cuentas privadas no cuentan en el presupuesto del grupo */
+  private loadBudgets(): void {
+    const account = this.account();
+    if (account.viewMode === 'private' || account.permissions.supervision)
+      return this.budgets.set(null);
+    this.store
+      .budgets(account.familyId)
+      .then((b) => this.budgets.set(b))
+      .catch(() => this.budgets.set(null));
+  }
+
+  protected reminderDetail(projects: AccountSavings['projects']): string {
+    return projects.map((p) => `${p.name} ${this.money(p.amount)}`).join(', ');
+  }
+
+  /** Aviso en la app al cruzar el 80 o el 100 % del presupuesto del mes (los correos los manda el servidor) */
+  private budgetToast(previous: Movement | null, amount: number): void {
+    const data = this.budgets();
+    if (!data || this.kind() !== 'out' || this.date().slice(0, 7) !== data.month) return;
+    const budget = data.budgets.find((b) => b.categoryId === this.categoryId());
+    if (!budget) return;
+    const before =
+      previous?.kind === 'out' &&
+      previous.category?.id === budget.categoryId &&
+      previous.date.slice(0, 7) === data.month
+        ? previous.amount
+        : 0;
+    const add = Math.round((amount - before) * 100) / 100;
+    const crossed = budgetCrossing(budget, add);
+    const spent = Math.round((budget.spent + add) * 100) / 100;
+    this.budgets.set({
+      ...data,
+      budgets: data.budgets.map((b) =>
+        b === budget ? { ...b, spent, pct: Math.round((spent / b.limit) * 100) } : b,
+      ),
+    });
+    if (!crossed) return;
+    this.toast.show(
+      this.i18n.t(crossed === 100 ? 'finance.budget.toast100' : 'finance.budget.toast80', {
+        category: budget.name,
+        pct: Math.round((spent / budget.limit) * 100),
+        spent: this.money(spent),
+        limit: this.money(budget.limit),
+      }),
+      { durationMs: 8000 },
+    );
   }
 
   protected money(n: number): string {
@@ -212,6 +295,9 @@ export class MovementDialogComponent {
             date: this.date(),
             description: this.description().trim(),
             categoryId: this.categoryId(),
+            ...(this.kind() === 'out' && this.savingsProjectId()
+              ? { savingsProjectId: this.savingsProjectId() }
+              : {}),
           },
           this.category(),
         );
@@ -232,10 +318,12 @@ export class MovementDialogComponent {
             date: this.date(),
             description: this.description().trim(),
             categoryId: this.categoryId(),
+            savingsProjectId: this.kind() === 'out' ? this.savingsProjectId() || null : null,
           },
           this.category(),
         );
       }
+      if (!m || (!m.transfer && m.kind !== 'adjust')) this.budgetToast(m, amount);
       this.saved.emit({ keepOpen: keepOpen && !m });
       if (keepOpen && !m) {
         this.addedCount.update((n) => n + 1);
@@ -307,7 +395,7 @@ export class MovementDialogComponent {
     };
     return Object.entries(h.changes).map(([field, [from, to]]) => ({
       field: this.i18n.t(
-        `finance.movements.fields.${field as 'kind' | 'amount' | 'date' | 'description' | 'category'}`,
+        `finance.movements.fields.${field as 'kind' | 'amount' | 'date' | 'description' | 'category' | 'savings'}`,
       ),
       from: show(field, from),
       to: show(field, to),

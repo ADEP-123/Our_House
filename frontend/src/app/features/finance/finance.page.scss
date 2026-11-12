@@ -305,3 +305,30 @@
 .tab--summary {
   margin-left: auto;
 }
+
+/* Saldo · Ahorro · Disponible */
+.savings-facts {
+  display: flex;
+  gap: 16px;
+  margin: 8px 0 0;
+  font-size: 0.875rem;
+
+  dt {
+    color: var(--oh-text-muted);
+    font-size: 0.75rem;
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.savings-list {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8125rem;
+  color: var(--oh-text-muted);
+  text-decoration: none;
+}
