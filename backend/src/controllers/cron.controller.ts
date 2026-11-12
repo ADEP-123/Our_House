@@ -1,5 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import type { Request, Response } from 'express';
+import { scheduledService } from '../services/scheduled.service.js';
 import { env } from '../config/env.js';
 import { HttpError } from '../lib/http-error.js';
 import { calendarService } from '../services/calendar.service.js';
@@ -20,8 +21,13 @@ export const cronController = {
     // Lo que se repite sin fecha vuelve a pendiente cuando le toca
     await reopenDueItems();
     const reminders = await remindersService.run();
+    // Finanzas: movimientos programados que tocan hoy y sus avisos previos
+    const scheduled = await scheduledService.run().catch((err) => {
+      console.error('[programados] proceso', err);
+      return { scheduled: 0 };
+    });
     // De paso, el calendario: borra eventos de tareas eliminadas y reintenta lo que falló
     await calendarService.reconcile().catch((err) => console.error('[calendario] repaso', err));
-    res.json(reminders);
+    res.json({ ...reminders, ...scheduled });
   },
 };
