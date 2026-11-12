@@ -15,6 +15,8 @@ export interface MovementRow {
   transfer_id: string | null;
   /** Salida pagada con el ahorro de un proyecto */
   savings_project_id: string | null;
+  /** Creado por un movimiento programado */
+  schedule_id: string | null;
   created_by: string | null;
   updated_by: string | null;
   deleted_at: Date | null;

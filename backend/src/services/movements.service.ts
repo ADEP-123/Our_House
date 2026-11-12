@@ -36,6 +36,8 @@ function toMovementView(m: MovementViewRow, prefix: string, visible: Set<string>
     category: m.category_id ? { id: m.category_id, name: m.category_name, icon: m.category_icon, color: m.category_color } : null,
     createdBy: m.created_by ? { id: m.created_by, nickname: m.created_by_nickname } : null,
     edited: m.edited,
+    /** Creado por un movimiento programado */
+    scheduled: !!m.schedule_id,
     /** Pagado con el ahorro de un proyecto */
     savings: m.savings_project_id ? { id: m.savings_project_id, name: m.savings_project_name, icon: m.savings_project_icon } : null,
     balance: round2(m.balance),
