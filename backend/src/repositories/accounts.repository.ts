@@ -68,8 +68,8 @@ const VIEW_SELECT = `
 
 export const accountsRepository = {
   /** Todas las cuentas del grupo (activas o archivadas); quién ve cada una lo decide el servicio. */
-  async listForFamily(familyId: string, userId: string, archived: boolean): Promise<AccountViewRow[]> {
-    const { rows } = await db().query<AccountViewRow>(
+  async listForFamily(familyId: string, userId: string, archived: boolean, conn: Db = db()): Promise<AccountViewRow[]> {
+    const { rows } = await conn.query<AccountViewRow>(
       `${VIEW_SELECT} WHERE a.family_id = $1 AND (a.archived_at IS NOT NULL) = $3 ORDER BY a.created_at`,
       [familyId, userId, archived],
     );

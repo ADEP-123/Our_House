@@ -59,8 +59,8 @@ export const categoriesRepository = {
     );
   },
 
-  async update(id: string, data: { name?: string; icon?: string; color?: string; disabled?: boolean }): Promise<void> {
-    await db().query(
+  async update(id: string, data: { name?: string; icon?: string; color?: string; disabled?: boolean }, conn: Db = db()): Promise<void> {
+    await conn.query(
       `UPDATE movement_categories SET
          name = COALESCE($2, name),
          icon = COALESCE($3, icon),

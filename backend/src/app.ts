@@ -10,7 +10,9 @@ export function createApp(): express.Express {
   app.disable('x-powered-by');
   app.set('trust proxy', 1); // detrás del proxy de Vercel
   app.use(helmet());
-  app.use(express.json({ limit: '1mb' }));
+  // La importación de finanzas trae su propio límite (más alto)
+  const json = express.json({ limit: '1mb' });
+  app.use((req, res, next) => (req.path.endsWith('/import') ? next() : json(req, res, next)));
   app.use(cookieParser());
 
   app.use('/api', apiRouter);
