@@ -29,6 +29,9 @@
         <a class="oh-btn oh-btn--text" routerLink="/finanzas/ahorros">{{
           'finance.savings.link' | t
         }}</a>
+        <a class="oh-btn oh-btn--text" routerLink="/finanzas/programados">{{
+          'finance.scheduled.link' | t
+        }}</a>
         <a class="oh-btn oh-btn--text" routerLink="/finanzas/importar">{{
           'finance.io.import' | t
         }}</a>
@@ -202,6 +205,22 @@
                 </div>
               }
             </header>
+
+            <!-- Programados de esta cuenta: cuántos hay y el próximo -->
+            @if (scheduledOf(a); as sc) {
+              <a
+                class="scheduled-line"
+                routerLink="/finanzas/programados"
+                [queryParams]="{ cuenta: a.id }"
+              >
+                🔁 {{ sc.text }}
+                @if (sc.pending) {
+                  <span class="pending-tag">{{
+                    'finance.scheduled.pendingTag' | t: { n: sc.pending }
+                  }}</span>
+                }
+              </a>
+            }
 
             <ul class="access">
               <li><span aria-hidden="true">👁</span> {{ viewText(a) }}</li>
