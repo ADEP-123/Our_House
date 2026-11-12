@@ -35,7 +35,7 @@ describe('notificaciones por correo', () => {
   it('respeta la preferencia de cada persona', async () => {
     const { familyId, users, mail } = await setupFamily(['ana', 'beto']);
     const res = await users.beto!.agent.patch('/api/me/settings').send({ newLists: false }).expect(200);
-    expect(res.body.user.notifications).toEqual({ newLists: false, assignments: true, reminders: true, secretViews: true, finance: true });
+    expect(res.body.user.notifications).toEqual({ newLists: false, assignments: true, reminders: true, secretViews: true, finance: true, scheduled: true });
     expect(await after(mail, () => createList(users.ana!, familyId))).toEqual([]);
 
     await users.beto!.agent.patch('/api/me/settings').send({}).expect(400);
