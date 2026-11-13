@@ -39,6 +39,8 @@ export interface MovementViewRow extends MovementRow {
   counterpart_number: number | null;
   savings_project_name: string | null;
   savings_project_icon: string | null;
+  /** Creado con "Registrar pago" de una lista de compras */
+  purchase: boolean;
 }
 
 export interface HistoryRow {
@@ -66,6 +68,7 @@ export const movementsRepository = {
               ta.prefix AS counterpart_prefix, t.number AS counterpart_number,
               sp.name AS savings_project_name, sp.icon AS savings_project_icon,
               EXISTS (SELECT 1 FROM account_movement_history h WHERE h.movement_id = m.id AND h.action = 'updated') AS edited,
+              EXISTS (SELECT 1 FROM list_payments lp WHERE lp.movement_id = m.id) AS purchase,
               sum(${SIGNED}) OVER (ORDER BY m.date, m.created_at, m.number ROWS UNBOUNDED PRECEDING) AS balance
          FROM account_movements m
          LEFT JOIN movement_categories c ON c.id = m.category_id

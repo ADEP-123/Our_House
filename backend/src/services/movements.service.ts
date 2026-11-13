@@ -38,6 +38,7 @@ function toMovementView(m: MovementViewRow, prefix: string, visible: Set<string>
     edited: m.edited,
     /** Creado por un movimiento programado */
     scheduled: !!m.schedule_id,
+    purchase: !!m.purchase,
     /** Pagado con el ahorro de un proyecto */
     savings: m.savings_project_id ? { id: m.savings_project_id, name: m.savings_project_name, icon: m.savings_project_icon } : null,
     balance: round2(m.balance),
