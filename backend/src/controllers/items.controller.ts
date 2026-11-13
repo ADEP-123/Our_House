@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { currentUserId } from '../middlewares/auth.js';
 import { itemsService } from '../services/items.service.js';
+import { listPaymentsService } from '../services/list-payments.service.js';
 
 const ids = (req: Request) => ({ listId: String(req.params.listId), itemId: String(req.params.itemId) });
 
@@ -27,6 +28,15 @@ export const itemsController = {
   async purchase(req: Request, res: Response): Promise<void> {
     const { listId, itemId } = ids(req);
     res.json({ item: await itemsService.purchase(listId, itemId, currentUserId(req), req.body) });
+  },
+
+  /** Registrar pago (listas de compras): lo pendiente y los últimos pagos */
+  async payments(req: Request, res: Response): Promise<void> {
+    res.json(await listPaymentsService.pending(ids(req).listId, currentUserId(req)));
+  },
+
+  async registerPayment(req: Request, res: Response): Promise<void> {
+    res.status(201).json(await listPaymentsService.register(ids(req).listId, currentUserId(req), req.body));
   },
 
   async assignedToMe(req: Request, res: Response): Promise<void> {

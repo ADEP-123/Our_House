@@ -49,7 +49,8 @@ async function getForLeader(id: string, userId: string) {
   return { category, role };
 }
 
-async function seedIfNeeded(familyId: string, userId: string): Promise<void> {
+/** Las categorías iniciales se crean la primera vez que alguien las necesita (finanzas o un pago de una lista) */
+export async function seedIfNeeded(familyId: string, userId: string): Promise<void> {
   const family = await familiesRepository.findById(familyId);
   if (!family || family.categories_seeded) return;
   const locale = (await usersRepository.findById(userId))?.locale ?? 'es';
