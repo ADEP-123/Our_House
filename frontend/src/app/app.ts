@@ -5,11 +5,12 @@ import { ToastComponent } from './shared/toast.component';
 import { AppUpdateService } from './core/offline/app-update.service';
 import { ThemeService } from './core/theme/theme.service';
 import { OverdueBadgeService } from './features/tasks/overdue-badge.service';
+import { TourOverlayComponent } from './features/tutorial/tour-overlay.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, ConfirmDialogComponent, ToastComponent],
-  template: '<router-outlet /><oh-confirm-dialog /><oh-toast />',
+  imports: [RouterOutlet, ConfirmDialogComponent, ToastComponent, TourOverlayComponent],
+  template: '<router-outlet /><oh-confirm-dialog /><oh-toast /><oh-tour-overlay />',
 })
 export class App {
   // Aplica la paleta del usuario desde el arranque

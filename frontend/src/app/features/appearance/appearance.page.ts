@@ -17,6 +17,9 @@ import {
 } from '../../core/theme/patterns';
 import { effectiveTheme, seasonFor, seasonUntil } from '../../core/theme/seasons';
 import { IconPickerComponent } from '../lists/icon-picker.component';
+import { PracticeMode } from '../tutorial/practice-mode.service';
+import { TutorialButtonComponent } from '../tutorial/tutorial-button.component';
+import { TutorialService } from '../tutorial/tutorial.service';
 import {
   CLASSIC_PRESETS,
   ClassicId,
@@ -44,11 +47,19 @@ import {
 
 @Component({
   selector: 'oh-appearance-page',
-  imports: [TPipe, IconPickerComponent],
+  imports: [TPipe, IconPickerComponent, TutorialButtonComponent],
   templateUrl: './appearance.page.html',
   styleUrl: './appearance.page.scss',
 })
 export class AppearancePage {
+  /** En la práctica del tutorial esta misma pantalla se usa sin guardar nada */
+  protected readonly practice = inject(PracticeMode);
+
+  constructor() {
+    // Primera vez en Apariencia: invita al tutorial de la cuenta
+    if (!this.practice.active()) inject(TutorialService).offer('account');
+  }
+
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
   private readonly i18n = inject(I18n);

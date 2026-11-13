@@ -195,6 +195,14 @@ Cómo funciona: cada tarea con fecha aparece en el calendario "Our House" de su 
 - **Dependencias nuevas del frontend:** `read-excel-file` y `write-excel-file`. Se cargan solo al importar o exportar, así que no hacen más lenta la app.
 - **Permisos de las cuentas:** quien crea una cuenta decide quién la ve (todo el grupo, personas elegidas o solo yo) y quién puede agregar movimientos. Los líderes ven las cuentas privadas de los supervisados en modo lectura, después de un aviso.
 
+## 13. Tutoriales (fase 8)
+
+- **Migración:** `027_tutoriales` agrega `users.tutorials` (jsonb). La aplica el workflow **Migraciones** al llegar a `main`. Sin variables nuevas. Si otra rama también trae una `027_…` con otro nombre no hay problema: las migraciones se registran por nombre.
+- **Qué hay:** tres tutoriales cortos (Listas, Tu cuenta y Google Calendar) con pasos opcionales al final. Se ofrecen la primera vez que la persona entra a Listas, a Apariencia o Perfil, y a la sección de Google Calendar del Perfil (esta última solo si el servidor tiene Google configurado). Saltar cuenta como visto. El botón «?» de cada módulo los vuelve a abrir. Si alguien sale a la mitad, la próxima vez se le ofrece seguir donde quedó.
+- **Nada de la práctica se guarda:** cada tutorial abre una copia de la pantalla (`/tutorial/listas`, `/tutorial/cuenta`, `/tutorial/calendario`). Las listas usan un almacén en memoria; los cambios de la cuenta (tema, foto, idioma, avisos) se responden en el navegador y al salir la cuenta vuelve a como estaba. Además, mientras dura la práctica el navegador rechaza cualquier otro cambio hacia la API (`PRACTICE_MODE`). Lo único que se guarda es el estado de cada tutorial: `PUT /api/me/tutorials/:id` con `{ state: 'done' | 'skipped' | 'progress', step? }`.
+- **Google Calendar en la práctica:** la conexión se simula (botón, permiso y una vista previa del calendario). Al final, «Conectar de verdad» lleva al Perfil.
+- **Primeros pasos:** tarjeta en Inicio (crear la primera lista, elegir un tema, conectar Google Calendar si está disponible) que se marca sola, desaparece al completarse y se puede ocultar.
+
 ## Desarrollo local
 
 ```bash

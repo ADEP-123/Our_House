@@ -37,6 +37,10 @@ export const profileController = {
     res.status(202).json(await verificationCodesService.request(currentUserId(req), req.body.purpose));
   },
 
+  async setTutorial(req: Request, res: Response): Promise<void> {
+    res.json({ user: await profileService.setTutorial(currentUserId(req), String(req.params.tutorial), req.body) });
+  },
+
   async setSettings(req: Request, res: Response): Promise<void> {
     res.json({ user: await profileService.setSettings(currentUserId(req), req.body) });
   },
