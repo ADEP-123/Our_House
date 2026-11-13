@@ -6,6 +6,8 @@ import { TPipe } from '../../core/i18n/t.pipe';
 import { SyncStatus } from '../../core/offline/sync-status.service';
 import { ConfirmService } from '../../shared/confirm.service';
 import { FamiliesService } from '../families/families.service';
+import { TutorialButtonComponent } from '../tutorial/tutorial-button.component';
+import { TutorialService } from '../tutorial/tutorial.service';
 import { ListCardComponent } from './list-card.component';
 import { LIST_TYPES, ListType } from './list-presets';
 import { FamilyLists } from './lists.models';
@@ -13,7 +15,7 @@ import { ListsStore } from './lists.store';
 
 @Component({
   selector: 'oh-lists-page',
-  imports: [RouterLink, TPipe, ListCardComponent],
+  imports: [RouterLink, TPipe, ListCardComponent, TutorialButtonComponent],
   templateUrl: './lists.page.html',
   styleUrl: './lists.page.scss',
 })
@@ -39,6 +41,9 @@ export class ListsPage implements OnInit {
   });
 
   constructor() {
+    // Primera vez en Listas: invita al tutorial
+    inject(TutorialService).offer('lists');
+
     // Recarga al cambiar de grupo activo o entre activas / archivadas
     effect(() => {
       const family = this.family();

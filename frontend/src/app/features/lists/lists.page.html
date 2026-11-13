@@ -19,6 +19,7 @@
       }
     </div>
     <div class="head-actions">
+      <oh-tutorial-button tutorial="lists" />
       @if (family()?.role === 'leader') {
         <a class="oh-btn oh-btn--text" [routerLink]="['/familias', family()!.id, 'bitacora']">{{ 'activity.title' | t }}</a>
       }
