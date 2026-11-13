@@ -29,6 +29,8 @@ export function toUserView(user: UserRow) {
     },
     /** Ya no mostrar el aviso de conectar Google Calendar al poner una fecha */
     calendarPromptDismissed: user.calendar_prompt_dismissed,
+    /** Tutoriales vistos, saltados o a medias */
+    tutorials: user.tutorials,
   };
 }
 
