@@ -219,6 +219,9 @@
                   @if (m.scheduled) {
                     <span class="edited">🔁 {{ 'finance.scheduled.tag' | t }}</span>
                   }
+                  @if (m.purchase) {
+                    <span class="edited">🛒 {{ 'finance.movements.purchaseTag' | t }}</span>
+                  }
                   @if (m.savings; as s) {
                     <span class="edited link">{{
                       'finance.savings.paidWith'
