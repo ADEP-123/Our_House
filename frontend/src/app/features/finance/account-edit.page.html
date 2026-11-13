@@ -1,0 +1,257 @@
+<a class="back" routerLink="/finanzas" [queryParams]="id() ? { cuenta: id() } : {}"
+  >← {{ 'finance.form.back' | t }}</a
+>
+
+<div class="page">
+  <header class="head">
+    <h1>{{ (id() ? 'finance.form.editTitle' : 'finance.form.createTitle') | t }}</h1>
+    @if (!id()) {
+      @if ((families.families()?.length ?? 0) > 1) {
+        <label class="family-select">
+          <span class="oh-sr-only">{{ 'finance.form.group' | t }}</span>
+          <select class="oh-input" (change)="familyId.set($any($event.target).value)">
+            @for (f of families.families(); track f.id) {
+              <option [value]="f.id" [selected]="f.id === familyId()">{{ f.name }}</option>
+            }
+          </select>
+        </label>
+      } @else if (family(); as f) {
+        <p class="oh-muted">{{ 'finance.form.in' | t: { family: f.name } }}</p>
+      }
+    }
+  </header>
+
+  @if (loading()) {
+    <p class="oh-muted" role="status">{{ 'common.loading' | t }}</p>
+  } @else if (id() && !account()) {
+    @if (error(); as err) {
+      <p class="oh-alert is-error" role="alert">{{ err }}</p>
+    }
+  } @else {
+    <form class="oh-panel oh-form" [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <div class="oh-field">
+        <label for="account-name">{{ 'finance.form.name' | t }}</label>
+        <input
+          id="account-name"
+          class="oh-input"
+          formControlName="name"
+          maxlength="60"
+          autocomplete="off"
+          [placeholder]="'finance.form.namePlaceholder' | t"
+        />
+        @if (fieldError('name'); as e) {
+          <p class="oh-error">{{ e }}</p>
+        }
+      </div>
+
+      <div class="oh-field">
+        <label for="account-description">{{ 'finance.form.description' | t }}</label>
+        <textarea
+          id="account-description"
+          class="oh-input"
+          rows="2"
+          maxlength="280"
+          formControlName="description"
+          [placeholder]="'finance.form.descriptionPlaceholder' | t"
+        ></textarea>
+      </div>
+
+      <fieldset>
+        <legend>{{ 'finance.form.kind' | t }}</legend>
+        <div class="kinds">
+          @for (k of kinds; track k.id) {
+            <label class="kind" [class.on]="kind() === k.id">
+              <input type="radio" class="oh-sr-only" formControlName="kind" [value]="k.id" />
+              <span class="kind-icon" aria-hidden="true">{{ k.icon }}</span>
+              <span>{{ kindLabel(k.id) }}</span>
+            </label>
+          }
+        </div>
+      </fieldset>
+
+      <div class="row">
+        <div class="oh-field prefix">
+          <label for="account-prefix">{{ 'finance.form.prefix' | t }}</label>
+          <input
+            id="account-prefix"
+            class="oh-input"
+            maxlength="4"
+            autocomplete="off"
+            autocapitalize="characters"
+            [value]="form.controls.prefix.value"
+            (input)="onPrefix($event)"
+            aria-describedby="prefix-hint"
+          />
+          <p id="prefix-hint" class="oh-hint">
+            {{ 'finance.form.prefixHint' | t: { example: example() } }}
+          </p>
+          @if (fieldError('prefix'); as e) {
+            <p class="oh-error">{{ e }}</p>
+          }
+        </div>
+
+        @if (kind() === 'credit') {
+          <div class="oh-field">
+            <label for="account-limit">{{ 'finance.form.creditLimit' | t }}</label>
+            <input
+              id="account-limit"
+              class="oh-input"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              step="0.01"
+              formControlName="creditLimit"
+            />
+            @if (fieldError('creditLimit'); as e) {
+              <p class="oh-error">{{ e }}</p>
+            }
+          </div>
+        } @else {
+          <div class="oh-field">
+            <label for="account-threshold">{{ 'finance.form.lowBalance' | t }}</label>
+            <input
+              id="account-threshold"
+              class="oh-input"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              step="0.01"
+              formControlName="lowBalanceThreshold"
+              aria-describedby="threshold-hint"
+            />
+            <p id="threshold-hint" class="oh-hint">{{ 'finance.form.lowBalanceHint' | t }}</p>
+            @if (fieldError('lowBalanceThreshold'); as e) {
+              <p class="oh-error">{{ e }}</p>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="row">
+        <div class="oh-field">
+          <label for="account-opening">{{
+            (kind() === 'credit' ? 'finance.form.openingDebt' : 'finance.form.opening') | t
+          }}</label>
+          <input
+            id="account-opening"
+            class="oh-input"
+            type="number"
+            inputmode="decimal"
+            step="0.01"
+            formControlName="openingAmount"
+            aria-describedby="opening-hint"
+          />
+          <p id="opening-hint" class="oh-hint">
+            {{
+              (kind() === 'credit' ? 'finance.form.openingDebtHint' : 'finance.form.openingHint')
+                | t
+            }}
+          </p>
+          @if (fieldError('opening.amount'); as e) {
+            <p class="oh-error">{{ e }}</p>
+          }
+        </div>
+        <div class="oh-field">
+          <label for="account-opening-date">{{ 'finance.form.openingDate' | t }}</label>
+          <input
+            id="account-opening-date"
+            class="oh-input"
+            type="date"
+            formControlName="openingDate"
+          />
+        </div>
+      </div>
+
+      <fieldset>
+        <legend>{{ 'finance.form.view' | t }}</legend>
+        <div class="segmented">
+          @for (m of viewModes; track m.id) {
+            <label [class.on]="viewMode() === m.id">
+              <input type="radio" class="oh-sr-only" formControlName="viewMode" [value]="m.id" />
+              {{ m.label | t }}
+            </label>
+          }
+        </div>
+        @if (viewMode() === 'members') {
+          <div class="people">
+            <p class="oh-hint">{{ 'finance.form.pickPeople' | t }}</p>
+            @for (m of others(); track m.userId) {
+              <label class="person">
+                <input
+                  type="checkbox"
+                  [checked]="viewers().has(m.userId)"
+                  (change)="toggleViewer(m.userId)"
+                />
+                <span>{{ m.nickname }}</span>
+              </label>
+            } @empty {
+              <p class="oh-hint">{{ 'finance.form.noOthers' | t }}</p>
+            }
+          </div>
+        }
+        @if (viewMode() === 'private' && family()?.role === 'supervised') {
+          <p class="oh-alert" role="note">🔎 {{ 'finance.form.supervisedNotice' | t }}</p>
+        }
+      </fieldset>
+
+      <fieldset>
+        <legend>{{ 'finance.form.edit' | t }}</legend>
+        @if (viewMode() === 'private') {
+          <p class="oh-hint">{{ 'finance.form.privateNote' | t }}</p>
+        } @else {
+          <div class="segmented">
+            <label [class.on]="editMode() === 'roles'">
+              <input type="radio" class="oh-sr-only" formControlName="editMode" value="roles" />
+              {{ 'finance.form.editRoles' | t }}
+            </label>
+            <label [class.on]="editMode() === 'members'">
+              <input type="radio" class="oh-sr-only" formControlName="editMode" value="members" />
+              {{ 'finance.form.editMembers' | t }}
+            </label>
+          </div>
+          <div class="people">
+            @if (editMode() === 'roles') {
+              @for (r of roles; track r) {
+                <label class="person">
+                  <input type="checkbox" [checked]="editRoles().has(r)" (change)="toggleRole(r)" />
+                  <span>{{ roleLabel(r) }}</span>
+                </label>
+              }
+            } @else {
+              @for (m of others(); track m.userId) {
+                <label class="person">
+                  <input
+                    type="checkbox"
+                    [checked]="editors().has(m.userId)"
+                    (change)="toggleEditor(m.userId)"
+                  />
+                  <span>{{ m.nickname }}</span>
+                </label>
+              } @empty {
+                <p class="oh-hint">{{ 'finance.form.noOthers' | t }}</p>
+              }
+            }
+          </div>
+          <p class="oh-hint">{{ 'finance.form.editHint' | t }}</p>
+        }
+      </fieldset>
+
+      @if (error(); as err) {
+        <p class="oh-alert is-error" role="alert">{{ err }}</p>
+      }
+
+      <div class="actions">
+        <button
+          class="oh-btn oh-btn--filled"
+          type="submit"
+          [disabled]="form.invalid || busy() || !familyId()"
+        >
+          {{ (id() ? 'finance.form.save' : 'finance.form.create') | t }}
+        </button>
+        <button class="oh-btn oh-btn--text" type="button" (click)="cancel()">
+          {{ 'finance.form.cancel' | t }}
+        </button>
+      </div>
+    </form>
+  }
+</div>

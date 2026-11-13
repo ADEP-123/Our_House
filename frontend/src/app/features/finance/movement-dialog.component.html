@@ -1,0 +1,252 @@
+<dialog #dialog (close)="onClosed()" aria-labelledby="movement-title">
+  @if (request()) {
+    <form (submit)="$event.preventDefault(); save(false)" novalidate>
+      <header class="top">
+        <h2 id="movement-title">
+          @if (movement(); as m) {
+            <span class="code">{{ m.code }}</span>
+            {{ (readOnly() ? 'finance.movements.view' : 'finance.movements.edit') | t }}
+          } @else {
+            {{ 'finance.movements.add' | t }}
+          }
+        </h2>
+        <p class="account">{{ account().name }}</p>
+      </header>
+
+      @if (movement()?.kind === 'opening') {
+        <p class="oh-hint">{{ 'finance.movements.openingHint' | t }}</p>
+      } @else if (readOnly()) {
+        <p class="oh-hint">{{ 'finance.readOnly' | t }}</p>
+      }
+
+      @if (isTransfer()) {
+        <p class="transfer-info">⇄ {{ transferText() }}</p>
+        @if (!readOnly()) {
+          <p class="oh-hint">{{ 'finance.transfers.bothSides' | t }}</p>
+        }
+      }
+
+      @if (!plain()) {
+        <div class="kind" role="radiogroup" [attr.aria-label]="'finance.movements.kind' | t">
+          <button
+            type="button"
+            role="radio"
+            class="out"
+            [attr.aria-checked]="kind() === 'out'"
+            [disabled]="readOnly()"
+            (click)="kind.set('out')"
+          >
+            − {{ 'finance.movements.kindOut' | t }}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            class="in"
+            [attr.aria-checked]="kind() === 'in'"
+            [disabled]="readOnly()"
+            (click)="kind.set('in')"
+          >
+            + {{ 'finance.movements.kindIn' | t }}
+          </button>
+        </div>
+      }
+
+      <div class="oh-field">
+        <label for="movement-amount">{{
+          (isAdjust() ? 'finance.movements.adjustAmount' : 'finance.movements.amount') | t
+        }}</label>
+        <input
+          #amountInput
+          id="movement-amount"
+          class="oh-input amount"
+          [class.in]="kind() === 'in' && !isAdjust()"
+          inputmode="decimal"
+          autocomplete="off"
+          placeholder="0,00"
+          [readOnly]="readOnly()"
+          [value]="amountText()"
+          (input)="amountText.set($any($event.target).value)"
+        />
+        @if (amountText() && amount() === null) {
+          <p class="oh-error">{{ 'errors.MOVEMENT_AMOUNT_INVALID' | t }}</p>
+        }
+      </div>
+
+      <div class="oh-field suggest">
+        <label for="movement-description">{{ 'finance.movements.description' | t }}</label>
+        <input
+          id="movement-description"
+          class="oh-input"
+          maxlength="200"
+          autocomplete="off"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-controls="movement-suggestions"
+          [attr.aria-expanded]="suggestions().length > 0"
+          [readOnly]="readOnly()"
+          [placeholder]="'finance.movements.descriptionPlaceholder' | t"
+          [value]="description()"
+          (input)="onDescription($any($event.target).value)"
+          (keydown.escape)="closeSuggestions($event)"
+        />
+        @if (suggestions().length) {
+          <ul id="movement-suggestions" class="suggestions" role="listbox">
+            @for (s of suggestions(); track s.description) {
+              <li role="option" aria-selected="false">
+                <button type="button" (click)="pick(s)">
+                  <span>{{ s.description }}</span>
+                  @if (s.categoryId) {
+                    <small>{{ categoryLabel(s.categoryId) }}</small>
+                  }
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <div class="row">
+        @if (!plain()) {
+          <div class="oh-field">
+            <label for="movement-category">{{ 'finance.movements.category' | t }}</label>
+            <select
+              id="movement-category"
+              class="oh-input"
+              [disabled]="readOnly()"
+              (change)="categoryId.set($any($event.target).value)"
+            >
+              <option value="" [selected]="!categoryId()" disabled>
+                {{ 'finance.movements.chooseCategory' | t }}
+              </option>
+              @for (c of categoryOptions(); track c.id) {
+                <option [value]="c.id" [selected]="c.id === categoryId()">
+                  {{ iconOf(c.icon) }} {{ c.name
+                  }}{{ c.disabled ? ' (' + ('finance.categories.disabledTag' | t) + ')' : '' }}
+                </option>
+              }
+            </select>
+          </div>
+        }
+        <div class="oh-field">
+          <label for="movement-date">{{ 'finance.movements.date' | t }}</label>
+          <input
+            id="movement-date"
+            class="oh-input"
+            type="date"
+            [readOnly]="readOnly()"
+            [value]="date()"
+            (input)="date.set($any($event.target).value)"
+          />
+        </div>
+      </div>
+
+      <!-- Pagar con el ahorro de un proyecto (solo salidas en cuentas con ahorro) -->
+      @if (showSavings()) {
+        <div class="oh-field">
+          <label for="movement-savings">{{ 'finance.savings.payWith' | t }}</label>
+          <select
+            id="movement-savings"
+            class="oh-input"
+            [disabled]="readOnly()"
+            (change)="savingsProjectId.set($any($event.target).value)"
+          >
+            <option value="" [selected]="!savingsProjectId()">
+              {{ 'finance.savings.payWithNone' | t }}
+            </option>
+            @for (p of savingsOptions(); track p.id) {
+              <option [value]="p.id" [selected]="p.id === savingsProjectId()">
+                {{ iconOf(p.icon) }} {{ p.name }} · {{ money(p.amount) }}
+              </option>
+            }
+          </select>
+        </div>
+      }
+      @if (reminder(); as r) {
+        <p class="oh-alert savings-reminder" role="status">
+          💡
+          {{
+            'finance.savings.reminder'
+              | t
+                : {
+                    saved: money(r.saved),
+                    detail: reminderDetail(r.projects),
+                    available: money(r.available),
+                  }
+          }}
+        </p>
+      }
+
+      @if (error(); as e) {
+        <p class="oh-alert is-error" role="alert">{{ e }}</p>
+      }
+      @if (addedCount()) {
+        <p class="oh-ok" role="status">
+          {{ 'finance.movements.addedCount' | t: { n: addedCount() } }}
+        </p>
+      }
+
+      @if (movement(); as m) {
+        <section class="history">
+          @if (history(); as h) {
+            <h3>{{ 'finance.movements.history.title' | t }}</h3>
+            <ol>
+              @for (entry of h; track entry.id) {
+                <li>
+                  <span class="who">{{ actionLabel(entry) }}</span>
+                  <span class="when">{{ when(entry.at) }}</span>
+                  @for (c of changeLines(entry); track c.field) {
+                    <span class="change">{{ c.field }}: {{ c.from }} → {{ c.to }}</span>
+                  }
+                </li>
+              }
+            </ol>
+          } @else {
+            <button type="button" class="oh-btn oh-btn--text" (click)="loadHistory()">
+              {{ 'finance.movements.history.show' | t }}
+              @if (m.createdBy) {
+                · {{ 'finance.movements.createdByName' | t: { name: m.createdBy.nickname ?? '' } }}
+              }
+            </button>
+          }
+        </section>
+      }
+
+      <div class="actions">
+        @if (!readOnly()) {
+          @if (movement()) {
+            <button
+              type="button"
+              class="oh-btn oh-btn--text delete"
+              [disabled]="busy()"
+              (click)="remove()"
+            >
+              {{ 'finance.actions.delete' | t }}
+            </button>
+          }
+          <span class="spacer"></span>
+          <button type="button" class="oh-btn oh-btn--text" (click)="close()">
+            {{ 'finance.cancel' | t }}
+          </button>
+          @if (!movement()) {
+            <button
+              type="button"
+              class="oh-btn oh-btn--tonal"
+              [disabled]="!canSave()"
+              (click)="save(true)"
+            >
+              {{ 'finance.movements.saveAndAdd' | t }}
+            </button>
+          }
+          <button type="submit" class="oh-btn oh-btn--filled" [disabled]="!canSave()">
+            {{ 'finance.movements.save' | t }}
+          </button>
+        } @else {
+          <span class="spacer"></span>
+          <button type="button" class="oh-btn oh-btn--filled" (click)="close()">
+            {{ 'finance.movements.close' | t }}
+          </button>
+        }
+      </div>
+    </form>
+  }
+</dialog>

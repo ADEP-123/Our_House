@@ -1,0 +1,313 @@
+<div class="oh-sticky finance-top">
+  <header class="head">
+    <div>
+      <h1>{{ 'finance.title' | t }}</h1>
+      @if (family(); as f) {
+        @if ((families.families()?.length ?? 0) > 1) {
+          <label class="family-select">
+            <span class="oh-sr-only">{{ 'home.switchGroup' | t }}</span>
+            <select
+              class="oh-input"
+              [value]="f.id"
+              (change)="families.setActive($any($event.target).value)"
+            >
+              @for (fam of families.families(); track fam.id) {
+                <option [value]="fam.id" [selected]="fam.id === f.id">{{ fam.name }}</option>
+              }
+            </select>
+          </label>
+        } @else {
+          <p class="oh-muted">{{ 'finance.of' | t: { family: f.name } }}</p>
+        }
+      }
+    </div>
+    @if (family() && !supervised()) {
+      <div class="head-actions">
+        <a class="oh-btn oh-btn--text" routerLink="/finanzas/categorias">{{
+          'finance.categories.link' | t
+        }}</a>
+        <a class="oh-btn oh-btn--text" routerLink="/finanzas/ahorros">{{
+          'finance.savings.link' | t
+        }}</a>
+        <a class="oh-btn oh-btn--text" routerLink="/finanzas/programados">{{
+          'finance.scheduled.link' | t
+        }}</a>
+        <a class="oh-btn oh-btn--text" routerLink="/finanzas/importar">{{
+          'finance.io.import' | t
+        }}</a>
+        <div class="switch" role="group">
+          <button type="button" [attr.aria-pressed]="!archived()" (click)="setArchivedView(false)">
+            {{ 'finance.active' | t }}
+          </button>
+          <button type="button" [attr.aria-pressed]="archived()" (click)="setArchivedView(true)">
+            {{ 'finance.archived' | t }}
+          </button>
+        </div>
+        @if (!archived()) {
+          <a
+            class="oh-btn oh-btn--filled"
+            routerLink="/finanzas/cuentas/nueva"
+            [queryParams]="{ familia: family()!.id }"
+            >+ {{ 'finance.newAccount' | t }}</a
+          >
+        }
+      </div>
+    }
+  </header>
+</div>
+
+@if (families.families() !== null && !family()) {
+  <section class="empty">
+    <p>{{ 'finance.noFamily' | t }}</p>
+    <a class="oh-btn oh-btn--filled" routerLink="/familias">{{ 'finance.goFamilies' | t }}</a>
+  </section>
+} @else {
+  @if (error()) {
+    <p class="oh-alert is-error" role="alert">{{ error() }}</p>
+  }
+
+  @if (supervised(); as s) {
+    <p class="oh-alert supervision" role="status">
+      <span>🔎 {{ 'finance.supervised.banner' | t: { name: s.owner?.nickname ?? '' } }}</span>
+      <button type="button" class="oh-btn oh-btn--text" (click)="leaveSupervision()">
+        {{ 'finance.supervised.back' | t }}
+      </button>
+    </p>
+  }
+
+  @if (data(); as d) {
+    @if (d.accounts.length || supervised()) {
+      <section class="book">
+        <!-- Una pestaña por cuenta, como las hojas de un libro de Excel -->
+        @if (!supervised()) {
+          <div class="tabs" role="tablist" [attr.aria-label]="'finance.tabs' | t">
+            @for (a of d.accounts; track a.id; let i = $index) {
+              <button
+                type="button"
+                role="tab"
+                class="tab"
+                [id]="'tab-' + a.id"
+                [attr.aria-selected]="selected()?.id === a.id"
+                [attr.aria-controls]="'sheet-' + a.id"
+                [tabIndex]="selected()?.id === a.id ? 0 : -1"
+                (click)="open(a.id)"
+                (keydown)="onTabKey($event, i)"
+              >
+                <span class="tab-name"
+                  ><span aria-hidden="true">{{ kindIcon(a.kind) }}</span> {{ a.name }}</span
+                >
+                <span class="tab-balance" [class.negative]="a.balance < 0">{{
+                  money(a.balance, a)
+                }}</span>
+              </button>
+            }
+            @if (!archived()) {
+              <button
+                type="button"
+                role="tab"
+                class="tab tab--summary"
+                id="tab-resumen"
+                [attr.aria-selected]="showSummary()"
+                aria-controls="sheet-resumen"
+                [tabIndex]="showSummary() ? 0 : -1"
+                (click)="open('resumen')"
+                (keydown)="onTabKey($event, d.accounts.length)"
+              >
+                <span class="tab-name"
+                  ><span aria-hidden="true">📊</span> {{ 'finance.summary.tab' | t }}</span
+                >
+                <span class="tab-balance">{{ 'finance.summary.tabHint' | t }}</span>
+              </button>
+            }
+          </div>
+        }
+
+        @if (showSummary() && family(); as f) {
+          <div class="sheet" id="sheet-resumen" role="tabpanel" aria-labelledby="tab-resumen">
+            <oh-finance-summary [familyId]="f.id" />
+          </div>
+        }
+
+        @if (selected(); as a) {
+          <div
+            class="sheet"
+            [id]="'sheet-' + a.id"
+            [attr.role]="supervised() ? null : 'tabpanel'"
+            [attr.aria-labelledby]="supervised() ? null : 'tab-' + a.id"
+          >
+            <header class="sheet-head">
+              <div class="who">
+                <h2>{{ a.name }}</h2>
+                <p class="kind">{{ kindIcon(a.kind) }} {{ kindLabel(a) }}</p>
+                @if (a.description) {
+                  <p class="description">{{ a.description }}</p>
+                }
+              </div>
+
+              @if (a.credit; as c) {
+                <div class="figure credit">
+                  <p class="figure-label">{{ 'finance.credit.debt' | t }}</p>
+                  <p class="figure-value">{{ money(c.debt, a) }}</p>
+                  <div
+                    class="meter"
+                    [class.over]="c.overLimit"
+                    role="meter"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    [attr.aria-valuenow]="usage()"
+                    [attr.aria-label]="'finance.credit.used' | t: { pct: usage() }"
+                  >
+                    <span [style.width.%]="usage()"></span>
+                  </div>
+                  <dl class="credit-facts">
+                    <div>
+                      <dt>{{ 'finance.credit.available' | t }}</dt>
+                      <dd>{{ money(c.available, a) }}</dd>
+                    </div>
+                    <div>
+                      <dt>{{ 'finance.credit.limit' | t }}</dt>
+                      <dd>{{ money(c.limit, a) }}</dd>
+                    </div>
+                  </dl>
+                  @if (c.overLimit) {
+                    <p class="over-note" role="note">
+                      {{ 'finance.credit.overLimit' | t: { amount: money(c.debt - c.limit, a) } }}
+                    </p>
+                  }
+                </div>
+              } @else {
+                <div class="figure">
+                  <p class="figure-label">{{ 'finance.balance' | t }}</p>
+                  <p class="figure-value" [class.negative]="a.balance < 0">
+                    {{ money(a.balance, a) }}
+                  </p>
+                  <!-- Saldo · Ahorro · Disponible -->
+                  @if (a.savings.total > 0) {
+                    <dl class="savings-facts">
+                      <div>
+                        <dt>{{ 'finance.savings.saved' | t }}</dt>
+                        <dd>{{ money(a.savings.total, a) }}</dd>
+                      </div>
+                      <div>
+                        <dt>{{ 'finance.savings.available' | t }}</dt>
+                        <dd [class.negative]="a.savings.available < 0">
+                          {{ money(a.savings.available, a) }}
+                        </dd>
+                      </div>
+                    </dl>
+                    <a class="savings-list" routerLink="/finanzas/ahorros">
+                      @for (p of a.savings.projects; track p.id; let last = $last) {
+                        {{ iconOf(p.icon) }} {{ p.name }} {{ money(p.amount, a)
+                        }}{{ last ? '' : ' · ' }}
+                      }
+                    </a>
+                  }
+                </div>
+              }
+            </header>
+
+            <!-- Programados de esta cuenta: cuántos hay y el próximo -->
+            @if (scheduledOf(a); as sc) {
+              <a
+                class="scheduled-line"
+                routerLink="/finanzas/programados"
+                [queryParams]="{ cuenta: a.id }"
+              >
+                🔁 {{ sc.text }}
+                @if (sc.pending) {
+                  <span class="pending-tag">{{
+                    'finance.scheduled.pendingTag' | t: { n: sc.pending }
+                  }}</span>
+                }
+              </a>
+            }
+
+            <ul class="access">
+              <li><span aria-hidden="true">👁</span> {{ viewText(a) }}</li>
+              <li><span aria-hidden="true">✏️</span> {{ editText(a) }}</li>
+              <li><span aria-hidden="true">👤</span> {{ owner(a) }}</li>
+            </ul>
+
+            @if (a.archivedAt) {
+              <p class="oh-hint note">{{ 'finance.archivedNote' | t }}</p>
+            } @else if (!a.permissions.canEdit && !a.permissions.supervision) {
+              <p class="oh-hint note">{{ 'finance.readOnly' | t }}</p>
+            }
+
+            @if (a.permissions.canAdmin) {
+              <div class="actions">
+                @if (!a.archivedAt) {
+                  <a
+                    class="oh-btn oh-btn--tonal"
+                    [routerLink]="['/finanzas/cuentas', a.id, 'editar']"
+                    >{{ 'finance.actions.edit' | t }}</a
+                  >
+                  <button
+                    type="button"
+                    class="oh-btn oh-btn--text"
+                    [disabled]="busy()"
+                    (click)="setArchived(a, true)"
+                  >
+                    {{ 'finance.actions.archive' | t }}
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="oh-btn oh-btn--tonal"
+                    [disabled]="busy()"
+                    (click)="setArchived(a, false)"
+                  >
+                    {{ 'finance.actions.restore' | t }}
+                  </button>
+                }
+                <button
+                  type="button"
+                  class="oh-btn oh-btn--text delete"
+                  [disabled]="busy()"
+                  (click)="remove(a)"
+                >
+                  {{ 'finance.actions.delete' | t }}
+                </button>
+              </div>
+            }
+
+            <oh-movements [account]="a" [accounts]="d.accounts" (changed)="refreshAccounts()" />
+          </div>
+        }
+      </section>
+    } @else {
+      <section class="empty">
+        <p>{{ (archived() ? 'finance.emptyArchived' : 'finance.empty') | t }}</p>
+        @if (!archived()) {
+          <a
+            class="oh-btn oh-btn--filled"
+            routerLink="/finanzas/cuentas/nueva"
+            [queryParams]="{ familia: family()!.id }"
+            >+ {{ 'finance.newAccount' | t }}</a
+          >
+        }
+      </section>
+    }
+
+    @if (d.supervisedPrivate.length && !supervised()) {
+      <section class="supervised">
+        <h2>{{ 'finance.supervised.title' | t }}</h2>
+        <ul>
+          @for (s of d.supervisedPrivate; track s.id) {
+            <li>
+              <button
+                type="button"
+                class="oh-btn oh-btn--outline"
+                (click)="openSupervised(s.id, s.ownerNickname)"
+              >
+                🔒 {{ 'finance.supervised.item' | t: { name: s.ownerNickname ?? '' } }}
+              </button>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  } @else if (family()) {
+    <p class="oh-muted" role="status">{{ 'common.loading' | t }}</p>
+  }
+}

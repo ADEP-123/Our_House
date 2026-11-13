@@ -1,0 +1,238 @@
+<a class="back" routerLink="/finanzas">← {{ 'finance.title' | t }}</a>
+
+<div class="page">
+  <header class="head">
+    <div>
+      <h1>{{ 'finance.savings.title' | t }}</h1>
+      @if (family(); as f) {
+        <p class="oh-muted">{{ 'finance.of' | t: { family: f.name } }}</p>
+      }
+    </div>
+    @if (data()) {
+      <button
+        type="button"
+        class="oh-btn oh-btn--filled"
+        [disabled]="!sync.online()"
+        (click)="newProject()"
+      >
+        + {{ 'finance.savings.new' | t }}
+      </button>
+    }
+  </header>
+
+  <p class="intro">{{ 'finance.savings.intro' | t }}</p>
+
+  @if (!sync.online()) {
+    <p class="oh-alert is-error" role="alert">{{ 'finance.savings.offline' | t }}</p>
+  }
+  @if (error()) {
+    <p class="oh-alert is-error" role="alert">{{ error() }}</p>
+  }
+
+  @if (data(); as d) {
+    <!-- Cada cuenta: saldo, ahorro y disponible -->
+    @if (d.accounts.length) {
+      <section class="accounts" [attr.aria-label]="'finance.savings.accountsTitle' | t">
+        @for (a of d.accounts; track a.id) {
+          <div class="account">
+            <p class="account-name">
+              <span aria-hidden="true">{{ kindIcon(a.kind) }}</span> {{ a.name }}
+            </p>
+            <dl>
+              <div>
+                <dt>{{ 'finance.balance' | t }}</dt>
+                <dd>{{ money(a.balance) }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'finance.savings.saved' | t }}</dt>
+                <dd>{{ money(a.saved) }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'finance.savings.available' | t }}</dt>
+                <dd class="strong" [class.negative]="a.available < 0">{{ money(a.available) }}</dd>
+              </div>
+            </dl>
+          </div>
+        }
+      </section>
+    }
+
+    @if (!open().length) {
+      <section class="empty">
+        <p>{{ 'finance.savings.empty' | t }}</p>
+      </section>
+    } @else {
+      <p class="total">{{ 'finance.savings.total' | t: { amount: money(totalSaved()) } }}</p>
+      <div class="projects">
+        @for (p of open(); track p.id) {
+          <article class="project">
+            <header>
+              <span class="icon" aria-hidden="true">{{ iconOf(p.icon) }}</span>
+              <div>
+                <h2>{{ p.name }}</h2>
+                @if (p.targetDate) {
+                  <p class="oh-muted">
+                    {{ 'finance.savings.by' | t: { date: dateLabel(p.targetDate) } }}
+                  </p>
+                }
+              </div>
+            </header>
+
+            <p class="saved">
+              <strong>{{ money(p.saved) }}</strong>
+              @if (p.goal) {
+                <span class="oh-muted">
+                  {{ 'finance.savings.of' | t: { goal: money(p.goal) } }}</span
+                >
+              }
+            </p>
+            @if (p.goal) {
+              <div
+                class="meter"
+                [class.done]="progress(p) >= 100"
+                role="meter"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                [attr.aria-valuenow]="progress(p)"
+                [attr.aria-label]="'finance.savings.progress' | t: { pct: progress(p) }"
+              >
+                <span [style.width.%]="progress(p)"></span>
+              </div>
+              <p class="hint">
+                @if (progress(p) >= 100) {
+                  🎉 {{ 'finance.savings.reached' | t }}
+                } @else if (perMonth(p); as m) {
+                  {{ 'finance.savings.perMonth' | t: { amount: money(m) } }}
+                } @else {
+                  {{ 'finance.savings.progress' | t: { pct: progress(p) } }}
+                }
+              </p>
+            }
+
+            @if (p.accounts.length) {
+              <ul class="where">
+                @for (a of p.accounts; track a.accountId ?? 'other') {
+                  <li>
+                    <span>{{ a.name ?? ('finance.savings.otherAccount' | t) }}</span>
+                    <span>{{ money(a.amount) }}</span>
+                  </li>
+                }
+              </ul>
+            }
+            @if (p.spent) {
+              <p class="hint">{{ 'finance.savings.spent' | t: { amount: money(p.spent) } }}</p>
+            }
+
+            <div class="actions">
+              <button
+                type="button"
+                class="oh-btn oh-btn--tonal"
+                [disabled]="!canSetAside() || !sync.online()"
+                (click)="moveMoney(p, 'set_aside')"
+              >
+                {{ 'finance.savings.setAside' | t }}
+              </button>
+              @if (p.saved > 0) {
+                <button
+                  type="button"
+                  class="oh-btn oh-btn--text"
+                  [disabled]="!sync.online()"
+                  (click)="moveMoney(p, 'release')"
+                >
+                  {{ 'finance.savings.release' | t }}
+                </button>
+              }
+              @if (p.canManage) {
+                <button
+                  type="button"
+                  class="oh-btn oh-btn--text"
+                  [disabled]="!sync.online()"
+                  (click)="edit(p)"
+                >
+                  {{ 'finance.savings.edit' | t }}
+                </button>
+                <button
+                  type="button"
+                  class="oh-btn oh-btn--text"
+                  [disabled]="!sync.online()"
+                  (click)="close(p)"
+                >
+                  {{ 'finance.savings.close' | t }}
+                </button>
+              }
+            </div>
+
+            <details class="history" (toggle)="onHistoryToggle(p, $event)">
+              <summary>{{ 'finance.savings.historyTitle' | t }}</summary>
+              @if (history()[p.id]; as list) {
+                @if (list.length) {
+                  <ul>
+                    @for (h of list; track $index) {
+                      <li>
+                        <span class="when">{{ when(h.at) }}</span>
+                        <span>{{ historyText(h) }}</span>
+                        <span class="amount" [class.out]="h.kind !== 'set_aside'">
+                          {{ h.kind === 'set_aside' ? '+' : '−' }}{{ money(h.amount) }}
+                        </span>
+                      </li>
+                    }
+                  </ul>
+                } @else {
+                  <p class="oh-muted">{{ 'finance.savings.noHistory' | t }}</p>
+                }
+              } @else {
+                <p class="oh-muted">{{ 'common.loading' | t }}</p>
+              }
+            </details>
+          </article>
+        }
+      </div>
+    }
+
+    @if (closed().length) {
+      <details class="closed">
+        <summary>{{ 'finance.savings.closedTitle' | t: { n: closed().length } }}</summary>
+        <ul>
+          @for (p of closed(); track p.id) {
+            <li>
+              <span>{{ iconOf(p.icon) }} {{ p.name }}</span>
+              @if (p.spent) {
+                <span class="oh-muted">{{
+                  'finance.savings.spent' | t: { amount: money(p.spent) }
+                }}</span>
+              }
+              @if (p.canManage) {
+                <span class="row-actions">
+                  <button
+                    type="button"
+                    class="oh-btn oh-btn--text"
+                    [disabled]="!sync.online()"
+                    (click)="reopen(p)"
+                  >
+                    {{ 'finance.savings.reopen' | t }}
+                  </button>
+                  <button
+                    type="button"
+                    class="oh-btn oh-btn--text delete"
+                    [disabled]="!sync.online()"
+                    (click)="remove(p)"
+                  >
+                    {{ 'finance.savings.delete' | t }}
+                  </button>
+                </span>
+              }
+            </li>
+          }
+        </ul>
+      </details>
+    }
+
+    <oh-savings-move-dialog [data]="d" (saved)="load()" />
+  } @else if (!error()) {
+    <p class="oh-muted" role="status">{{ 'common.loading' | t }}</p>
+  }
+
+  @if (family(); as f) {
+    <oh-savings-project-dialog [familyId]="f.id" (saved)="load()" />
+  }
+</div>

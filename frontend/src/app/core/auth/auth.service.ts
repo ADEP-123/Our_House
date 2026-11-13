@@ -30,6 +30,8 @@ export interface UserNotifications {
   assignments: boolean;
   reminders: boolean;
   secretViews: boolean;
+  finance: boolean;
+  scheduled: boolean;
 }
 
 export interface ReminderDefaults {

@@ -23,6 +23,8 @@ export interface UserRow {
   reminder_every_days: number;
   calendar_prompt_dismissed: boolean;
   email_secret_views: boolean;
+  email_finance: boolean;
+  email_scheduled: boolean;
   created_at: Date;
 }
 
@@ -36,6 +38,8 @@ export const USER_SETTINGS = {
   reminderEveryDays: 'reminder_every_days',
   calendarPromptDismissed: 'calendar_prompt_dismissed',
   secretViews: 'email_secret_views',
+  finance: 'email_finance',
+  scheduled: 'email_scheduled',
 } as const;
 export type UserSettings = Partial<Record<keyof typeof USER_SETTINGS, unknown>>;
 

@@ -159,3 +159,18 @@ list.post(
   ),
   itemsController.purchase,
 );
+
+// Registrar pago: lo pagado en los artículos desde el último pago, en un solo movimiento
+list.get('/payments', itemsController.payments);
+list.post(
+  '/payments',
+  validateBody(
+    z.strictObject({
+      id: clientId,
+      accountId: z.uuid('PAYMENT_ACCOUNT_INVALID').nullable(),
+      categoryId: z.uuid('CATEGORY_NOT_FOUND').nullable().optional(),
+      date: z.iso.date('DATE_INVALID').optional(),
+    }),
+  ),
+  itemsController.registerPayment,
+);

@@ -1,0 +1,306 @@
+<section class="movements" aria-labelledby="movements-title">
+  <header class="bar">
+    <h3 id="movements-title">{{ 'finance.movements.title' | t }}</h3>
+    <div class="bar-actions">
+      @if (canTransfer()) {
+        @if (account().kind === 'credit') {
+          <button
+            type="button"
+            class="oh-btn oh-btn--tonal"
+            (click)="transfer.open({ to: account() })"
+          >
+            {{ 'finance.transfers.payTitle' | t }}
+          </button>
+        }
+        <button
+          type="button"
+          class="oh-btn oh-btn--text"
+          (click)="transfer.open({ from: account() })"
+        >
+          {{ 'finance.transfers.button' | t }}
+        </button>
+      }
+      @if (canEdit()) {
+        <button type="button" class="oh-btn oh-btn--text" (click)="adjust.open()">
+          {{ 'finance.movements.adjust' | t }}
+        </button>
+      }
+      <details class="columns">
+        <summary class="oh-btn oh-btn--text">{{ 'finance.movements.columnsButton' | t }}</summary>
+        <div class="columns-menu">
+          @for (c of hideable; track c) {
+            <label>
+              <input type="checkbox" [checked]="show(c)" (change)="toggleColumn(c)" />
+              {{ columnLabel(c) }}
+            </label>
+          }
+        </div>
+      </details>
+      @if (!account().permissions.supervision) {
+        <oh-export-menu
+          [familyId]="account().familyId"
+          [accounts]="[account().id]"
+          [subject]="account().name"
+        />
+      }
+      @if (canEdit()) {
+        <button type="button" class="oh-btn oh-btn--filled add-desktop" (click)="openNew()">
+          + {{ 'finance.movements.add' | t }}
+        </button>
+      }
+    </div>
+  </header>
+
+  <!-- Búsqueda y filtros -->
+  <div class="filters" role="search">
+    <label class="search">
+      <span class="oh-sr-only">{{ 'finance.movements.search' | t }}</span>
+      <input
+        class="oh-input"
+        type="search"
+        [placeholder]="'finance.movements.search' | t"
+        [value]="filters().text"
+        (input)="setFilter({ text: $any($event.target).value })"
+      />
+    </label>
+    <label>
+      <span class="oh-sr-only">{{ 'finance.movements.category' | t }}</span>
+      <select class="oh-input" (change)="setFilter({ categoryId: $any($event.target).value })">
+        <option value="" [selected]="!filters().categoryId">
+          {{ 'finance.movements.allCategories' | t }}
+        </option>
+        <option [value]="transfersFilter" [selected]="filters().categoryId === transfersFilter">
+          ⇄ {{ 'finance.transfers.plural' | t }}
+        </option>
+        @for (c of categories(); track c.id) {
+          <option [value]="c.id" [selected]="filters().categoryId === c.id">
+            {{ iconOf(c.icon) }} {{ c.name }}
+          </option>
+        }
+      </select>
+    </label>
+    <div class="seg" role="group" [attr.aria-label]="'finance.movements.kind' | t">
+      <button
+        type="button"
+        [attr.aria-pressed]="filters().kind === 'all'"
+        (click)="setFilter({ kind: 'all' })"
+      >
+        {{ 'finance.movements.all' | t }}
+      </button>
+      <button
+        type="button"
+        [attr.aria-pressed]="filters().kind === 'in'"
+        (click)="setFilter({ kind: 'in' })"
+      >
+        {{ 'finance.movements.ins' | t }}
+      </button>
+      <button
+        type="button"
+        [attr.aria-pressed]="filters().kind === 'out'"
+        (click)="setFilter({ kind: 'out' })"
+      >
+        {{ 'finance.movements.outs' | t }}
+      </button>
+    </div>
+    <div class="dates">
+      <label class="date">
+        <span>{{ 'finance.movements.from' | t }}</span>
+        <input
+          class="oh-input"
+          type="date"
+          [value]="filters().from"
+          (input)="setFilter({ from: $any($event.target).value })"
+        />
+      </label>
+      <label class="date">
+        <span>{{ 'finance.movements.to' | t }}</span>
+        <input
+          class="oh-input"
+          type="date"
+          [value]="filters().to"
+          (input)="setFilter({ to: $any($event.target).value })"
+        />
+      </label>
+    </div>
+    @if (filtering()) {
+      <button type="button" class="oh-btn oh-btn--text" (click)="clearFilters()">
+        {{ 'finance.movements.clear' | t }}
+      </button>
+    }
+  </div>
+
+  <!-- Total de lo que se ve -->
+  @if (movements()) {
+    <dl class="totals" [attr.aria-label]="'finance.movements.totals' | t">
+      <div>
+        <dt>{{ 'finance.movements.count' | t }}</dt>
+        <dd>{{ filtered().totals.count }}</dd>
+      </div>
+      <div>
+        <dt>{{ 'finance.movements.ins' | t }}</dt>
+        <dd class="positive">{{ money(filtered().totals.income) }}</dd>
+      </div>
+      <div>
+        <dt>{{ 'finance.movements.outs' | t }}</dt>
+        <dd class="negative">{{ money(-filtered().totals.expense) }}</dd>
+      </div>
+      <div>
+        <dt>{{ 'finance.movements.net' | t }}</dt>
+        <dd [class.negative]="filtered().totals.net < 0">{{ money(filtered().totals.net) }}</dd>
+      </div>
+    </dl>
+  }
+
+  @if (error()) {
+    <p class="oh-alert is-error" role="alert">{{ error() }}</p>
+  }
+
+  @if (movements(); as all) {
+    @if (rows().length) {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              @if (show('code')) {
+                <th scope="col">{{ columnLabel('code') }}</th>
+              }
+              @if (show('date')) {
+                <th scope="col">
+                  <button type="button" class="sort" (click)="newestFirst.set(!newestFirst())">
+                    {{ columnLabel('date') }} {{ newestFirst() ? '↓' : '↑' }}
+                    <span class="oh-sr-only">{{
+                      (newestFirst()
+                        ? 'finance.movements.newestFirst'
+                        : 'finance.movements.oldestFirst'
+                      ) | t
+                    }}</span>
+                  </button>
+                </th>
+              }
+              <th scope="col">{{ columnLabel('description') }}</th>
+              @if (show('category')) {
+                <th scope="col">{{ columnLabel('category') }}</th>
+              }
+              @if (show('amount')) {
+                <th scope="col" class="num">{{ columnLabel('amount') }}</th>
+              }
+              @if (show('balance')) {
+                <th scope="col" class="num">{{ columnLabel('balance') }}</th>
+              }
+              @if (show('createdBy')) {
+                <th scope="col">{{ columnLabel('createdBy') }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of rows(); track m.id) {
+              <tr (click)="open(m)" [class.special]="m.kind === 'opening' || m.kind === 'adjust'">
+                @if (show('code')) {
+                  <td class="code">{{ m.pending && !m.code ? '…' : m.code }}</td>
+                }
+                @if (show('date')) {
+                  <td class="date-cell">{{ date(m.date) }}</td>
+                }
+                <td class="desc">
+                  <button type="button" class="row-btn" (click)="$event.stopPropagation(); open(m)">
+                    {{ m.kind === 'opening' ? ('finance.movements.opening' | t) : m.description }}
+                  </button>
+                  @if (m.pending) {
+                    <span class="edited pending">⏳ {{ 'finance.movements.pending' | t }}</span>
+                  } @else if (m.edited) {
+                    <span class="edited">{{ 'finance.movements.edited' | t }}</span>
+                  }
+                  @if (m.transfer) {
+                    <span class="edited link">{{ transferLabel(m) }}</span>
+                  }
+                  @if (m.kind === 'adjust') {
+                    <span class="edited">{{ 'finance.movements.adjustTag' | t }}</span>
+                  }
+                  @if (m.scheduled) {
+                    <span class="edited">🔁 {{ 'finance.scheduled.tag' | t }}</span>
+                  }
+                  @if (m.purchase) {
+                    <span class="edited">🛒 {{ 'finance.movements.purchaseTag' | t }}</span>
+                  }
+                  @if (m.savings; as s) {
+                    <span class="edited link">{{
+                      'finance.savings.paidWith'
+                        | t: { name: iconOf(s.icon ?? '🎯') + ' ' + (s.name ?? '') }
+                    }}</span>
+                  }
+                </td>
+                @if (show('category')) {
+                  <td class="cat">
+                    @if (m.category; as c) {
+                      <span class="chip" [style.--cat]="colorOf(c.color)"
+                        >{{ iconOf(c.icon) }} {{ c.name }}</span
+                      >
+                    } @else if (m.transfer) {
+                      <span class="chip transfer">⇄ {{ 'finance.transfers.single' | t }}</span>
+                    }
+                  </td>
+                }
+                @if (show('amount')) {
+                  <td
+                    class="num amount"
+                    [class.negative]="m.signedAmount < 0"
+                    [class.positive]="m.signedAmount > 0"
+                  >
+                    {{ m.signedAmount > 0 ? '+' : '' }}{{ money(m.signedAmount) }}
+                  </td>
+                }
+                @if (show('balance')) {
+                  <td class="num balance" [class.negative]="m.balance < 0">
+                    {{ money(m.balance) }}
+                  </td>
+                }
+                @if (show('createdBy')) {
+                  <td class="by">{{ m.createdBy?.nickname ?? '—' }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (more() > 0) {
+        <button
+          type="button"
+          class="oh-btn oh-btn--outline more"
+          (click)="limit.set(limit() + 150)"
+        >
+          {{ 'finance.movements.showMore' | t: { n: more() } }}
+        </button>
+      }
+    } @else {
+      <p class="oh-muted empty">
+        {{ (filtering() ? 'finance.movements.noResults' : 'finance.movements.empty') | t }}
+      </p>
+    }
+  } @else if (!error()) {
+    <p class="oh-muted" role="status">{{ 'common.loading' | t }}</p>
+  }
+</section>
+
+<!-- Agregar rápido (celular) -->
+@if (canEdit()) {
+  <button
+    type="button"
+    class="fab"
+    (click)="openNew()"
+    [attr.aria-label]="'finance.movements.add' | t"
+  >
+    +
+  </button>
+}
+
+<oh-movement-dialog
+  [account]="account()"
+  [categories]="categories()"
+  [request]="request()"
+  (saved)="onSaved()"
+  (deleteRequested)="onDelete($event)"
+  (closed)="request.set(null)"
+/>
+
+<oh-adjust-dialog #adjust [account]="account()" (saved)="refresh()" />
+<oh-transfer-dialog #transfer [accounts]="accounts()" (saved)="refresh()" />

@@ -1,0 +1,259 @@
+<a class="back" routerLink="/finanzas">← {{ 'finance.title' | t }}</a>
+
+<div class="page">
+  <header class="head">
+    <div>
+      <h1>{{ 'finance.scheduled.title' | t }}</h1>
+      @if (family(); as f) {
+        <p class="oh-muted">{{ 'finance.of' | t: { family: f.name } }}</p>
+      }
+    </div>
+    @if (data()) {
+      <button
+        type="button"
+        class="oh-btn oh-btn--filled"
+        [disabled]="!sync.online()"
+        (click)="newScheduled()"
+      >
+        + {{ 'finance.scheduled.new' | t }}
+      </button>
+    }
+  </header>
+
+  <p class="intro">{{ 'finance.scheduled.intro' | t }}</p>
+
+  @if (!sync.online()) {
+    <p class="oh-alert is-error" role="alert">{{ 'finance.scheduled.offline' | t }}</p>
+  }
+  @if (error()) {
+    <p class="oh-alert is-error" role="alert">{{ error() }}</p>
+  }
+  @if (filterName(); as name) {
+    <p class="filter">
+      {{ 'finance.scheduled.onlyAccount' | t: { name } }}
+      <button type="button" class="oh-btn oh-btn--text" (click)="clearFilter()">
+        {{ 'finance.scheduled.showAll' | t }}
+      </button>
+    </p>
+  }
+
+  @if (data(); as d) {
+    <!-- Pendientes de confirmar: el monto real de lo que varía cada mes -->
+    @if (pending().length) {
+      <section class="pending" [attr.aria-label]="'finance.scheduled.pendingTitle' | t">
+        <h2>{{ 'finance.scheduled.pendingTitle' | t }}</h2>
+        <ul>
+          @for (p of pending(); track p.id) {
+            <li>
+              <div class="info">
+                <strong>{{ kindIcon(p.schedule) }} {{ p.schedule.description }}</strong>
+                <span class="oh-muted">
+                  {{ 'finance.scheduled.dueOn' | t: { date: dateLabel(p.dueDate) } }} ·
+                  {{ where(p.schedule) }}
+                </span>
+              </div>
+              <label class="amount">
+                <span class="oh-sr-only">{{ 'finance.savings.amount' | t }}</span>
+                <input
+                  class="oh-input"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  [value]="confirmText()[p.id] ?? ''"
+                  (input)="setConfirmText(p.id, $any($event.target).value)"
+                />
+              </label>
+              @if (p.schedule.canManage) {
+                <span class="row-actions">
+                  <button
+                    type="button"
+                    class="oh-btn oh-btn--filled"
+                    [disabled]="busy() || !confirmAmount(p) || !sync.online()"
+                    (click)="confirmPending(p)"
+                  >
+                    {{ 'finance.scheduled.confirmButton' | t }}
+                  </button>
+                  <button
+                    type="button"
+                    class="oh-btn oh-btn--text"
+                    [disabled]="busy() || !sync.online()"
+                    (click)="dismissPending(p)"
+                  >
+                    {{ 'finance.scheduled.dismiss' | t }}
+                  </button>
+                </span>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    <!-- Gastos que se repiten y todavía no están programados -->
+    @if (visibleSuggestions().length && !cuenta()) {
+      <section class="suggestions">
+        <h2>💡 {{ 'finance.scheduled.suggestionsTitle' | t }}</h2>
+        <ul>
+          @for (s of visibleSuggestions(); track suggestionKey(s)) {
+            <li>
+              <span>
+                <strong>{{ s.description }}</strong> ·
+                {{
+                  'finance.scheduled.suggestionText'
+                    | t
+                      : {
+                          amount: money(s.amount),
+                          day: s.day,
+                          account: s.accountName,
+                          months: s.months,
+                        }
+                }}
+              </span>
+              <span class="row-actions">
+                <button
+                  type="button"
+                  class="oh-btn oh-btn--tonal"
+                  [disabled]="!sync.online()"
+                  (click)="fromSuggestion(s)"
+                >
+                  {{ 'finance.scheduled.schedule' | t }}
+                </button>
+                <button type="button" class="oh-btn oh-btn--text" (click)="hideSuggestion(s)">
+                  {{ 'finance.scheduled.notNow' | t }}
+                </button>
+              </span>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (!active().length && !paused().length) {
+      <section class="empty">
+        <p>{{ 'finance.scheduled.empty' | t }}</p>
+      </section>
+    }
+
+    <ng-template #rowTpl let-s>
+      <li class="item" [class.is-paused]="!!s.paused">
+        <span class="icon" aria-hidden="true">{{ kindIcon(s) }}</span>
+        <div class="info">
+          <p class="title">
+            <strong>{{ s.description }}</strong>
+            @if (s.mode === 'confirm') {
+              <span class="badge">{{ 'finance.scheduled.confirm' | t }}</span>
+            }
+            @if (s.remindDays) {
+              <span class="badge"
+                >🔔 {{ 'finance.scheduled.remindBadge' | t: { n: s.remindDays } }}</span
+              >
+            }
+            @if (s.paused) {
+              <span class="badge warn">⏸ {{ pausedText(s) }}</span>
+            }
+          </p>
+          <p class="oh-muted">{{ where(s) }}</p>
+          <p class="oh-muted">{{ frequency(s) }}</p>
+          @if (!s.paused && !s.ended) {
+            <p class="next">{{ nextText(s) }}</p>
+          }
+        </div>
+        <p class="amount" [class.in]="s.kind === 'in'">{{ signedMoney(s) }}</p>
+        @if (s.canManage && !s.ended) {
+          <div class="actions">
+            <button
+              type="button"
+              class="oh-btn oh-btn--text"
+              [disabled]="busy() || !sync.online()"
+              (click)="edit(s)"
+            >
+              {{ 'finance.scheduled.edit' | t }}
+            </button>
+            @if (s.paused) {
+              <button
+                type="button"
+                class="oh-btn oh-btn--tonal"
+                [disabled]="busy() || !sync.online()"
+                (click)="action(s, 'resume')"
+              >
+                {{ 'finance.scheduled.resume' | t }}
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="oh-btn oh-btn--text"
+                [disabled]="busy() || !sync.online()"
+                (click)="action(s, 'skip')"
+              >
+                {{ 'finance.scheduled.skip' | t }}
+              </button>
+              <button
+                type="button"
+                class="oh-btn oh-btn--text"
+                [disabled]="busy() || !sync.online()"
+                (click)="action(s, 'pause')"
+              >
+                {{ 'finance.scheduled.pause' | t }}
+              </button>
+            }
+            <button
+              type="button"
+              class="oh-btn oh-btn--text delete"
+              [disabled]="busy() || !sync.online()"
+              (click)="remove(s)"
+            >
+              {{ 'finance.scheduled.delete' | t }}
+            </button>
+          </div>
+        } @else if (s.canManage) {
+          <div class="actions">
+            <button
+              type="button"
+              class="oh-btn oh-btn--text delete"
+              [disabled]="busy() || !sync.online()"
+              (click)="remove(s)"
+            >
+              {{ 'finance.scheduled.delete' | t }}
+            </button>
+          </div>
+        }
+      </li>
+    </ng-template>
+
+    @if (active().length) {
+      <section>
+        <h2>{{ 'finance.scheduled.activeTitle' | t: { n: active().length } }}</h2>
+        <ul class="list">
+          @for (s of active(); track s.id) {
+            <ng-container *ngTemplateOutlet="rowTpl; context: { $implicit: s }" />
+          }
+        </ul>
+      </section>
+    }
+    @if (paused().length) {
+      <section>
+        <h2>{{ 'finance.scheduled.pausedTitle' | t: { n: paused().length } }}</h2>
+        <ul class="list">
+          @for (s of paused(); track s.id) {
+            <ng-container *ngTemplateOutlet="rowTpl; context: { $implicit: s }" />
+          }
+        </ul>
+      </section>
+    }
+    @if (ended().length) {
+      <details class="ended">
+        <summary>{{ 'finance.scheduled.endedTitle' | t: { n: ended().length } }}</summary>
+        <ul class="list">
+          @for (s of ended(); track s.id) {
+            <ng-container *ngTemplateOutlet="rowTpl; context: { $implicit: s }" />
+          }
+        </ul>
+      </details>
+    }
+  } @else if (!error()) {
+    <p class="oh-muted" role="status">{{ 'common.loading' | t }}</p>
+  }
+
+  @if (family(); as f) {
+    <oh-scheduled-dialog [familyId]="f.id" (saved)="load()" />
+  }
+</div>
