@@ -38,6 +38,7 @@ import {
 } from './item-logic';
 import { dueLabel, repeatLabel, shortDate } from './due-label';
 import { DEFAULT_FEATURES, ListFeature } from './list-presets';
+import { ListPaymentsService } from './list-payments.service';
 import { ListDetail, ListItem } from './lists.models';
 import { ItemEditorComponent, ItemEditorResult } from './item-editor.component';
 import { PurchaseDialogComponent, PurchaseInput } from './purchase-dialog.component';
@@ -75,6 +76,7 @@ export class ListItemsComponent implements OnDestroy {
   private readonly store = inject(ListsStore);
   private readonly auth = inject(AuthService);
   private readonly confirm = inject(ConfirmService);
+  private readonly payments = inject(ListPaymentsService);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18n);
   private readonly fb = inject(FormBuilder).nonNullable;
@@ -358,6 +360,17 @@ export class ListItemsComponent implements OnDestroy {
   }
 
   private async setCompleted(item: ListItem, completed: boolean): Promise<void> {
+    // Ya está en un pago registrado: desmarcarlo lo descuenta del movimiento en finanzas
+    if (!completed && this.payments.isPaid(item.id)) {
+      const ok = await this.confirm.ask({
+        title: this.i18n.t('lists.payment.uncheckTitle', { text: item.text }),
+        message: this.i18n.t('lists.payment.uncheckBody'),
+        confirmLabel: this.i18n.t('lists.payment.uncheckConfirm'),
+        cancelLabel: this.i18n.t('lists.items.cancel'),
+        danger: true,
+      });
+      if (!ok) return;
+    }
     const before = this.list().items;
     // Al instante en pantalla (con su tarea y subtareas); la respuesta trae el autor y la hora reales
     this.list.update((l) => ({ ...l, items: applyToggle(l.items, item.id, completed, this.me()) }));
@@ -365,6 +378,7 @@ export class ListItemsComponent implements OnDestroy {
     try {
       const after = await this.store.setCompleted(this.list().id, item.id, completed);
       this.patchItem(item.id, after);
+      this.refreshPayments();
       if (completed) await this.afterDone(item, after);
     } catch (err) {
       this.list.update((l) => ({ ...l, items: before }));
@@ -378,6 +392,7 @@ export class ListItemsComponent implements OnDestroy {
     try {
       const after = await this.store.purchase(this.list().id, item.id, input);
       this.patchItem(item.id, after);
+      this.refreshPayments();
       await this.afterDone(item, after);
     } catch (err) {
       this.patchItem(item.id, item);
@@ -532,17 +547,24 @@ export class ListItemsComponent implements OnDestroy {
     }
   }
 
+  /** Lo pendiente de registrar cambió (compras) */
+  private refreshPayments(): void {
+    if (this.has('purchases')) void this.payments.refresh();
+  }
+
   async reset(): Promise<void> {
     const n = this.completed().length;
+    const paid = this.list().items.filter((i) => this.payments.isPaid(i.id)).length;
     const ok = await this.confirm.ask({
       title: this.i18n.t('lists.items.resetTitle'),
-      message: this.i18n.t('lists.items.resetBody', { n }),
+      message: this.i18n.t('lists.items.resetBody', { n }) + (paid ? this.i18n.t('lists.payment.resetPaid', { n: paid }) : ''),
       confirmLabel: this.i18n.t('lists.items.resetConfirm'),
       cancelLabel: this.i18n.t('lists.items.cancel'),
     });
     if (!ok) return;
     try {
       this.list.set(await this.store.uncheckAll(this.list().id));
+      this.refreshPayments();
     } catch (err) {
       this.fail(err);
     }
@@ -550,9 +572,12 @@ export class ListItemsComponent implements OnDestroy {
 
   async clearCompleted(): Promise<void> {
     const n = this.completed().length;
+    // Lo pagado de esos ítems que todavía no se registró ya no se podrá registrar
+    const done = new Set(this.completed().map((i) => i.id));
+    const unregistered = (this.payments.data()?.items ?? []).some((i) => done.has(i.id));
     const ok = await this.confirm.ask({
       title: this.i18n.t('lists.items.clearTitle'),
-      message: this.i18n.t('lists.items.clearBody', { n }),
+      message: this.i18n.t('lists.items.clearBody', { n }) + (unregistered ? this.i18n.t('lists.payment.clearUnregistered') : ''),
       confirmLabel: this.i18n.t('lists.items.clearConfirm'),
       cancelLabel: this.i18n.t('lists.items.cancel'),
       danger: true,
@@ -560,6 +585,7 @@ export class ListItemsComponent implements OnDestroy {
     if (!ok) return;
     try {
       this.list.set(await this.store.deleteCompleted(this.list().id));
+      this.refreshPayments();
     } catch (err) {
       this.fail(err);
     }

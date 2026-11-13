@@ -1,4 +1,5 @@
-import { db, type Db } from '../config/database.js';
+import { db, withTransaction, type Db } from '../config/database.js';
+import { PENDING_AMOUNT } from './list-payments.repository.js';
 import type { RepeatRule } from '../lib/recurrence.js';
 import { ITEM_SELECT, type ItemRow } from './lists.repository.js';
 
@@ -180,6 +181,21 @@ export const itemsRepository = {
   // ---------- Repetición ----------
 
   /**
+   * Antes de que la repetición borre lo pagado del artículo: lo que no entró en un pago queda en unpaid
+   * para el próximo "Registrar pago", y sus pagos anteriores quedan como estaban.
+   */
+  async carryUnpaid(where: string, params: unknown[], conn: Db): Promise<void> {
+    await conn.query(
+      `WITH c AS (
+         SELECT i.id, ${PENDING_AMOUNT} AS rest FROM list_items i
+          WHERE (i.spent IS NOT NULL OR i.unpaid IS NOT NULL) AND ${where}
+       ), d AS (DELETE FROM list_payment_items x USING c WHERE x.item_id = c.id)
+       UPDATE list_items i SET unpaid = NULLIF(GREATEST(c.rest, 0), 0) FROM c WHERE i.id = c.id`,
+      params,
+    );
+  },
+
+  /**
    * Siguiente vez de una tarea con fecha: queda pendiente en su nueva fecha, sin lo comprado,
    * con sus subtareas desmarcadas y, si hay turnos, con el responsable que sigue.
    */
@@ -187,8 +203,12 @@ export const itemsRepository = {
     itemId: string,
     listId: string,
     data: { dueDate: string; countDone: boolean; assigneeId?: string | null; rotationIndex?: number },
-    conn: Db = db(),
+    tx?: Db,
   ): Promise<void> {
+    // En una transacción: guardar lo no pagado y borrar lo pagado van juntos
+    if (!tx) return withTransaction((c) => itemsRepository.advance(itemId, listId, data, c));
+    const conn = tx;
+    await itemsRepository.carryUnpaid('i.id = $1', [itemId], conn);
     await conn.query(
       `UPDATE list_items
           SET due_date = $2, completed_at = NULL, completed_by = NULL, purchased = NULL, spent = NULL, last_purchase_id = NULL,
@@ -209,7 +229,10 @@ export const itemsRepository = {
   },
 
   /** Vuelven a pendiente las que ya cumplieron su plazo (con su siguiente turno). Devuelve las reabiertas. */
-  async reopenDue(conn: Db = db()): Promise<ReopenedItem[]> {
+  async reopenDue(tx?: Db): Promise<ReopenedItem[]> {
+    if (!tx) return withTransaction((c) => itemsRepository.reopenDue(c));
+    const conn = tx;
+    await itemsRepository.carryUnpaid('i.reopen_on IS NOT NULL AND i.reopen_on <= current_date', [], conn);
     const { rows } = await conn.query<ReopenedItem>(
       `UPDATE list_items i
           SET completed_at = NULL, completed_by = NULL, purchased = NULL, spent = NULL, last_purchase_id = NULL,

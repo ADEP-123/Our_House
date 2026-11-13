@@ -6,6 +6,7 @@ import { itemsRepository, type ItemFields } from '../repositories/items.reposito
 import { usersRepository } from '../repositories/users.repository.js';
 import { listRef, logActivity } from './activity.service.js';
 import { getAccess, listsService, requireEdit, toItemView, type ListAccess } from './lists.service.js';
+import { listPaymentsService } from './list-payments.service.js';
 import { calendarService } from './calendar.service.js';
 import { notificationsService } from './notifications.service.js';
 import { nextTurn, reopenDueItems } from './repeat.service.js';
@@ -196,6 +197,8 @@ export const itemsService = {
     const access = await getAccess(listId, userId);
     if (!access.canCheck) throw forbidden(access.list.archived_at ? 'LIST_ARCHIVED' : 'LIST_READ_ONLY');
     const before = await getItem(access, itemId);
+    // Desmarcar algo ya pagado lo descuenta del movimiento de su pago
+    if (!completed && before.spent !== null) await listPaymentsService.onItemsReset(listId, [itemId], userId, access.list.family_id);
     await itemsRepository.setCompleted(itemId, listId, completed, userId);
     // Completar una tarea completa sus subtareas; una subtarea arrastra a su tarea
     const cascaded = completed && !before.parent_id ? await itemsRepository.completeChildren(itemId, userId) : 0;
@@ -285,6 +288,8 @@ export const itemsService = {
   async uncheckAll(listId: string, userId: string) {
     const access = await getAccess(listId, userId);
     requireEdit(access);
+    // Reiniciar la lista borra (o descuenta) los movimientos de sus pagos
+    await listPaymentsService.onItemsReset(listId, null, userId, access.list.family_id);
     const count = await itemsRepository.uncheckAll(listId);
     await logActivity(access.list.family_id, userId, 'list.reset', { ...listRef(access.list), details: { count } });
     calendarService.syncList(listId);

@@ -132,6 +132,8 @@ export interface Movement {
   savings?: { id: string; name: string | null; icon: string | null } | null;
   /** Creado por un movimiento programado */
   scheduled?: boolean;
+  /** Creado con "Registrar pago" de una lista de compras */
+  purchase?: boolean;
 }
 
 /** Transferencia entre dos cuentas; los ids los genera el dispositivo (funciona sin conexión) */
