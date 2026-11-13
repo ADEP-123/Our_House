@@ -43,6 +43,23 @@ meRoutes.get('/tasks', itemsController.assignedToMe);
 // Código de verificación al correo (para acciones sensibles)
 meRoutes.post('/verification-codes', validateBody(z.strictObject({ purpose: z.enum(['secrets']) })), profileController.requestCode);
 
+// Tutoriales: visto, saltado o en qué paso quedó (la práctica en sí nunca llega al servidor)
+const TUTORIALS = ['lists', 'account', 'calendar', 'getting-started'] as const;
+meRoutes.put(
+  '/tutorials/:tutorial',
+  (req, _res, next) => {
+    z.enum(TUTORIALS).parse(req.params.tutorial);
+    next();
+  },
+  validateBody(
+    z.strictObject({
+      state: z.enum(['done', 'skipped', 'progress']),
+      step: z.int().min(0).max(50).optional(),
+    }),
+  ),
+  profileController.setTutorial,
+);
+
 // Preferencias de notificaciones (y más adelante recordatorios y calendario)
 meRoutes.patch(
   '/settings',

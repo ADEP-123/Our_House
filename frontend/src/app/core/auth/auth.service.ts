@@ -23,6 +23,8 @@ export interface User {
   reminders: ReminderDefaults;
   /** Ya no mostrar el aviso de conectar Google Calendar */
   calendarPromptDismissed: boolean;
+  /** Tutoriales vistos, saltados o a medias (una sesión guardada antes de la fase 8 no lo trae) */
+  tutorials?: Partial<Record<'lists' | 'account' | 'calendar' | 'getting-started', { state: 'done' | 'skipped' | 'progress'; step?: number }>>;
 }
 
 export interface UserNotifications {

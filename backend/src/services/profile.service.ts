@@ -112,6 +112,11 @@ export const profileService = {
     return toUserView(updated);
   },
 
+  /** Marca un tutorial como visto o saltado, o guarda en qué paso quedó */
+  async setTutorial(userId: string, tutorial: string, value: { state: string; step?: number }): Promise<UserView> {
+    return toUserView(await usersRepository.setTutorial(userId, tutorial, value));
+  },
+
   async setSettings(userId: string, settings: UserSettings): Promise<UserView> {
     return toUserView(await usersRepository.setSettings(userId, settings));
   },

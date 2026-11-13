@@ -25,6 +25,7 @@ export interface UserRow {
   email_secret_views: boolean;
   email_finance: boolean;
   email_scheduled: boolean;
+  tutorials: Record<string, { state: string; step?: number }>;
   created_at: Date;
 }
 
@@ -112,6 +113,14 @@ export const usersRepository = {
     return (await one(
       'UPDATE users SET avatar_url = $2, avatar_preset = $3, updated_at = now() WHERE id = $1 RETURNING *',
       [id, avatar.url, avatar.preset],
+    ))!;
+  },
+
+  /** Estado de un tutorial (los demás no se tocan) */
+  async setTutorial(id: string, tutorial: string, value: { state: string; step?: number }) {
+    return (await one(
+      `UPDATE users SET tutorials = jsonb_set(tutorials, ARRAY[$2::text], $3::jsonb), updated_at = now() WHERE id = $1 RETURNING *`,
+      [id, tutorial, JSON.stringify(value)],
     ))!;
   },
 
