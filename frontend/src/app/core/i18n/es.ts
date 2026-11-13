@@ -262,6 +262,15 @@ export const es = {
       manage: { title: 'Cuando quieras', body: 'En Perfil, en «Google Calendar», ves con qué cuenta estás conectado y puedes desconectarla.' },
       connectForReal: 'Conectar de verdad',
     },
+    gettingStarted: {
+      title: 'Primeros pasos',
+      hide: 'Ocultar',
+      lists: 'Crea tu primera lista',
+      theme: 'Elige tu tema',
+      calendar: 'Conecta Google Calendar',
+      go: 'Ir',
+      done: 'Hecho',
+    },
   },
   home: {
     greeting: 'Hola, {name}',

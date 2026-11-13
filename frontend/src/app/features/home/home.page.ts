@@ -5,10 +5,11 @@ import { TPipe } from '../../core/i18n/t.pipe';
 import { FAMILY_AVATAR_PRESETS } from '../../shared/avatar-presets';
 import { AvatarComponent } from '../../shared/avatar.component';
 import { FamiliesService } from '../families/families.service';
+import { GettingStartedComponent } from '../tutorial/getting-started.component';
 
 @Component({
   selector: 'oh-home-page',
-  imports: [RouterLink, TPipe, AvatarComponent],
+  imports: [RouterLink, TPipe, AvatarComponent, GettingStartedComponent],
   template: `
     <h1>{{ 'home.greeting' | t: { name: auth.user()?.firstName || auth.user()?.nickname || '' } }}</h1>
     <p class="intro">{{ 'home.intro' | t }}</p>
@@ -47,6 +48,7 @@ import { FamiliesService } from '../families/families.service';
             }
           </div>
         </section>
+        <oh-getting-started />
       } @else {
         <section class="start">
           <p>{{ 'home.noFamily' | t }}</p>
