@@ -263,6 +263,15 @@ export const en: Dictionary = {
       manage: { title: 'Anytime', body: 'In Profile, under "Google Calendar", you see which account is connected and can disconnect it.' },
       connectForReal: 'Connect for real',
     },
+    gettingStarted: {
+      title: 'Getting started',
+      hide: 'Hide',
+      lists: 'Create your first list',
+      theme: 'Choose your theme',
+      calendar: 'Connect Google Calendar',
+      go: 'Go',
+      done: 'Done',
+    },
   },
   home: {
     greeting: 'Hi, {name}',
