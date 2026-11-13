@@ -8,6 +8,7 @@ import { ConfirmService } from '../../shared/confirm.service';
 import { ToastService } from '../../shared/toast.service';
 import { FamiliesService, FamilyMember } from '../families/families.service';
 import { ListItemsComponent } from './list-items.component';
+import { ListPaymentComponent } from './list-payment.component';
 import { SecretListComponent } from './secret-list.component';
 import { formatMoney } from './item-logic';
 import { colorOf, iconOf, LIST_TYPES } from './list-presets';
@@ -16,7 +17,7 @@ import { ListsStore } from './lists.store';
 
 @Component({
   selector: 'oh-list-page',
-  imports: [RouterLink, TPipe, ListItemsComponent, SecretListComponent],
+  imports: [RouterLink, TPipe, ListItemsComponent, ListPaymentComponent, SecretListComponent],
   templateUrl: './list.page.html',
   styleUrl: './list.page.scss',
 })
