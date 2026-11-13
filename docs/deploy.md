@@ -120,7 +120,7 @@ Vercel gratis solo permite tareas programadas una vez al día, así que el reloj
 3. En GitHub > Settings > Secrets and variables > Actions:
    - pestaña **Secrets**: `CRON_SECRET` con la misma clave;
    - pestaña **Variables**: `API_URL` = `https://our-house-api.vercel.app`.
-4. En Actions > **Recordatorios** > **Run workflow** pruébalo a mano: debe terminar en verde y mostrar `{"sent":0}` (o los que haya enviado).
+4. En Actions > **Recordatorios** > **Run workflow** pruébalo a mano: debe terminar en verde y mostrar `{"sent":0,"scheduled":0}` (o los que haya enviado y los movimientos programados que registró).
 
 Notas:
 - GitHub puede atrasar unos minutos cada ejecución; la API envía cada recordatorio una sola vez por día y persona.
@@ -179,6 +179,21 @@ Cómo funciona: cada tarea con fecha aparece en el calendario "Our House" de su 
 - **Modo automático:** es opcional. Cada día usa el tema de la fiesta o, si no hay, el de la estación según el hemisferio que elija la persona. Fiestas: Halloween del 15 al 31 de octubre, Navidad del 1 al 26 de diciembre, Año nuevo del 27 de diciembre al 6 de enero, Amor del 1 al 14 de febrero. Las estaciones van por meses completos (en el norte, invierno de diciembre a febrero). La app revisa la fecha al volver a abrirla y cada hora.
 - **Ícono de la pestaña:** durante una fiesta lleva su detalle (gorro, calabaza, corazón o estrella), elija la persona el tema que elija. La app instalada mantiene su ícono.
 - **Inicio de sesión:** en escritorio, el panel de la marca lleva el patrón de la temporada.
+
+## 12. Finanzas (fase 7)
+
+- **Migraciones:** de `019_cuentas` a `026_pago_compras`. Las aplica el workflow **Migraciones** al llegar a `main`. No borran ni cambian datos de las fases anteriores: las listas de compras siguen igual y solo ganan "Registrar pago".
+- **Sin variables nuevas:** los movimientos programados usan el mismo workflow **Recordatorios** de la sección 7.1 (cada hora, con `CRON_SECRET`). Si ese workflow no está configurado, los programados no se registran solos, pero el resto de finanzas funciona.
+- **Moneda:** cada grupo usa una sola moneda, la que elige un líder en la configuración del grupo. No hay conversión: un gasto en otra moneda se anota ya convertido.
+- **Correos nuevos:** usan el mismo Gmail de la sección 5.1.
+  - **Avisos de finanzas:** presupuesto al 80 % y al 100 %, meta de ahorro cumplida y disponible bajo de una cuenta.
+  - **Programados:** antes de cobrar, al registrarse, pendiente de confirmar y cuando un programado se pausa solo.
+  - Cada persona los apaga en Perfil > Notificaciones. Vienen activados.
+- **Sin conexión:** con la PWA publicada, las cuentas que se abrieron con conexión quedan guardadas en el dispositivo. Sin red se pueden agregar, editar y borrar movimientos, transferir y ajustar saldos; los cambios se envían solos al volver. Necesitan conexión: crear o cambiar cuentas y categorías, el resumen, importar y exportar, ahorros, cambiar programados y "Registrar pago". Cerrar sesión borra esa copia.
+- **Importar tus datos:** en Finanzas > **Importar**, descarga la plantilla (trae las cuentas y categorías del grupo) o sube tu propio Excel con las hojas Movimientos, Cuentas y Categorías, en español o inglés. Antes de guardar muestra qué pasa con cada fila; las filas con error se saltan. Volver a importar el mismo archivo actualiza los movimientos con ID en lugar de duplicarlos. Límites: 5 MB y 5.000 movimientos por archivo (la API acepta hasta 4 MB de datos, dentro del límite de 4,5 MB de Vercel).
+- **Exportar:** desde la hoja de cada cuenta o desde el Resumen, en Excel (con hoja de resumen) o CSV. El Excel exportado se puede volver a importar.
+- **Dependencias nuevas del frontend:** `read-excel-file` y `write-excel-file`. Se cargan solo al importar o exportar, así que no hacen más lenta la app.
+- **Permisos de las cuentas:** quien crea una cuenta decide quién la ve (todo el grupo, personas elegidas o solo yo) y quién puede agregar movimientos. Los líderes ven las cuentas privadas de los supervisados en modo lectura, después de un aviso.
 
 ## Desarrollo local
 
