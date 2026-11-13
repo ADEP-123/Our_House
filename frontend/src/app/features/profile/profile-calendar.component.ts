@@ -1,19 +1,26 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toApiError } from '../../core/api/api-error';
 import { I18n } from '../../core/i18n/i18n.service';
 import { TPipe } from '../../core/i18n/t.pipe';
 import { ConfirmService } from '../../shared/confirm.service';
 import { GoogleCalendarService } from '../calendar/google-calendar.service';
+import { TutorialButtonComponent } from '../tutorial/tutorial-button.component';
+import { TutorialService } from '../tutorial/tutorial.service';
 
 /** Perfil > Google Calendar: conectar, ver con qué cuenta y desconectar. */
 @Component({
   selector: 'oh-profile-calendar',
-  imports: [TPipe],
+  imports: [TPipe, TutorialButtonComponent],
   styleUrl: './profile-section.scss',
   host: { id: 'calendario' },
   template: `
-    <h2>{{ 'profile.calendar.title' | t }}</h2>
+    <div class="title-row">
+      <h2>{{ 'profile.calendar.title' | t }}</h2>
+      @if (status()?.available) {
+        <oh-tutorial-button tutorial="calendar" />
+      }
+    </div>
     <div class="section-body">
       @if (status(); as s) {
         @if (!s.available) {
@@ -39,8 +46,19 @@ import { GoogleCalendarService } from '../calendar/google-calendar.service';
       }
     </div>
   `,
+  styles: `
+    .title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+  `,
 })
 export class ProfileCalendarComponent implements OnInit {
+  private readonly tutorial = inject(TutorialService);
+  private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly calendar = inject(GoogleCalendarService);
   private readonly confirm = inject(ConfirmService);
   private readonly route = inject(ActivatedRoute);
@@ -55,12 +73,23 @@ export class ProfileCalendarComponent implements OnInit {
     // Vuelta desde Google: ?google=connected | cancelled | error
     const result = this.route.snapshot.queryParamMap.get('google');
     await this.calendar.load(!!result);
+    this.offerTutorialWhenSeen();
     if (result) {
       const key = result === 'connected' ? 'profile.calendar.connected' : result === 'cancelled' ? 'profile.calendar.cancelled' : 'profile.calendar.failed';
       this.message.set({ text: this.i18n.t(key), error: result !== 'connected' });
       void this.router.navigate([], { queryParams: { google: null }, queryParamsHandling: 'merge', replaceUrl: true, fragment: 'calendario' });
       setTimeout(() => document.getElementById('calendario')?.scrollIntoView({ behavior: 'smooth' }));
     }
+  }
+
+  /** La primera vez que se ve esta sección (con Google disponible), invita al tutorial del calendario */
+  private offerTutorialWhenSeen(): void {
+    if (!this.status()?.available || this.tutorial.seen('calendar') || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) this.tutorial.offer('calendar');
+    }, { threshold: 0.6 });
+    observer.observe(this.host.nativeElement);
+    this.destroyRef.onDestroy(() => observer.disconnect());
   }
 
   async connect(): Promise<void> {
