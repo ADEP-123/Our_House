@@ -226,6 +226,17 @@ export const es = {
         milk: 'Leche',
       },
     },
+    account: {
+      season: { title: 'Temas de temporada', body: 'Además de los temas clásicos hay estaciones y fiestas, en versión clara u oscura. Elige uno.' },
+      pattern: { title: 'Patrón de fondo', body: 'Elige un dibujo para el fondo, o cualquier emoji, y cuánto se nota.' },
+      save: { title: 'Guarda', body: 'Toca «Guardar paleta»: en la práctica lo verás en toda la app, pero al salir vuelve a como estaba.' },
+      photo: { title: 'Tu foto', body: 'Sube una foto o elige un avatar: así te reconocen en las listas y en el grupo.' },
+      details: { title: 'Tus datos e idioma', body: 'Aquí cambias tu nombre, tu apodo, el idioma de la app y tu zona horaria.' },
+      extras: { auto: 'Tema automático', notifications: 'Correos y recordatorios' },
+      auto: { title: 'Según la temporada', body: 'Activa «Cambiar solo según la temporada»: cada día usa el tema de la estación o de la fiesta.' },
+      autoSave: { title: 'Guarda', body: 'Toca «Guardar paleta» para verlo.' },
+      notifications: { title: 'Correos y recordatorios', body: 'Elige qué correos recibir y a qué hora y con cuántos días de anticipación llegan los recordatorios de tus tareas.' },
+    },
   },
   home: {
     greeting: 'Hola, {name}',

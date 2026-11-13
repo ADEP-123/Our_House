@@ -1,4 +1,9 @@
-<h1>{{ 'appearance.title' | t }}</h1>
+<div class="title-row">
+  <h1>{{ 'appearance.title' | t }}</h1>
+  @if (!practice.active()) {
+    <oh-tutorial-button tutorial="account" />
+  }
+</div>
 <p class="lead">{{ 'appearance.lead' | t }}</p>
 
 <div class="layout">
@@ -25,7 +30,7 @@
       </div>
     </section>
 
-    <section class="auto-box">
+    <section class="auto-box" data-tour="auto">
       <label class="switch-label">
         <input type="checkbox" role="switch" [checked]="auto().enabled" (change)="setAuto(!auto().enabled)" />
         <span>🗓️ {{ 'appearance.auto.title' | t }}</span>
@@ -47,7 +52,7 @@
       }
     </section>
 
-    <section>
+    <section data-tour="seasonal">
       <div class="section-head">
         <h2>{{ 'appearance.seasonalTitle' | t }}</h2>
         <label class="switch-label">
@@ -79,7 +84,7 @@
       }
     </section>
 
-    <section>
+    <section data-tour="patterns">
       <h2>{{ 'appearance.pattern.title' | t }}</h2>
       <p class="oh-hint pattern-hint">{{ 'appearance.pattern.hint' | t }}</p>
       <div class="patterns" role="radiogroup" [attr.aria-label]="'appearance.pattern.title' | t">
@@ -189,7 +194,7 @@
     </div>
 
     <div class="actions">
-      <button type="button" class="oh-btn oh-btn--filled" (click)="save()" [disabled]="!dirty() || busy()">
+      <button type="button" class="oh-btn oh-btn--filled" data-tour="save" (click)="save()" [disabled]="!dirty() || busy()">
         {{ 'appearance.save' | t }}
       </button>
       @if (dirty()) {

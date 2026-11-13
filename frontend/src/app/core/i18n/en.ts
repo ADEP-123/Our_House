@@ -227,6 +227,17 @@ export const en: Dictionary = {
         milk: 'Milk',
       },
     },
+    account: {
+      season: { title: 'Seasonal themes', body: 'Besides the classic themes there are seasons and holidays, in light or dark versions. Choose one.' },
+      pattern: { title: 'Background pattern', body: 'Choose a drawing for the background, or any emoji, and how strong it is.' },
+      save: { title: 'Save', body: 'Tap "Save palette": during the practice you will see it all over the app, but it goes back when you leave.' },
+      photo: { title: 'Your photo', body: 'Upload a photo or choose an avatar, so people recognize you in lists and in the group.' },
+      details: { title: 'Your details and language', body: 'Here you change your name, nickname, the app language and your time zone.' },
+      extras: { auto: 'Automatic theme', notifications: 'Emails and reminders' },
+      auto: { title: 'Follow the season', body: 'Turn on "Change with the season": every day it uses the theme of the season or holiday.' },
+      autoSave: { title: 'Save', body: 'Tap "Save palette" to see it.' },
+      notifications: { title: 'Emails and reminders', body: 'Choose which emails you get, and at what time and how many days ahead the reminders for your tasks arrive.' },
+    },
   },
   home: {
     greeting: 'Hi, {name}',
