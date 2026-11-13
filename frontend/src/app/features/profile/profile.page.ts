@@ -10,6 +10,8 @@ import { ProfileNotificationsComponent } from './profile-notifications.component
 import { ProfilePasswordComponent } from './profile-password.component';
 import { ProfilePhotoComponent } from './profile-photo.component';
 import { ProfileSecurityComponent } from './profile-security.component';
+import { TutorialButtonComponent } from '../tutorial/tutorial-button.component';
+import { TutorialService } from '../tutorial/tutorial.service';
 
 @Component({
   selector: 'oh-profile-page',
@@ -24,6 +26,7 @@ import { ProfileSecurityComponent } from './profile-security.component';
     ProfileNotificationsComponent,
     ProfileCalendarComponent,
     ProfileSecurityComponent,
+    TutorialButtonComponent,
   ],
   template: `
     <h1 class="oh-sr-only">{{ 'profile.title' | t }}</h1>
@@ -34,6 +37,7 @@ import { ProfileSecurityComponent } from './profile-security.component';
           <p class="name">{{ user.firstName ? user.firstName + ' ' + (user.lastName ?? '') : user.nickname }}</p>
           <p class="oh-muted">&#64;{{ user.nickname }} · {{ user.email }}</p>
         </div>
+        <oh-tutorial-button tutorial="account" class="help" />
       </header>
     }
     <oh-profile-photo />
@@ -54,6 +58,9 @@ import { ProfileSecurityComponent } from './profile-security.component';
       align-items: center;
       gap: 16px;
       padding-bottom: 28px;
+    }
+    .help {
+      margin-left: auto;
     }
     .name {
       font-size: 1.5rem;
@@ -77,4 +84,9 @@ import { ProfileSecurityComponent } from './profile-security.component';
 })
 export class ProfilePage {
   protected readonly auth = inject(AuthService);
+
+  constructor() {
+    // Primera vez en Perfil: invita al tutorial de la cuenta
+    inject(TutorialService).offer('account');
+  }
 }
