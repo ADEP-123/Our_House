@@ -59,6 +59,7 @@ export const routes: Routes = [
       // Prácticas de los tutoriales: copias de las pantallas que no guardan nada
       { path: 'tutorial/listas', loadComponent: () => import('./features/tutorial/lists-practice.page').then((m) => m.ListsPracticePage) },
       { path: 'tutorial/cuenta', loadComponent: () => import('./features/tutorial/account-practice.page').then((m) => m.AccountPracticePage) },
+      { path: 'tutorial/calendario', loadComponent: () => import('./features/tutorial/calendar-practice.page').then((m) => m.CalendarPracticePage) },
       { path: 'finanzas', loadComponent: () => import('./features/finance/finance.page').then((m) => m.FinancePage) },
       {
         path: 'finanzas/categorias',
