@@ -56,6 +56,8 @@ export const routes: Routes = [
       { path: 'listas/nueva', loadComponent: () => import('./features/lists/list-edit.page').then((m) => m.ListEditPage) },
       { path: 'listas/:id/editar', loadComponent: () => import('./features/lists/list-edit.page').then((m) => m.ListEditPage) },
       { path: 'listas/:id', loadComponent: () => import('./features/lists/list.page').then((m) => m.ListPage) },
+      // Prácticas de los tutoriales: copias de las pantallas que no guardan nada
+      { path: 'tutorial/listas', loadComponent: () => import('./features/tutorial/lists-practice.page').then((m) => m.ListsPracticePage) },
       { path: 'finanzas', loadComponent: () => import('./features/finance/finance.page').then((m) => m.FinancePage) },
       {
         path: 'finanzas/categorias',
