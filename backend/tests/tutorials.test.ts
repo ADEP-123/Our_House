@@ -14,6 +14,10 @@ describe('tutoriales', () => {
 
     await agent.put('/api/me/tutorials/lists').send({ state: 'done' }).expect(200);
     expect((await agent.get('/api/auth/me')).body.user.tutorials.lists).toEqual({ state: 'done' });
+
+    // Finanzas también tiene su tutorial
+    const finance = await agent.put('/api/me/tutorials/finance').send({ state: 'progress', step: 11 }).expect(200);
+    expect(finance.body.user.tutorials.finance).toEqual({ state: 'progress', step: 11 });
   });
 
   it('solo tutoriales y estados conocidos, con sesión', async () => {
