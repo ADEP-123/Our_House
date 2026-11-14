@@ -1,4 +1,21 @@
 import { HttpRequest } from '@angular/common/http';
+
+/** Respuesta inventada por la práctica de un módulo (status >= 400 = error con body { error }) */
+export interface PracticeResponse {
+  status: number;
+  body: unknown;
+}
+
+/**
+ * Práctica sobre las pantallas reales de un módulo (Finanzas): responde en memoria las llamadas
+ * a la API del módulo, también las lecturas, así la pantalla muestra solo los datos de práctica.
+ */
+export interface PracticeHandler {
+  /** null: esta llamada no es de la práctica */
+  handle(req: HttpRequest<unknown>): PracticeResponse | null;
+  /** Rutas de la API del módulo: durante la práctica nunca llegan al servidor */
+  owns(url: string): boolean;
+}
 import { Injectable, inject, signal } from '@angular/core';
 import { AuthService, User } from '../../core/auth/auth.service';
 
@@ -12,17 +29,46 @@ export class PracticeMode {
   readonly active = signal(false);
   /** La cuenta real al entrar a la práctica */
   private snapshot: User | null = null;
+  /** Práctica de un módulo sobre sus pantallas reales (Finanzas) */
+  private moduleHandler: PracticeHandler | null = null;
+  /**
+   * Sube al entrar y salir de la práctica y cuando cambian sus datos por fuera de una llamada:
+   * las pantallas reales que la usan vuelven a cargar.
+   */
+  readonly revision = signal(0);
+
+  get handler(): PracticeHandler | null {
+    return this.active() ? this.moduleHandler : null;
+  }
+
+  /** Usa la práctica en memoria de un módulo hasta que termine la práctica */
+  use(handler: PracticeHandler): void {
+    this.moduleHandler = handler;
+    this.revision.update((n) => n + 1);
+  }
+
+  /** Los datos de práctica cambiaron (ej. el tutorial agregó una tarjeta) */
+  refresh(): void {
+    this.revision.update((n) => n + 1);
+  }
 
   start(): void {
     if (this.active()) return;
     this.snapshot = this.auth.user() ?? null;
     this.active.set(true);
+    // Las ventanas de las pantallas reales se abren sin el modo modal (shared/modal.ts)
+    document.body.classList.add('oh-practice');
   }
 
   /** Devuelve la cuenta real (con el estado de los tutoriales, que sí se guarda) */
   end(): void {
     if (!this.active()) return;
     this.active.set(false);
+    document.body.classList.remove('oh-practice');
+    if (this.moduleHandler) {
+      this.moduleHandler = null;
+      this.revision.update((n) => n + 1);
+    }
     const real = this.snapshot;
     this.snapshot = null;
     if (real)
