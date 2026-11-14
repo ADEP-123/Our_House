@@ -5,6 +5,7 @@ import { AuthService } from '../auth/auth.service';
 import { isNetworkError, isRetryable } from './network';
 import { OfflineDb } from './offline-db.service';
 import { SyncStatus } from './sync-status.service';
+import { PracticeMode } from '../../features/tutorial/practice-mode.service';
 
 /** Un cambio guardado en el dispositivo, listo para reenviarse tal cual al servidor */
 export interface QueuedRequest {
@@ -19,12 +20,15 @@ export interface QueuedRequest {
  * - Al volver la conexión (y cada 15 s) se envía en orden; un error de red detiene el envío.
  * - Lo que el servidor rechaza se descarta y se avisa (SyncStatus.rejected).
  * - Los ids los genera el dispositivo, así un reenvío no duplica.
+ * - En modo práctica (tutoriales) no se guarda ni se envía nada: todo va directo a la
+ *   práctica en memoria y la cola real queda en pausa hasta salir.
  * Se crea dentro del constructor de un servicio (contexto de inyección).
  */
 export class OfflineQueue<M extends QueuedRequest = QueuedRequest> {
   private readonly http = inject(HttpClient);
   private readonly db = inject(OfflineDb);
   private readonly status = inject(SyncStatus);
+  private readonly practice = inject(PracticeMode);
 
   /** Sube cada vez que la cola termina de enviarse: las pantallas recargan desde el servidor */
   readonly synced = signal(0);
@@ -60,6 +64,7 @@ export class OfflineQueue<M extends QueuedRequest = QueuedRequest> {
 
   /** Hay cambios sin enviar que cumplen la condición */
   has(match: (m: M) => boolean = () => true): boolean {
+    if (this.practice.active()) return false;
     return this.queue.some(match);
   }
 
@@ -74,6 +79,7 @@ export class OfflineQueue<M extends QueuedRequest = QueuedRequest> {
 
   /** Envía la cola en orden. Se detiene en el primer error que vale la pena reintentar. */
   flush(): Promise<void> {
+    if (this.practice.active()) return Promise.resolve();
     this.flushing ??= (async () => {
       await this.ready;
       let sent = false;
@@ -104,6 +110,7 @@ export class OfflineQueue<M extends QueuedRequest = QueuedRequest> {
   mutate<T>(m: M, offline: () => Promise<T>, online: (res: unknown) => Promise<T>): Promise<T> {
     const run = async (): Promise<T> => {
       await this.ready;
+      if (this.practice.active()) return online(await this.send(m));
       if (!this.queue.length) {
         try {
           const res = await this.send(m);
@@ -126,6 +133,7 @@ export class OfflineQueue<M extends QueuedRequest = QueuedRequest> {
 
   /** Lectura con respaldo: la red primero (se guarda copia); sin conexión, la última copia. */
   async read<T>(key: string, request: () => Promise<T>): Promise<T> {
+    if (this.practice.active()) return request();
     try {
       const value = await request();
       this.status.online.set(true);
@@ -141,10 +149,12 @@ export class OfflineQueue<M extends QueuedRequest = QueuedRequest> {
   }
 
   cached<T>(key: string): Promise<T | undefined> {
+    if (this.practice.active()) return Promise.resolve(undefined);
     return this.db.get<T>(key);
   }
 
   save(key: string, value: unknown): Promise<void> {
+    if (this.practice.active()) return Promise.resolve();
     return this.db.set(key, value);
   }
 }

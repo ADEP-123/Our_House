@@ -23,6 +23,7 @@ import { FinanceService } from './finance.service';
 import { FinanceStore } from './finance.store';
 import { SavingsService } from './savings.service';
 import { amountForInput, parseAmount } from './movement-logic';
+import { FinancePracticeBannerComponent } from './tutorial/finance-practice-banner.component';
 
 interface Removal {
   category: Category;
@@ -39,7 +40,7 @@ interface Removal {
  */
 @Component({
   selector: 'oh-categories-page',
-  imports: [NgTemplateOutlet, RouterLink, TPipe, IconPickerComponent],
+  imports: [NgTemplateOutlet, RouterLink, TPipe, IconPickerComponent, FinancePracticeBannerComponent],
   templateUrl: './categories.page.html',
   styleUrl: './categories.page.scss',
 })

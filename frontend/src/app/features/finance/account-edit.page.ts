@@ -25,6 +25,7 @@ import {
 } from './finance-logic';
 import { Account, AccountInput, AccountKind, EditMode, ViewMode } from './finance.models';
 import { FinanceService } from './finance.service';
+import { FinancePracticeBannerComponent } from './tutorial/finance-practice-banner.component';
 
 const ROLES: FamilyRole[] = ['leader', 'member', 'supervised'];
 
@@ -42,7 +43,7 @@ function flip<T>(set: Set<T>, value: T): Set<T> {
  */
 @Component({
   selector: 'oh-account-edit-page',
-  imports: [ReactiveFormsModule, RouterLink, TPipe],
+  imports: [ReactiveFormsModule, RouterLink, TPipe, FinancePracticeBannerComponent],
   templateUrl: './account-edit.page.html',
   styleUrl: './account-edit.page.scss',
 })

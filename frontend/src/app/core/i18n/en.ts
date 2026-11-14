@@ -173,6 +173,7 @@ export const en: Dictionary = {
   tutorial: {
     eyebrow: 'Tutorial',
     invite: {
+      finance: 'Want me to show you how to track your money in Finances?',
       lists: 'Want me to show you how lists work?',
       account: 'Want me to show you how to personalize your account?',
       calendar: 'Want me to show you how to bring your tasks to Google Calendar?',
@@ -185,6 +186,8 @@ export const en: Dictionary = {
     skipTutorial: 'Skip tutorial',
     skippedToast: 'You can watch the tutorial anytime with the "?" button.',
     help: 'Watch the tutorial',
+    showMore: 'Show more',
+    showLess: 'Show less',
     stepOf: 'Step {n} of {total}',
     next: 'Next',
     back: 'Back',
@@ -195,6 +198,118 @@ export const en: Dictionary = {
     finish: 'Finish',
     banner: 'Practice mode: nothing you do here is saved.',
     exit: 'Exit',
+    finance: {
+      welcome: {
+        title: '👋 Welcome to Finances',
+        body: 'In a few minutes I will show you how to track your money here. This is practice mode: tap and save freely, none of this goes into your data.',
+      },
+      tabs: {
+        title: 'One tab per account',
+        body: 'Each account (bank, cash, card, savings) is a tab, like the sheets of a spreadsheet, and shows its balance. There is a practice one already: Cash.',
+      },
+      newAccount: { title: 'Add an account', body: 'Let us create your bank account. Tap "+ New account".' },
+      accountForm: {
+        title: 'Account details',
+        body: 'Type the name (for example "Bank"), the type and, if you want, the starting balance. The prefix builds each transaction ID (B0001). You also choose who sees it and who edits it. Tap "Create account".',
+      },
+      addMovement: { title: 'Add an expense', body: 'You are now in your new account. Tap "+ Add transaction".' },
+      movementForm: {
+        title: 'Money out or in',
+        body: 'Money out subtracts and money in adds. Type the amount, what it was and pick the category. While typing it suggests what you used before. Then save.',
+      },
+      table: {
+        title: 'Your transactions',
+        body: 'Each transaction has its ID, its category and the balance left. Tap it to change or delete it. Above you can search, filter and hide columns.',
+      },
+      transfer: {
+        title: 'Moving money between accounts',
+        body: 'Moving money from one account to another is neither an expense nor income: it is a transfer. Tap "Transfer".',
+      },
+      transferForm: {
+        title: 'From and to',
+        body: 'Choose the account it leaves, the one it goes to and the amount. It shows in both accounts, linked. Tap "Transfer".',
+      },
+      summaryTab: { title: 'The summary', body: 'After the tabs there is the Summary. Tap it.' },
+      summary: {
+        title: 'How you are doing',
+        body: 'Income, expenses and balance for the period, compared with the previous one. Below there are charts, spending by category and the table by month. You can change the period and the accounts.',
+      },
+      cards: {
+        chapter: 'Credit cards',
+        card: {
+          title: 'Your card',
+          body: 'I added a practice card. It shows the debt, how much of the limit you used, what is available and the limit. Buying with it is money out in its tab: the debt goes up.',
+        },
+        pay: { title: 'Pay the card', body: 'To pay it, tap "Pay card".' },
+        payForm: {
+          title: 'The payment',
+          body: 'It already has the debt as the amount and a source account. It is a transfer, so the expense is not counted twice. Tap "Transfer".',
+        },
+        paid: { title: 'Debt paid down', body: 'The debt went down and the available amount went up. If you go over the limit, it warns you in red.' },
+      },
+      categories: {
+        chapter: 'Categories and budget',
+        list: {
+          title: 'Categories',
+          body: 'They are shared by the whole group and work for money in and out. Leaders create, change and disable them.',
+        },
+        edit: { title: 'Give it a budget', body: 'Tap "Edit" on a category, for example the one for food.' },
+        budget: { title: 'Monthly budget', body: 'Type how much you want to spend per month in that category and save.' },
+        alerts: {
+          title: 'We let you know',
+          body: 'At 80 % and 100 % of the budget it warns you in the app and by email. In the monthly Summary you see a bar for each category.',
+        },
+      },
+      savings: {
+        chapter: 'Savings',
+        new: { title: 'A savings project', body: 'For a trip or an emergency. Tap "+ New project".' },
+        form: {
+          title: 'Name and goal',
+          body: 'Give it a name and an icon. The goal and date are optional: with them it tells you how much to set aside per month. Save.',
+        },
+        setAside: { title: 'Set money aside', body: 'Tap "Set aside".' },
+        move: {
+          title: 'From which account',
+          body: 'Choose the account and the amount. The money does not leave the account: it is reserved, and you will see Balance · Savings · Available. Save.',
+        },
+        project: {
+          title: 'Your progress',
+          body: 'Here you see what you set aside, the progress to the goal and which accounts hold it. When you add an expense you can pay it with the savings.',
+        },
+      },
+      scheduled: {
+        chapter: 'Scheduled expenses',
+        new: { title: 'What repeats', body: 'Rent, Netflix, your salary… Schedule it once. Tap "+ New scheduled".' },
+        form: {
+          title: 'How often',
+          body: 'Choose the type, the account, the amount and the day of the month (or every week, every year…). Automatic records itself; "To confirm" waits for the real amount. Save.',
+        },
+        item: {
+          title: 'Done',
+          body: 'It shows the next charge. You can skip one, pause it and get an email before it is charged or when it is recorded.',
+        },
+      },
+      io: {
+        chapter: 'Import and export',
+        import: {
+          title: 'Bring your spreadsheet',
+          body: 'Upload an Excel or CSV file with your transactions. Before saving you see what happens with each row. Uploading it again updates instead of duplicating. (Nothing is imported in practice.)',
+        },
+        template: { title: 'Template', body: 'Download a template with your accounts and categories to fill in.' },
+        export: { title: 'Export', body: 'From each account, or from the Summary, you download your transactions in Excel or CSV.' },
+      },
+      lists: {
+        chapter: 'Purchases from lists',
+        pay: {
+          title: 'Record payment',
+          body: 'In a shopping list, what you pay for each item adds up. With "Record payment" it goes into Finances as a single expense, in the account you choose.',
+        },
+        undo: {
+          title: 'If you uncheck',
+          body: 'If you uncheck something already recorded or reset the list, its price is subtracted from the expense. In Finances those expenses have the "🛒 purchase" tag.',
+        },
+      },
+    },
     lists: {
       practiceList: 'Practice list',
       personA: 'Ana (example)',

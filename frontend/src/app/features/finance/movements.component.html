@@ -7,6 +7,7 @@
           <button
             type="button"
             class="oh-btn oh-btn--tonal"
+            data-tour="pay-card"
             (click)="transfer.open({ to: account() })"
           >
             {{ 'finance.transfers.payTitle' | t }}
@@ -15,6 +16,7 @@
         <button
           type="button"
           class="oh-btn oh-btn--text"
+          data-tour="transfer"
           (click)="transfer.open({ from: account() })"
         >
           {{ 'finance.transfers.button' | t }}
@@ -44,7 +46,12 @@
         />
       }
       @if (canEdit()) {
-        <button type="button" class="oh-btn oh-btn--filled add-desktop" (click)="openNew()">
+        <button
+          type="button"
+          class="oh-btn oh-btn--filled add-desktop"
+          data-tour="add-movement"
+          (click)="openNew()"
+        >
           + {{ 'finance.movements.add' | t }}
         </button>
       }
@@ -157,7 +164,7 @@
 
   @if (movements(); as all) {
     @if (rows().length) {
-      <div class="table-wrap">
+      <div class="table-wrap" data-tour="movements-table">
         <table>
           <thead>
             <tr>
@@ -286,6 +293,7 @@
   <button
     type="button"
     class="fab"
+    data-tour="add-movement"
     (click)="openNew()"
     [attr.aria-label]="'finance.movements.add' | t"
   >

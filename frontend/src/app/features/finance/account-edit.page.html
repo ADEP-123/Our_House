@@ -1,3 +1,4 @@
+<oh-finance-practice-banner />
 <a class="back" routerLink="/finanzas" [queryParams]="id() ? { cuenta: id() } : {}"
   >← {{ 'finance.form.back' | t }}</a
 >
@@ -28,7 +29,7 @@
       <p class="oh-alert is-error" role="alert">{{ err }}</p>
     }
   } @else {
-    <form class="oh-panel oh-form" [formGroup]="form" (ngSubmit)="save()" novalidate>
+    <form class="oh-panel oh-form" data-tour="account-form" [formGroup]="form" (ngSubmit)="save()" novalidate>
       <div class="oh-field">
         <label for="account-name">{{ 'finance.form.name' | t }}</label>
         <input

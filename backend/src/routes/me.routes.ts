@@ -44,7 +44,7 @@ meRoutes.get('/tasks', itemsController.assignedToMe);
 meRoutes.post('/verification-codes', validateBody(z.strictObject({ purpose: z.enum(['secrets']) })), profileController.requestCode);
 
 // Tutoriales: visto, saltado o en qué paso quedó (la práctica en sí nunca llega al servidor)
-const TUTORIALS = ['lists', 'account', 'calendar', 'getting-started'] as const;
+const TUTORIALS = ['lists', 'account', 'calendar', 'finance', 'getting-started'] as const;
 meRoutes.put(
   '/tutorials/:tutorial',
   (req, _res, next) => {

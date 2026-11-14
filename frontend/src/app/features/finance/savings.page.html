@@ -1,3 +1,4 @@
+<oh-finance-practice-banner />
 <a class="back" routerLink="/finanzas">← {{ 'finance.title' | t }}</a>
 
 <div class="page">
@@ -12,6 +13,7 @@
       <button
         type="button"
         class="oh-btn oh-btn--filled"
+        data-tour="new-project"
         [disabled]="!sync.online()"
         (click)="newProject()"
       >
@@ -127,6 +129,7 @@
               <button
                 type="button"
                 class="oh-btn oh-btn--tonal"
+                data-tour="set-aside"
                 [disabled]="!canSetAside() || !sync.online()"
                 (click)="moveMoney(p, 'set_aside')"
               >
