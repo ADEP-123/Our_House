@@ -16,6 +16,7 @@ import { kindIcon, localToday } from './finance-logic';
 import { Account } from './finance.models';
 import { FinanceStore } from './finance.store';
 import { amountForInput, parseAmount } from './movement-logic';
+import { openModal } from '../../shared/modal';
 
 /**
  * Transferir entre dos cuentas del grupo o pagar una tarjeta.
@@ -260,7 +261,7 @@ export class TransferDialogComponent {
     );
     this.date.set(localToday());
     this.error.set(null);
-    this.dialog().nativeElement.showModal();
+    openModal(this.dialog().nativeElement);
     setTimeout(() => this.amountInput()?.nativeElement.select());
   }
 

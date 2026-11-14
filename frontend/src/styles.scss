@@ -270,3 +270,12 @@ a {
     animation: none !important;
   }
 }
+
+/* Diálogo abierto durante un tutorial (shared/modal.ts): se ve como modal, debajo de la tarjeta */
+dialog.oh-dialog-tour[open] {
+  position: fixed;
+  inset: 0;
+  z-index: 1001;
+  max-height: calc(100% - 24px);
+  overflow: auto;
+}
