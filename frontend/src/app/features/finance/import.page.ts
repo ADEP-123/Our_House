@@ -9,6 +9,7 @@ import { formatMoney } from '../lists/item-logic';
 import { ACCOUNT_KIND_LABELS, COLOR_LABELS, KIND_LABELS, ParsedFile } from './finance-io';
 import { FinanceIoService, ImportFileError } from './finance-io.service';
 import { ImportReport, ImportStatus } from './finance.models';
+import { FinancePracticeBannerComponent } from './tutorial/finance-practice-banner.component';
 
 type Sheet = 'accounts' | 'categories' | 'movements';
 type Filter = ImportStatus | 'all';
@@ -34,7 +35,7 @@ const SHEET_ORDER: Sheet[] = ['accounts', 'categories', 'movements'];
  */
 @Component({
   selector: 'oh-finance-import-page',
-  imports: [RouterLink, TPipe],
+  imports: [RouterLink, TPipe, FinancePracticeBannerComponent],
   templateUrl: './import.page.html',
   styleUrl: './import.page.scss',
 })

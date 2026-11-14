@@ -30,6 +30,7 @@ import { FinanceStore } from './finance.store';
 import { amountForInput, parseAmount } from './movement-logic';
 import { budgetCrossing, savingsReminder } from './savings-logic';
 import { ToastService } from '../../shared/toast.service';
+import { openModal } from '../../shared/modal';
 
 /** null: cerrado; movement null: agregar uno nuevo */
 export interface MovementRequest {
@@ -151,7 +152,7 @@ export class MovementDialogComponent {
           return;
         }
         this.reset(request.movement);
-        if (!el.open) el.showModal();
+        openModal(el);
         setTimeout(() => this.amountInput()?.nativeElement.select());
       });
     });

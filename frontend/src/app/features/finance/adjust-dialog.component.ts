@@ -16,6 +16,7 @@ import { localToday } from './finance-logic';
 import { Account } from './finance.models';
 import { FinanceStore } from './finance.store';
 import { amountForInput, parseAmount } from './movement-logic';
+import { openModal } from '../../shared/modal';
 
 /** Ajustar saldo: se escribe el saldo real y se crea un movimiento por la diferencia. */
 @Component({
@@ -131,7 +132,7 @@ export class AdjustDialogComponent {
     this.text.set(amountForInput(this.account().balance, this.i18n.locale()));
     this.date.set(localToday());
     this.error.set(null);
-    this.dialog().nativeElement.showModal();
+    openModal(this.dialog().nativeElement);
     // El saldo actual queda seleccionado de inmediato: lo que se escriba lo reemplaza,
     // aunque se empiece a escribir antes de que la pantalla se actualice
     const input = this.input()?.nativeElement;

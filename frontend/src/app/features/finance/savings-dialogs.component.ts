@@ -16,6 +16,7 @@ import { formatMoney } from '../lists/item-logic';
 import { SavingsData, SavingsProject } from './finance.models';
 import { amountForInput, parseAmount } from './movement-logic';
 import { SavingsService } from './savings.service';
+import { openModal } from '../../shared/modal';
 
 const DIALOG_STYLES = `
   dialog {
@@ -159,7 +160,7 @@ export class SavingsProjectDialogComponent {
     this.goal.set(project?.goal ? amountForInput(project.goal, this.i18n.locale()) : '');
     this.targetDate.set(project?.targetDate ?? '');
     this.error.set(null);
-    this.dialog().nativeElement.showModal();
+    openModal(this.dialog().nativeElement);
   }
 
   close(): void {
@@ -314,7 +315,7 @@ export class SavingsMoveDialogComponent {
     this.accountId.set(options.find((a) => a.id === accountId)?.id ?? options[0]?.id ?? '');
     this.text.set('');
     this.error.set(null);
-    this.dialog().nativeElement.showModal();
+    openModal(this.dialog().nativeElement);
     this.amountInput()?.nativeElement.focus();
   }
 

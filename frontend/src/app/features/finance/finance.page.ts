@@ -24,6 +24,11 @@ import { FinanceService } from './finance.service';
 import { FinanceStore } from './finance.store';
 import { SummaryComponent } from './summary.component';
 import { MovementsComponent } from './movements.component';
+import { PracticeMode } from '../tutorial/practice-mode.service';
+import { TutorialButtonComponent } from '../tutorial/tutorial-button.component';
+import { TutorialService } from '../tutorial/tutorial.service';
+import { FinancePracticeBannerComponent } from './tutorial/finance-practice-banner.component';
+import { FinanceTour } from './tutorial/finance-tour';
 
 /**
  * Finanzas: una pestaña por cuenta, como las hojas de un Excel.
@@ -33,7 +38,14 @@ const SUMMARY_TAB = 'resumen';
 
 @Component({
   selector: 'oh-finance-page',
-  imports: [RouterLink, TPipe, MovementsComponent, SummaryComponent],
+  imports: [
+    RouterLink,
+    TPipe,
+    MovementsComponent,
+    SummaryComponent,
+    TutorialButtonComponent,
+    FinancePracticeBannerComponent,
+  ],
   templateUrl: './finance.page.html',
   styleUrl: './finance.page.scss',
 })
@@ -51,6 +63,8 @@ export class FinancePage implements OnInit {
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18n);
+  private readonly tutorial = inject(TutorialService);
+  protected readonly practice = inject(PracticeMode);
 
   protected readonly kindIcon = kindIcon;
   protected readonly iconOf = iconOf;
@@ -84,9 +98,13 @@ export class FinancePage implements OnInit {
   });
 
   constructor() {
+    // El tutorial de Finanzas corre sobre estas mismas pantallas
+    inject(FinanceTour).register();
     effect(() => {
       const family = this.family();
       const archived = this.archived();
+      // Al entrar o salir de la práctica del tutorial: los datos de práctica o los reales
+      this.practice.revision();
       untracked(() => {
         // Sin mostrar por un momento las cuentas del grupo o de la vista anterior
         this.data.set(null);
@@ -124,15 +142,22 @@ export class FinancePage implements OnInit {
 
   async ngOnInit(): Promise<void> {
     if (this.families.families() === null) await this.families.load().catch(() => undefined);
+    // La primera vez que la persona entra a Finanzas (con un grupo y sin modo supervisión)
+    if (this.family() && this.supervision() !== '1' && !this.practice.active()) this.tutorial.offer('finance');
   }
 
   async load(familyId: string, archived: boolean): Promise<void> {
+    // Una respuesta que llega después de entrar o salir de la práctica ya no sirve
+    const revision = this.practice.revision();
     try {
-      this.data.set(await this.store.accounts(familyId, archived));
+      const data = await this.store.accounts(familyId, archived);
+      if (revision !== this.practice.revision()) return;
+      this.data.set(data);
       this.error.set(null);
-      this.scheduled.set(await this.store.scheduled(familyId).catch(() => null));
+      const scheduled = await this.store.scheduled(familyId).catch(() => null);
+      if (revision === this.practice.revision()) this.scheduled.set(scheduled);
     } catch (err) {
-      this.error.set(this.i18n.error(toApiError(err).code));
+      if (revision === this.practice.revision()) this.error.set(this.i18n.error(toApiError(err).code));
     }
   }
 

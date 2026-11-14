@@ -28,6 +28,7 @@ import { amountForInput, parseAmount } from './movement-logic';
 import { SavingsService } from './savings.service';
 import { dayPassed, monthlyStart } from './scheduled-logic';
 import { ScheduledService } from './scheduled.service';
+import { openModal } from '../../shared/modal';
 
 type Freq = ScheduledRule['freq'];
 
@@ -213,7 +214,7 @@ export class ScheduledDialogComponent {
     this.remind.set(!!item?.remindDays);
     this.remindDays.set(item?.remindDays ?? 1);
     this.notifyDone.set(item?.notifyDone ?? true);
-    this.dialog().nativeElement.showModal();
+    openModal(this.dialog().nativeElement);
   }
 
   private async loadOptions(): Promise<void> {

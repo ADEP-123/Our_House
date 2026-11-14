@@ -23,6 +23,8 @@ interface Rect {
 const PAD = 6;
 const GAP = 12;
 const POLL_MS = 250;
+/** Ancho mínimo de la tarjeta para ponerla al lado de algo alto */
+const SIDE_MIN = 240;
 
 /**
  * Capa de los tutoriales: la invitación, el resaltado del elemento de cada paso y su tarjeta.
@@ -93,10 +95,12 @@ const POLL_MS = 250;
           #card
           class="card"
           [class.gone]="hidden()"
+          [class.tight]="tight()"
           role="dialog"
           aria-live="polite"
           [style.top.px]="cardPos().top"
           [style.left.px]="cardPos().left"
+          [style.width.px]="cardPos().width"
         >
           @if (tutorial.step(); as step) {
             <p class="eyebrow">
@@ -108,8 +112,18 @@ const POLL_MS = 250;
               }}
             </p>
             <h2>{{ step.title | t }}</h2>
-            <p>{{ step.body | t }}</p>
-            @if (step.until) {
+            <p [class.clamp]="tight() && !expanded()">{{ step.body | t }}</p>
+            @if (tight()) {
+              <button
+                type="button"
+                class="toggle"
+                [attr.aria-expanded]="expanded()"
+                (click)="expanded.set(!expanded())"
+              >
+                {{ (expanded() ? 'tutorial.showLess' : 'tutorial.showMore') | t }}
+              </button>
+            }
+            @if (step.until && !tight()) {
               <p class="doit">👆 {{ 'tutorial.doIt' | t }}</p>
             }
             <div class="actions">
@@ -217,6 +231,34 @@ const POLL_MS = 250;
       box-shadow: 0 12px 40px rgb(0 0 0 / 0.25);
       pointer-events: auto;
     }
+    @media (max-width: 599px) {
+      .card:not(.invite) {
+        max-height: 45vh;
+        overflow-y: auto;
+      }
+    }
+    /* Celular con algo alto resaltado (una ventana): la tarjeta se achica para no taparla */
+    .card.tight {
+      gap: 4px;
+      padding: 12px 14px 8px;
+    }
+    .clamp {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .toggle {
+      justify-self: start;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--oh-primary);
+      font: inherit;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
     .card.gone {
       display: none;
     }
@@ -289,21 +331,41 @@ export class TourOverlayComponent {
   /** Hay una ventana abierta que no es parte del paso: la tarjeta se esconde para no taparla */
   protected readonly hidden = signal(false);
   private readonly cardSize = signal({ width: 380, height: 200 });
+  /** Celular con algo más alto que media pantalla resaltado: tarjeta compacta */
+  protected readonly tight = computed(() => {
+    const r = this.spot();
+    const view = this.document.defaultView!;
+    return view.innerWidth < 600 && !!r && r.height > view.innerHeight / 2;
+  });
+  protected readonly expanded = signal(false);
   private readonly visible = computed(() => !!this.tutorial.invite() || this.tutorial.running());
 
-  /** Debajo del elemento si cabe; si no, arriba; si no, abajo de la pantalla */
-  protected readonly cardPos = computed(() => {
+  /**
+   * Debajo del elemento si cabe; si no, arriba; si no (algo alto, como una ventana), al lado
+   * con la tarjeta más angosta; y si tampoco, arriba de la pantalla, así no tapa los botones
+   * de guardar que van al final de los formularios.
+   */
+  protected readonly cardPos = computed<{ top: number; left: number; width?: number }>(() => {
     const view = this.document.defaultView!;
     const vw = view.innerWidth;
     const vh = view.innerHeight;
     const { width, height } = this.cardSize();
     const r = this.spot();
     if (!r) return { top: Math.max(GAP, (vh - height) / 2), left: Math.max(GAP, (vw - width) / 2) };
-    let top = r.top + r.height + GAP;
-    if (top + height > vh - GAP)
-      top = r.top - height - GAP >= GAP ? r.top - height - GAP : vh - height - GAP;
     const left = Math.min(Math.max(GAP, r.left + r.width / 2 - width / 2), vw - width - GAP);
-    return { top: Math.max(GAP, top), left };
+    const below = r.top + r.height + GAP;
+    if (below + height <= vh - GAP) return { top: below, left };
+    if (r.top - height - GAP >= GAP) return { top: r.top - height - GAP, left };
+    const sideTop = Math.max(GAP, Math.min(r.top, vh - height - GAP));
+    const right = vw - (r.left + r.width) - GAP * 2;
+    const leftSpace = r.left - GAP * 2;
+    if (Math.max(right, leftSpace) >= SIDE_MIN) {
+      const w = Math.min(380, Math.max(right, leftSpace));
+      return right >= leftSpace
+        ? { top: sideTop, left: r.left + r.width + GAP, width: w }
+        : { top: sideTop, left: r.left - GAP - w, width: w };
+    }
+    return { top: GAP, left };
   });
 
   private frame = 0;
@@ -312,6 +374,11 @@ export class TourOverlayComponent {
   private scrolledFor: unknown = null;
 
   constructor() {
+    // Cada paso empieza con la explicación recogida (en la tarjeta compacta)
+    effect(() => {
+      this.tutorial.step();
+      this.expanded.set(false);
+    });
     effect(() => {
       const layer = this.layer().nativeElement;
       const visible = this.visible();
@@ -325,7 +392,7 @@ export class TourOverlayComponent {
   }
 
   protected inviteTitle(id: string): TranslationKey {
-    return `tutorial.invite.${id as 'lists' | 'account' | 'calendar'}`;
+    return `tutorial.invite.${id as 'lists' | 'account' | 'calendar' | 'finance'}`;
   }
 
   protected runExtra(extra: TourExtra): void {

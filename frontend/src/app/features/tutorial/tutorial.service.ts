@@ -1,13 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { NavigationEnd, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService, User } from '../../core/auth/auth.service';
 import { I18n, TranslationKey } from '../../core/i18n/i18n.service';
 import { ToastService } from '../../shared/toast.service';
 import { PracticeMode } from './practice-mode.service';
 
-export type TutorialId = 'lists' | 'account' | 'calendar';
+export type TutorialId = 'lists' | 'account' | 'calendar' | 'finance';
 export type TutorialState = { state: 'done' | 'skipped' | 'progress'; step?: number };
 
 export interface TourStep {
@@ -42,7 +42,17 @@ const PRACTICE_ROUTES: Record<TutorialId, string> = {
   lists: '/tutorial/listas',
   account: '/tutorial/cuenta',
   calendar: '/tutorial/calendario',
+  // Finanzas se practica sobre sus pantallas reales, con sus datos en memoria (PracticeMode.use)
+  finance: '/finanzas',
 };
+
+/** Tutorial que corre sobre las pantallas reales de un módulo (no en una copia) */
+interface TourHost {
+  /** Rutas del módulo: salir de ellas deja el tutorial donde iba */
+  home: string;
+  /** Prepara la práctica en memoria y entrega los pasos */
+  create: () => TourDefinition;
+}
 
 /**
  * Tutoriales interactivos: invitación la primera vez que se entra a un módulo, pasos guiados sobre
@@ -81,6 +91,22 @@ export class TutorialService {
   private returnUrl = '/inicio';
   /** Invitaciones ya mostradas en esta sesión (si la cierra sin elegir, no insiste) */
   private readonly offered = new Set<TutorialId>();
+  private readonly hosts = new Map<TutorialId, TourHost>();
+
+  constructor() {
+    // Un tutorial sobre pantallas reales: salir del módulo (menú, atrás) lo deja donde iba
+    this.router.events?.subscribe((e) => {
+      if (!(e instanceof NavigationEnd)) return;
+      const definition = this.definition();
+      const host = definition ? this.hosts.get(definition.id) : undefined;
+      if (definition && host && !e.urlAfterRedirects.startsWith(host.home)) this.detach(definition);
+    });
+  }
+
+  /** Registra un tutorial que corre sobre las pantallas reales de su módulo */
+  host(id: TutorialId, home: string, create: () => TourDefinition): void {
+    this.hosts.set(id, { home, create });
+  }
 
   stateOf(id: TutorialId): TutorialState | undefined {
     return this.auth.user()?.tutorials?.[id];
@@ -114,7 +140,12 @@ export class TutorialService {
     this.startAt = step;
     this.returnUrl = this.router.url.startsWith('/tutorial/') ? '/inicio' : this.router.url;
     this.practice.start();
-    void this.router.navigateByUrl(PRACTICE_ROUTES[id]);
+    const host = this.hosts.get(id);
+    // Sobre pantallas reales: la práctica en memoria queda lista antes de abrir la pantalla
+    const definition = host?.create();
+    void this.router.navigateByUrl(PRACTICE_ROUTES[id]).then(() => {
+      if (definition && this.practice.active()) this.attach(definition);
+    });
   }
 
   /** "Saltar" en la invitación: cuenta como visto */
