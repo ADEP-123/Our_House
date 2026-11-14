@@ -172,6 +172,7 @@ export const es = {
   tutorial: {
     eyebrow: 'Tutorial',
     invite: {
+      finance: '¿Te muestro cómo llevar tu dinero en Finanzas?',
       lists: '¿Te muestro cómo usar las listas?',
       account: '¿Te muestro cómo personalizar tu cuenta?',
       calendar: '¿Te muestro cómo llevar tus tareas a Google Calendar?',
@@ -184,6 +185,8 @@ export const es = {
     skipTutorial: 'Saltar tutorial',
     skippedToast: 'Puedes ver el tutorial cuando quieras con el botón «?».',
     help: 'Ver el tutorial',
+    showMore: 'Ver más',
+    showLess: 'Ver menos',
     stepOf: 'Paso {n} de {total}',
     next: 'Siguiente',
     back: 'Atrás',
@@ -194,6 +197,136 @@ export const es = {
     finish: 'Terminar',
     banner: 'Modo práctica: lo que hagas aquí no se guarda.',
     exit: 'Salir',
+    finance: {
+      welcome: {
+        title: '👋 Bienvenido a Finanzas',
+        body: 'En unos minutos te muestro cómo llevar tu dinero aquí. Estás en modo práctica: toca y guarda sin miedo, que nada de esto queda en tus datos.',
+      },
+      tabs: {
+        title: 'Una pestaña por cuenta',
+        body: 'Cada cuenta (banco, efectivo, tarjeta, ahorro) es una pestaña, como las hojas de un Excel, y muestra su saldo. Ya hay una de práctica: Efectivo.',
+      },
+      newAccount: {
+        title: 'Agrega una cuenta',
+        body: 'Vamos a crear tu cuenta del banco. Toca "+ Nueva cuenta".',
+      },
+      accountForm: {
+        title: 'Datos de la cuenta',
+        body: 'Escribe el nombre (por ejemplo "Banco"), el tipo y, si quieres, el saldo con el que empiezas. El prefijo arma el ID de cada movimiento (B0001). También eliges quién la ve y quién la edita. Toca "Crear cuenta".',
+      },
+      addMovement: {
+        title: 'Anota un gasto',
+        body: 'Ya estás en tu cuenta nueva. Toca "+ Agregar movimiento".',
+      },
+      movementForm: {
+        title: 'Salida o entrada',
+        body: 'Salida resta y Entrada suma. Escribe el monto, qué fue y elige la categoría. Al escribir te sugiere lo que ya usaste. Luego guarda.',
+      },
+      table: {
+        title: 'Tus movimientos',
+        body: 'Cada movimiento tiene su ID, su categoría y el saldo que quedó. Tócalo para cambiarlo o borrarlo. Arriba puedes buscar, filtrar y ocultar columnas.',
+      },
+      transfer: {
+        title: 'Mover dinero entre cuentas',
+        body: 'Pasar dinero de una cuenta a otra no es gasto ni ingreso: es una transferencia. Toca "Transferir".',
+      },
+      transferForm: {
+        title: 'Desde y hacia',
+        body: 'Elige de qué cuenta sale, a cuál entra y el monto. Queda en las dos cuentas, enlazado. Toca "Transferir".',
+      },
+      summaryTab: {
+        title: 'El resumen',
+        body: 'Al final de las pestañas está el Resumen. Tócalo.',
+      },
+      summary: {
+        title: 'Cómo vas',
+        body: 'Ingresos, gastos y balance del período, comparados con el anterior. Más abajo hay gráficos, el gasto por categoría y la tabla por mes. Puedes cambiar el período y las cuentas.',
+      },
+      cards: {
+        chapter: 'Tarjetas de crédito',
+        card: {
+          title: 'Tu tarjeta',
+          body: 'Agregué una tarjeta de práctica. Muestra la deuda, cuánto del cupo usaste, lo disponible y el cupo. Comprar con ella es una Salida en su pestaña: sube la deuda.',
+        },
+        pay: { title: 'Pagar la tarjeta', body: 'Para pagarla, toca "Pagar tarjeta".' },
+        payForm: {
+          title: 'El pago',
+          body: 'Ya trae la deuda como monto y una cuenta de origen. Es una transferencia: así el gasto no se cuenta dos veces. Toca "Transferir".',
+        },
+        paid: { title: 'Deuda al día', body: 'La deuda bajó y lo disponible subió. Si pasas el cupo, te avisa en rojo.' },
+      },
+      categories: {
+        chapter: 'Categorías y presupuesto',
+        list: {
+          title: 'Categorías',
+          body: 'Son las mismas para todo el grupo y sirven para entradas y salidas. Los líderes las crean, cambian y deshabilitan.',
+        },
+        edit: { title: 'Ponle un presupuesto', body: 'Toca "Editar" en una categoría, por ejemplo la de comida.' },
+        budget: {
+          title: 'Presupuesto mensual',
+          body: 'Escribe cuánto quieres gastar al mes en esa categoría y guarda.',
+        },
+        alerts: {
+          title: 'Te avisamos',
+          body: 'Al llegar al 80 % y al 100 % del presupuesto te avisa en la app y por correo. En el Resumen del mes ves la barra de cada categoría.',
+        },
+      },
+      savings: {
+        chapter: 'Ahorros',
+        new: { title: 'Un proyecto de ahorro', body: 'Para un viaje o una emergencia. Toca "+ Nuevo proyecto".' },
+        form: {
+          title: 'Nombre y meta',
+          body: 'Ponle nombre e ícono. La meta y la fecha son opcionales: con ellas te dice cuánto apartar al mes. Guarda.',
+        },
+        setAside: { title: 'Apartar dinero', body: 'Toca "Apartar".' },
+        move: {
+          title: 'De qué cuenta',
+          body: 'Elige la cuenta y el monto. El dinero no sale de la cuenta: queda reservado, y verás Saldo · Ahorro · Disponible. Guarda.',
+        },
+        project: {
+          title: 'Tu avance',
+          body: 'Aquí ves lo apartado, el avance a la meta y en qué cuentas está. Al anotar un gasto puedes pagarlo con el ahorro.',
+        },
+      },
+      scheduled: {
+        chapter: 'Gastos programados',
+        new: {
+          title: 'Lo que se repite',
+          body: 'Arriendo, Netflix, el sueldo… Prográmalo una vez. Toca "+ Nuevo programado".',
+        },
+        form: {
+          title: 'Cada cuánto',
+          body: 'Elige el tipo, la cuenta, el monto y el día del mes (o cada semana, cada año…). Automático se registra solo; "A confirmar" espera el monto real. Guarda.',
+        },
+        item: {
+          title: 'Listo',
+          body: 'Muestra el próximo cobro. Puedes saltar uno, pausarlo y recibir un correo antes de cobrar o cuando se registra.',
+        },
+      },
+      io: {
+        chapter: 'Importar y exportar',
+        import: {
+          title: 'Trae tu Excel',
+          body: 'Sube un Excel o CSV con tus movimientos. Antes de guardar ves qué pasa con cada fila. Volver a subirlo actualiza en lugar de duplicar. (En la práctica no se importa nada.)',
+        },
+        template: { title: 'Plantilla', body: 'Descarga una plantilla con tus cuentas y categorías para llenarla.' },
+        export: {
+          title: 'Exportar',
+          body: 'Desde cada cuenta, o desde el Resumen, descargas tus movimientos en Excel o CSV.',
+        },
+      },
+      lists: {
+        chapter: 'Compras desde las listas',
+        pay: {
+          title: 'Registrar pago',
+          body: 'En una lista de compras, lo que pagas por cada artículo se suma. Con "Registrar pago" se anota en Finanzas como un solo gasto, en la cuenta que elijas.',
+        },
+        undo: {
+          title: 'Si desmarcas',
+          body: 'Si desmarcas algo ya registrado o reinicias la lista, su monto se descuenta del gasto. En Finanzas esos gastos llevan la etiqueta "🛒 compra".',
+        },
+      },
+    },
     lists: {
       practiceList: 'Lista de práctica',
       personA: 'Ana (ejemplo)',
