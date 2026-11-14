@@ -29,6 +29,7 @@ import { amountForInput, parseAmount } from './movement-logic';
 import { ScheduledDialogComponent } from './scheduled-dialog.component';
 import { scheduledSign } from './scheduled-logic';
 import { ScheduledService } from './scheduled.service';
+import { FinancePracticeBannerComponent } from './tutorial/finance-practice-banner.component';
 
 /**
  * Movimientos programados del grupo: gastos, ingresos, transferencias y apartados que se repiten.
@@ -36,7 +37,7 @@ import { ScheduledService } from './scheduled.service';
  */
 @Component({
   selector: 'oh-scheduled-page',
-  imports: [NgTemplateOutlet, RouterLink, TPipe, ScheduledDialogComponent],
+  imports: [NgTemplateOutlet, RouterLink, TPipe, ScheduledDialogComponent, FinancePracticeBannerComponent],
   templateUrl: './scheduled.page.html',
   styleUrl: './scheduled.page.scss',
 })

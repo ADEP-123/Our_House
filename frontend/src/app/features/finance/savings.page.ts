@@ -26,6 +26,7 @@ import {
 } from './savings-dialogs.component';
 import { goalProgress, monthlyToGoal } from './savings-logic';
 import { SavingsService } from './savings.service';
+import { FinancePracticeBannerComponent } from './tutorial/finance-practice-banner.component';
 
 /**
  * Proyectos de ahorro del grupo: el dinero se aparta dentro de una cuenta (el saldo no cambia, el disponible sí).
@@ -33,7 +34,7 @@ import { SavingsService } from './savings.service';
  */
 @Component({
   selector: 'oh-savings-page',
-  imports: [RouterLink, TPipe, SavingsProjectDialogComponent, SavingsMoveDialogComponent],
+  imports: [RouterLink, TPipe, SavingsProjectDialogComponent, SavingsMoveDialogComponent, FinancePracticeBannerComponent],
   templateUrl: './savings.page.html',
   styleUrl: './savings.page.scss',
 })

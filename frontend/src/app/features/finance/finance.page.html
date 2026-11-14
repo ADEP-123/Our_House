@@ -1,3 +1,4 @@
+<oh-finance-practice-banner />
 <div class="oh-sticky finance-top">
   <header class="head">
     <div>
@@ -23,6 +24,9 @@
     </div>
     @if (family() && !supervised()) {
       <div class="head-actions">
+        @if (!practice.active()) {
+          <oh-tutorial-button tutorial="finance" data-tour="tutorial" />
+        }
         <a class="oh-btn oh-btn--text" routerLink="/finanzas/categorias">{{
           'finance.categories.link' | t
         }}</a>
@@ -46,6 +50,7 @@
         @if (!archived()) {
           <a
             class="oh-btn oh-btn--filled"
+            data-tour="new-account"
             routerLink="/finanzas/cuentas/nueva"
             [queryParams]="{ familia: family()!.id }"
             >+ {{ 'finance.newAccount' | t }}</a
@@ -80,7 +85,7 @@
       <section class="book">
         <!-- Una pestaña por cuenta, como las hojas de un libro de Excel -->
         @if (!supervised()) {
-          <div class="tabs" role="tablist" [attr.aria-label]="'finance.tabs' | t">
+          <div class="tabs" data-tour="tabs" role="tablist" [attr.aria-label]="'finance.tabs' | t">
             @for (a of d.accounts; track a.id; let i = $index) {
               <button
                 type="button"
