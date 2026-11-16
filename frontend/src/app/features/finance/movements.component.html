@@ -45,6 +45,7 @@
             [familyId]="account().familyId"
             [accounts]="[account().id]"
             [subject]="account().name"
+            [choices]="exportChoices()"
           />
         }
         @if (canEdit()) {

@@ -96,6 +96,8 @@ export class MovementsComponent {
       this.accounts().some((a) => a.id !== this.account().id && a.permissions.canEdit),
   );
   protected readonly transfersFilter = TRANSFERS_FILTER;
+  /** Exportar: esta cuenta junto con las demás que la persona ve */
+  protected readonly exportChoices = computed(() => this.accounts().map((a) => ({ id: a.id, name: a.name })));
   private loadedFamily: string | null = null;
 
   /** Solo al cambiar de cuenta (no cuando llega la misma cuenta con el saldo nuevo) */
