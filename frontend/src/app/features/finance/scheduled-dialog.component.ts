@@ -29,6 +29,7 @@ import { SavingsService } from './savings.service';
 import { dayPassed, monthlyStart } from './scheduled-logic';
 import { ScheduledService } from './scheduled.service';
 import { openModal } from '../../shared/modal';
+import { AmountInputDirective } from './amount-input.directive';
 
 type Freq = ScheduledRule['freq'];
 
@@ -47,7 +48,7 @@ export interface ScheduledPrefill {
  */
 @Component({
   selector: 'oh-scheduled-dialog',
-  imports: [TPipe],
+  imports: [TPipe, AmountInputDirective],
   templateUrl: './scheduled-dialog.component.html',
   styleUrl: './scheduled-dialog.component.scss',
 })

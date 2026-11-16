@@ -31,6 +31,7 @@ import { amountForInput, parseAmount } from './movement-logic';
 import { budgetCrossing, savingsReminder } from './savings-logic';
 import { ToastService } from '../../shared/toast.service';
 import { openModal } from '../../shared/modal';
+import { AmountInputDirective } from './amount-input.directive';
 
 /** null: cerrado; movement null: agregar uno nuevo */
 export interface MovementRequest {
@@ -43,7 +44,7 @@ export interface MovementRequest {
  */
 @Component({
   selector: 'oh-movement-dialog',
-  imports: [TPipe],
+  imports: [TPipe, AmountInputDirective],
   templateUrl: './movement-dialog.component.html',
   styleUrl: './movement-dialog.component.scss',
 })
