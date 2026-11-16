@@ -1067,6 +1067,8 @@ export const en: Dictionary = {
       clear: 'Clear filters',
       newestFirst: 'newest first',
       oldestFirst: 'oldest first',
+      showFilters: 'Show search and filters',
+      hideFilters: 'Hide search and filters',
       showMore: 'Show {n} more',
       columnsButton: 'Columns',
       columns: {
