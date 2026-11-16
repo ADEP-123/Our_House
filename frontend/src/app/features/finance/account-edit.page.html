@@ -97,10 +97,9 @@
             <input
               id="account-limit"
               class="oh-input"
-              type="number"
+              ohAmount
               inputmode="decimal"
-              min="0"
-              step="0.01"
+              autocomplete="off"
               formControlName="creditLimit"
             />
             @if (fieldError('creditLimit'); as e) {
@@ -113,10 +112,9 @@
             <input
               id="account-threshold"
               class="oh-input"
-              type="number"
+              ohAmount
               inputmode="decimal"
-              min="0"
-              step="0.01"
+              autocomplete="off"
               formControlName="lowBalanceThreshold"
               aria-describedby="threshold-hint"
             />
@@ -136,9 +134,9 @@
           <input
             id="account-opening"
             class="oh-input"
-            type="number"
+            ohAmount
             inputmode="decimal"
-            step="0.01"
+            autocomplete="off"
             formControlName="openingAmount"
             aria-describedby="opening-hint"
           />

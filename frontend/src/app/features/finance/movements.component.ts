@@ -19,6 +19,7 @@ import { ExportMenuComponent } from './export-menu.component';
 import { formatMoney } from '../lists/item-logic';
 import { colorOf, iconOf } from '../lists/list-presets';
 import { AdjustDialogComponent } from './adjust-dialog.component';
+import { CashCountDialogComponent } from './cash-count-dialog.component';
 import { TransferDialogComponent } from './transfer-dialog.component';
 import { Account, Category, Movement, MovementColumn } from './finance.models';
 import { FinanceStore } from './finance.store';
@@ -41,7 +42,14 @@ const PAGE = 150;
  */
 @Component({
   selector: 'oh-movements',
-  imports: [TPipe, MovementDialogComponent, AdjustDialogComponent, TransferDialogComponent, ExportMenuComponent],
+  imports: [
+    TPipe,
+    MovementDialogComponent,
+    AdjustDialogComponent,
+    TransferDialogComponent,
+    ExportMenuComponent,
+    CashCountDialogComponent,
+  ],
   templateUrl: './movements.component.html',
   // El desplazamiento va aparte para que cada hoja de estilos quede bajo el límite de tamaño
   styleUrls: ['./movements.component.scss', './movements-scroll.scss'],

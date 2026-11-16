@@ -29,6 +29,11 @@
             {{ 'finance.movements.adjust' | t }}
           </button>
         }
+        @if (account().kind === 'cash') {
+          <button type="button" class="oh-btn oh-btn--text" (click)="cash.open()">
+            {{ 'finance.cash.button' | t }}
+          </button>
+        }
         <details class="columns">
           <summary class="oh-btn oh-btn--text">{{ 'finance.movements.columnsButton' | t }}</summary>
           <div class="columns-menu">
@@ -331,4 +336,5 @@
 />
 
 <oh-adjust-dialog #adjust [account]="account()" (saved)="refresh()" />
+<oh-cash-count-dialog #cash [account]="account()" [canAdjust]="canEdit()" (saved)="refresh()" />
 <oh-transfer-dialog #transfer [accounts]="accounts()" (saved)="refresh()" />
