@@ -3,6 +3,7 @@ import {
   amountForInput,
   filterMovements,
   hasFilters,
+  isExpression,
   parseAmount,
   recomputeBalances,
   signOf,
@@ -51,6 +52,36 @@ describe('finanzas: montos escritos a mano', () => {
     expect(parseAmount('1,500', 'en')).toBe(1500);
     expect(parseAmount('1.500', 'en')).toBe(1.5);
     expect(parseAmount('12.5000', 'es')).toBe(12.5);
+  });
+
+  it('hace cuentas con + − × ÷ y paréntesis', () => {
+    expect(parseAmount('12500+3000-500')).toBe(15000);
+    expect(parseAmount('3x20.000', 'es')).toBe(60000);
+    expect(parseAmount('3 × 20,000', 'en')).toBe(60000);
+    expect(parseAmount('2+3*4')).toBe(14);
+    expect(parseAmount('(10+5)/2')).toBe(7.5);
+    expect(parseAmount('10/3')).toBe(3.33);
+    expect(parseAmount('1.234,5 + 0,5')).toBe(1235);
+    expect(parseAmount('100 ÷ 4 − 5')).toBe(20);
+    expect(parseAmount('-5+2')).toBe(-3);
+    expect(parseAmount('$ 20 + $ 5')).toBe(25);
+    expect(parseAmount('MXN 20')).toBe(20);
+    expect(parseAmount('0,1+0,2')).toBe(0.3);
+  });
+
+  it('una cuenta incompleta o imposible no es un número', () => {
+    expect(parseAmount('5+')).toBeNull();
+    expect(parseAmount('5/0')).toBeNull();
+    expect(parseAmount('(5+2')).toBeNull();
+    expect(parseAmount('-')).toBeNull();
+  });
+
+  it('distingue una cuenta de un número con signo', () => {
+    expect(isExpression('12500+3000')).toBe(true);
+    expect(isExpression('3x2')).toBe(true);
+    expect(isExpression('-5')).toBe(false);
+    expect(isExpression('1.234,56')).toBe(false);
+    expect(isExpression('$ 20')).toBe(false);
   });
 });
 
