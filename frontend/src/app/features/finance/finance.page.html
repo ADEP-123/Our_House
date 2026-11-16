@@ -1,5 +1,5 @@
 <oh-finance-practice-banner />
-<div class="oh-sticky finance-top">
+<div class="oh-sticky finance-top" #headEl>
   <header class="head">
     <div>
       <h1>{{ 'finance.title' | t }}</h1>
@@ -85,7 +85,7 @@
       <section class="book">
         <!-- Una pestaña por cuenta, como las hojas de un libro de Excel -->
         @if (!supervised()) {
-          <div class="tabs" data-tour="tabs" role="tablist" [attr.aria-label]="'finance.tabs' | t">
+          <div class="tabs" #tabsEl data-tour="tabs" role="tablist" [attr.aria-label]="'finance.tabs' | t">
             @for (a of d.accounts; track a.id; let i = $index) {
               <button
                 type="button"

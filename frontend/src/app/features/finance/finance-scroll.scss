@@ -1,0 +1,23 @@
+/* ---------- Desplazamiento ---------- */
+// Al desplazar quedan fijos arriba el encabezado (en computador) y las pestañas de las cuentas
+// (con su saldo); en la hoja de una cuenta también la barra con la búsqueda y los filtros y los
+// títulos de las columnas (movements-scroll.scss). Lo demás se desliza por debajo.
+
+.tabs {
+  position: sticky;
+  top: var(--finance-head-h, 0px);
+  z-index: 2;
+  background: var(--oh-background);
+}
+
+// Celular: la parte de arriba (Finanzas, Categorías, Ahorros…) se va al desplazar
+@media (max-width: 839px) {
+  .finance-top {
+    position: static;
+  }
+
+  .tabs {
+    top: var(--oh-sticky-top);
+    padding-top: 6px;
+  }
+}

@@ -1,5 +1,6 @@
 import {
   Component,
+  ElementRef,
   OnInit,
   computed,
   effect,
@@ -7,6 +8,7 @@ import {
   input,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { toApiError } from '../../core/api/api-error';
@@ -24,6 +26,7 @@ import { FinanceService } from './finance.service';
 import { FinanceStore } from './finance.store';
 import { SummaryComponent } from './summary.component';
 import { MovementsComponent } from './movements.component';
+import { watchHeight } from '../../shared/watch-height';
 import { PracticeMode } from '../tutorial/practice-mode.service';
 import { TutorialButtonComponent } from '../tutorial/tutorial-button.component';
 import { TutorialService } from '../tutorial/tutorial.service';
@@ -47,7 +50,13 @@ const SUMMARY_TAB = 'resumen';
     FinancePracticeBannerComponent,
   ],
   templateUrl: './finance.page.html',
-  styleUrl: './finance.page.scss',
+  // El desplazamiento va aparte para que cada hoja de estilos quede bajo el límite de tamaño
+  styleUrls: ['./finance.page.scss', './finance-scroll.scss'],
+  // Alturas de lo que queda fijo arriba, para poner debajo lo que también queda fijo
+  host: {
+    '[style.--finance-head-h.px]': 'headHeight()',
+    '[style.--finance-tabs-h.px]': 'tabsHeight()',
+  },
 })
 export class FinancePage implements OnInit {
   /** ?cuenta= pestaña abierta */
@@ -97,7 +106,15 @@ export class FinancePage implements OnInit {
     return credit ? creditUsage(credit.debt, credit.limit) : 0;
   });
 
+  private readonly headEl = viewChild<ElementRef<HTMLElement>>('headEl');
+  private readonly tabsEl = viewChild<ElementRef<HTMLElement>>('tabsEl');
+  protected readonly headHeight = signal(0);
+  protected readonly tabsHeight = signal(64);
+
   constructor() {
+    // Alto del encabezado y de las pestañas (fijos al desplazar)
+    watchHeight(this.headEl, this.headHeight);
+    watchHeight(this.tabsEl, this.tabsHeight);
     // El tutorial de Finanzas corre sobre estas mismas pantallas
     inject(FinanceTour).register();
     effect(() => {

@@ -1084,6 +1084,8 @@ export const es = {
       clear: 'Quitar filtros',
       newestFirst: 'más recientes primero',
       oldestFirst: 'más antiguos primero',
+      showFilters: 'Mostrar la búsqueda y los filtros',
+      hideFilters: 'Ocultar la búsqueda y los filtros',
       showMore: 'Ver {n} más',
       columnsButton: 'Columnas',
       columns: {

@@ -1,5 +1,6 @@
 import {
   Component,
+  DestroyRef,
   ElementRef,
   computed,
   effect,
@@ -21,6 +22,7 @@ import { AdjustDialogComponent } from './adjust-dialog.component';
 import { TransferDialogComponent } from './transfer-dialog.component';
 import { Account, Category, Movement, MovementColumn } from './finance.models';
 import { FinanceStore } from './finance.store';
+import { watchHeight } from '../../shared/watch-height';
 import { MovementDialogComponent, MovementRequest } from './movement-dialog.component';
 import {
   EMPTY_FILTERS,
@@ -41,7 +43,10 @@ const PAGE = 150;
   selector: 'oh-movements',
   imports: [TPipe, MovementDialogComponent, AdjustDialogComponent, TransferDialogComponent, ExportMenuComponent],
   templateUrl: './movements.component.html',
-  styleUrl: './movements.component.scss',
+  // El desplazamiento va aparte para que cada hoja de estilos quede bajo el límite de tamaño
+  styleUrls: ['./movements.component.scss', './movements-scroll.scss'],
+  // Alto de la barra con los filtros (fija al desplazar): los títulos de las columnas van debajo
+  host: { '[style.--mov-top-h.px]': 'topHeight()' },
 })
 export class MovementsComponent {
   readonly account = input.required<Account>();
@@ -65,6 +70,13 @@ export class MovementsComponent {
   protected readonly limit = signal(PAGE);
   protected readonly error = signal<string | null>(null);
   protected readonly request = signal<MovementRequest | null>(null);
+  /** Celular: los filtros quedaron arriba, fuera de la vista (aparece el botón 🔍) */
+  protected readonly filtersAway = signal(false);
+  /** Celular: búsqueda y filtros fijos arriba sin volver al inicio */
+  protected readonly pinned = signal(false);
+  private readonly filtersEl = viewChild<ElementRef<HTMLElement>>('filtersEl');
+  private readonly topEl = viewChild<ElementRef<HTMLElement>>('topEl');
+  protected readonly topHeight = signal(0);
 
   protected readonly filtered = computed(() =>
     filterMovements(this.movements() ?? [], this.filters()),
@@ -90,6 +102,20 @@ export class MovementsComponent {
   private readonly accountId = computed(() => this.account().id);
 
   constructor() {
+    watchHeight(this.topEl, this.topHeight);
+    // Celular: saber si los filtros se ven, para ofrecer el botón que los trae
+    if (typeof IntersectionObserver !== 'undefined') {
+      const observer = new IntersectionObserver(([entry]) => {
+        if (!this.pinned())
+          this.filtersAway.set(!entry!.isIntersecting && entry!.boundingClientRect.top < 0);
+      });
+      effect(() => {
+        const el = this.filtersEl()?.nativeElement;
+        observer.disconnect();
+        if (el) observer.observe(el);
+      });
+      inject(DestroyRef).onDestroy(() => observer.disconnect());
+    }
     // Al terminar de enviar los cambios hechos sin conexión, se trae la versión del servidor (con números)
     effect(() => {
       if (this.store.synced() > 0) untracked(() => void this.load(this.account()));
@@ -122,6 +148,13 @@ export class MovementsComponent {
     } catch (err) {
       this.error.set(this.i18n.error(toApiError(err).code));
     }
+  }
+
+  /** Botón 🔍 (celular): fija la búsqueda y los filtros arriba, o los suelta */
+  protected togglePinned(): void {
+    const pinned = !this.pinned();
+    this.pinned.set(pinned);
+    if (!pinned) this.filtersAway.set(true);
   }
 
   protected async refresh(): Promise<void> {
