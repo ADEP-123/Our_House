@@ -1,0 +1,100 @@
+// Calculadora, totales y botones del diálogo de contar efectivo
+.calc {
+  display: grid;
+  gap: 8px;
+
+  .oh-hint,
+  .oh-error {
+    margin: 0;
+  }
+}
+
+.display {
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.keys {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.key {
+  min-height: 48px;
+  border: 1px solid var(--oh-border);
+  border-radius: var(--oh-radius);
+  background: var(--oh-surface);
+  color: var(--oh-text);
+  font: inherit;
+  font-size: 1.25rem;
+  cursor: pointer;
+
+  &:active {
+    background: var(--oh-secondary-soft);
+  }
+
+  &.op {
+    color: var(--oh-secondary);
+    font-weight: 700;
+  }
+
+  &.eq {
+    background: var(--oh-primary);
+    border-color: var(--oh-primary);
+    color: var(--oh-on-primary);
+  }
+}
+
+.sums {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--oh-radius);
+  background: var(--oh-background);
+  font-variant-numeric: tabular-nums;
+
+  div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  dt {
+    color: var(--oh-text-muted);
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .total {
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+
+  .negative {
+    color: var(--oh-error);
+  }
+}
+
+.match {
+  margin: 0;
+  color: var(--oh-success);
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+
+  .spacer {
+    flex: 1;
+  }
+}
