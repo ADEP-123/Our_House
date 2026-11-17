@@ -59,6 +59,8 @@ async function apply(familyId: string, userId: string, plan: ImportPlan, conn: D
         kind: a.kind,
         prefix: a.prefix,
         creditLimit: a.creditLimit,
+        paymentDay: null,
+        cutDay: null,
         viewMode: 'family',
         editMode: 'roles',
         editRoles: ['leader', 'member'],

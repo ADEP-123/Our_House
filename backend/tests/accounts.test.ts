@@ -81,7 +81,7 @@ describe('cuentas: crear y saldo', () => {
     expect(card).toMatchObject({ balance: -250.5, credit: { limit: 1000, debt: 250.5, available: 749.5, overLimit: false } });
 
     const over = await users.ana!.agent.put(`/api/accounts/${card.id}`).send(bodyOf(card, { creditLimit: 200 })).expect(200);
-    expect(over.body.account.credit).toEqual({ limit: 200, debt: 250.5, available: -50.5, overLimit: true });
+    expect(over.body.account.credit).toEqual({ limit: 200, debt: 250.5, available: -50.5, overLimit: true, paymentDay: null, cutDay: null });
 
     // Si deja de ser tarjeta, el cupo se borra
     const bank = await users.ana!.agent.put(`/api/accounts/${card.id}`).send(bodyOf(card, { kind: 'bank' })).expect(200);
