@@ -5,6 +5,7 @@ import { emailTemplates, type Locale } from '../lib/email-templates.js';
 import { mailer } from '../lib/mailer.js';
 import { todayIn } from '../lib/recurrence.js';
 import { savingsRepository } from '../repositories/savings.repository.js';
+import { cardPaymentsService } from './card-payments.service.js';
 
 interface Recipient {
   id: string;
@@ -141,6 +142,8 @@ async function checkGoal(projectId: string, actorId: string): Promise<void> {
  */
 export const financeAlerts = {
   afterChange(familyId: string, accountIds: string[], actorId: string): void {
+    // Tarjetas con día de pago: su evento en el calendario sigue la deuda
+    cardPaymentsService.afterChange(accountIds);
     runInBackground('avisos de finanzas', async () => {
       if (accountIds.length) await checkLowBalance(accountIds, actorId);
       await checkBudgets(familyId, actorId);
