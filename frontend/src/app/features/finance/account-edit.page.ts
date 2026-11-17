@@ -83,12 +83,17 @@ export class AccountEditPage implements OnInit {
   /** Mientras la persona no cambie el prefijo, sigue al nombre */
   private prefixTouched = false;
 
+  /** Días del mes para el día de pago y el de corte (en meses cortos, el último día) */
+  protected readonly days = Array.from({ length: 31 }, (_, i) => i + 1);
+
   protected readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(60)]],
     description: ['', Validators.maxLength(280)],
     kind: ['bank' as AccountKind],
     prefix: ['', [Validators.required, Validators.pattern(/^[A-Z0-9]{1,4}$/)]],
     creditLimit: [null as number | null],
+    paymentDay: [null as number | null],
+    cutDay: [null as number | null],
     lowBalanceThreshold: [null as number | null],
     openingAmount: [null as number | null],
     openingDate: [localToday()],
@@ -125,6 +130,13 @@ export class AccountEditPage implements OnInit {
       if (isCredit !== wasCredit && amount) this.form.controls.openingAmount.setValue(-amount);
       wasCredit = isCredit;
     });
+    // El corte solo sirve con día de pago
+    const cut = this.form.controls.cutDay;
+    cut.disable({ emitEvent: false });
+    this.form.controls.paymentDay.valueChanges.pipe(takeUntilDestroyed()).subscribe((day) => {
+      if (day) cut.enable({ emitEvent: false });
+      else cut.disable({ emitEvent: false });
+    });
     effect(() => {
       const familyId = this.familyId();
       if (!familyId) return;
@@ -151,6 +163,8 @@ export class AccountEditPage implements OnInit {
         kind: a.kind,
         prefix: a.prefix,
         creditLimit: a.credit?.limit ?? null,
+        paymentDay: a.credit?.paymentDay ?? null,
+        cutDay: a.credit?.cutDay ?? null,
         lowBalanceThreshold: a.lowBalanceThreshold ?? null,
         // En tarjetas se escribe la deuda en positivo
         openingAmount: a.opening ? (credit ? -a.opening.amount : a.opening.amount) : null,
@@ -237,6 +251,8 @@ export class AccountEditPage implements OnInit {
       kind: v.kind,
       prefix: v.prefix,
       creditLimit: credit ? (v.creditLimit ?? null) : null,
+      paymentDay: credit ? v.paymentDay : null,
+      cutDay: credit && v.paymentDay ? v.cutDay : null,
       lowBalanceThreshold: credit ? null : (v.lowBalanceThreshold ?? null),
       opening,
       viewMode: v.viewMode,

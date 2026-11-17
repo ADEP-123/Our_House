@@ -14,7 +14,15 @@ export interface Account {
   currency: string;
   balance: number;
   /** Solo tarjetas de crédito */
-  credit: { limit: number; debt: number; available: number; overLimit: boolean } | null;
+  credit: {
+    limit: number;
+    debt: number;
+    available: number;
+    overLimit: boolean;
+    /** Día de pago de cada mes y día de corte (opcional) */
+    paymentDay: number | null;
+    cutDay: number | null;
+  } | null;
   /** En tarjetas, la deuda inicial va en negativo. number: número del movimiento (para su ID visible) */
   opening: { amount: number; date: string; number: number } | null;
   /** Saldo · Ahorro · Disponible: lo apartado para proyectos de ahorro */
@@ -52,6 +60,8 @@ export interface AccountInput {
   kind: AccountKind;
   prefix: string;
   creditLimit: number | null;
+  paymentDay?: number | null;
+  cutDay?: number | null;
   opening: { amount: number; date: string } | null;
   viewMode: ViewMode;
   editMode: EditMode;
