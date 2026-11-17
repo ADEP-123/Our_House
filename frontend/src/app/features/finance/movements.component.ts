@@ -20,6 +20,8 @@ import { formatMoney } from '../lists/item-logic';
 import { colorOf, iconOf } from '../lists/list-presets';
 import { AdjustDialogComponent } from './adjust-dialog.component';
 import { CashCountDialogComponent } from './cash-count-dialog.component';
+import { cardPayment, type CardPayment } from './card-logic';
+import { localToday } from './finance-logic';
 import { TransferDialogComponent } from './transfer-dialog.component';
 import { Account, Category, Movement, MovementColumn } from './finance.models';
 import { FinanceStore } from './finance.store';
@@ -52,7 +54,7 @@ const PAGE = 150;
   ],
   templateUrl: './movements.component.html',
   // El desplazamiento va aparte para que cada hoja de estilos quede bajo el límite de tamaño
-  styleUrls: ['./movements.component.scss', './movements-scroll.scss'],
+  styleUrls: ['./movements.component.scss', './movements-scroll.scss', './card-payment.scss'],
   // Alto de la barra con los filtros (fija al desplazar): los títulos de las columnas van debajo
   host: { '[style.--mov-top-h.px]': 'topHeight()' },
 })
@@ -71,6 +73,12 @@ export class MovementsComponent {
   protected readonly iconOf = iconOf;
   protected readonly colorOf = colorOf;
   protected readonly movements = signal<Movement[] | null>(null);
+  /** Tarjeta con día de pago: cuándo toca pagar y cuánto falta */
+  protected readonly payment = computed(() => {
+    const credit = this.account().credit;
+    const list = this.movements();
+    return credit && list ? cardPayment(credit, list, localToday()) : null;
+  });
   protected readonly categories = signal<Category[]>([]);
   protected readonly hidden = signal<Set<MovementColumn>>(new Set());
   protected readonly filters = signal<MovementFilters>(EMPTY_FILTERS);
@@ -176,6 +184,20 @@ export class MovementsComponent {
 
   protected money(n: number): string {
     return formatMoney(n, this.account().currency, this.i18n.locale());
+  }
+
+  protected paymentWhen(p: CardPayment): string {
+    if (p.daysLeft === 0) return this.i18n.t('finance.credit.dueToday');
+    if (p.daysLeft === 1) return this.i18n.t('finance.credit.dueTomorrow');
+    return this.i18n.t('finance.credit.dueIn', { n: p.daysLeft });
+  }
+
+  /** "350 por pagar", "Al día ✓" o, antes del corte, "El corte es el 28 nov" */
+  protected paymentState(p: CardPayment): string {
+    const c = p.cycle;
+    if (c.pending > 0) return this.i18n.t('finance.credit.pending', { amount: this.money(c.pending) });
+    if (!c.closed && c.cut) return this.i18n.t('finance.credit.cutComing', { date: this.date(c.cut) });
+    return this.i18n.t('finance.credit.upToDate');
   }
 
   protected date(iso: string): string {

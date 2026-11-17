@@ -1,0 +1,29 @@
+// Tarjeta con día de pago: "💳 Pago: 15 de cada mes · faltan 3 días · 350 por pagar"
+.payment {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: var(--oh-radius);
+  background: var(--oh-secondary-soft);
+  color: var(--oh-text);
+
+  strong {
+    font-variant-numeric: tabular-nums;
+  }
+
+  small {
+    color: var(--oh-text-muted);
+  }
+
+  // Pago pendiente a 3 días o menos
+  &.soon {
+    background: var(--oh-error-soft);
+
+    strong {
+      color: var(--oh-error);
+    }
+  }
+}

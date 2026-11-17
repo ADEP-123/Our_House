@@ -32,6 +32,8 @@ interface PAccount {
   kind: AccountKind;
   prefix: string;
   creditLimit: number | null;
+  paymentDay: number | null;
+  cutDay: number | null;
   lowBalanceThreshold: number | null;
   lastNumber: number;
   createdAt: string;
@@ -272,6 +274,8 @@ export class FinancePractice implements PracticeHandler {
     const account: PAccount = {
       description: null,
       creditLimit: null,
+      paymentDay: null,
+      cutDay: null,
       lowBalanceThreshold: null,
       lastNumber: 0,
       createdAt: new Date().toISOString(),
@@ -354,6 +358,8 @@ export class FinancePractice implements PracticeHandler {
               debt,
               available: r2((a.creditLimit ?? 0) - debt),
               overLimit: debt > (a.creditLimit ?? 0),
+              paymentDay: a.paymentDay,
+              cutDay: a.cutDay,
             }
           : null,
       opening: opening
@@ -575,6 +581,8 @@ export class FinancePractice implements PracticeHandler {
       kind: input.kind,
       prefix: input.prefix.toUpperCase(),
       creditLimit: input.kind === 'credit' ? Number(input.creditLimit) : null,
+      paymentDay: input.kind === 'credit' ? (input.paymentDay ?? null) : null,
+      cutDay: input.kind === 'credit' && input.paymentDay ? (input.cutDay ?? null) : null,
       lowBalanceThreshold: input.lowBalanceThreshold ?? null,
     });
     if (input.opening && input.opening.amount) {
@@ -601,6 +609,8 @@ export class FinancePractice implements PracticeHandler {
       kind: input.kind,
       prefix: input.prefix.toUpperCase(),
       creditLimit: input.kind === 'credit' ? Number(input.creditLimit) : null,
+      paymentDay: input.kind === 'credit' ? (input.paymentDay ?? null) : null,
+      cutDay: input.kind === 'credit' && input.paymentDay ? (input.cutDay ?? null) : null,
       lowBalanceThreshold: input.lowBalanceThreshold ?? null,
     });
     const opening = this.live(id).find((m) => m.kind === 'opening');

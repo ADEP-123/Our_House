@@ -1,4 +1,15 @@
 <section class="movements" aria-labelledby="movements-title">
+  @if (payment(); as p) {
+    <p class="payment" [class.soon]="p.cycle.pending > 0 && p.daysLeft <= 3" role="note">
+      <span>💳 {{ 'finance.credit.paymentLine' | t: { day: p.paymentDay } }} · {{ paymentWhen(p) }}</span>
+      <strong>{{ paymentState(p) }}</strong>
+      @if (p.cycle.closed && p.cycle.cut && p.cycle.statement !== null) {
+        <small>{{
+          'finance.credit.statement' | t: { date: date(p.cycle.cut), amount: money(p.cycle.statement) }
+        }}</small>
+      }
+    </p>
+  }
   <!-- Barra, búsqueda, filtros y totales: en computador quedan fijos arriba al desplazar -->
   <div class="top" #topEl>
     <header class="bar">

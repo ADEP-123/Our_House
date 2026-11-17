@@ -304,6 +304,37 @@ export const emailTemplates = {
     });
   },
 
+  /** Tarjeta de crédito con pago pendiente (con los recordatorios de la persona) */
+  cardPayment(
+    locale: Locale,
+    p: { card: string; amount: string; date: string; daysLeft: number; statement: string | null; cut: string | null; url: string; settingsUrl: string },
+  ): EmailContent {
+    if (locale === 'en') {
+      const when = p.daysLeft === 0 ? 'today' : p.daysLeft === 1 ? 'tomorrow' : `in ${p.daysLeft} days`;
+      return render(`Pay ${p.card}: ${p.amount} due ${when}`, {
+        heading: `${p.card} payment is due ${when}`,
+        paragraphs: [
+          `${p.amount} still to pay by ${p.date}.`,
+          ...(p.statement && p.cut ? [`The statement closed on ${p.cut} with ${p.statement}; payments recorded after that are already discounted.`] : []),
+          'These reminders stop once you record the payment in the card (a transfer from another account or an income).',
+        ],
+        action: { label: 'Open card', url: p.url },
+        footnote: settingsNote(locale, p.settingsUrl),
+      });
+    }
+    const when = p.daysLeft === 0 ? 'hoy' : p.daysLeft === 1 ? 'mañana' : `en ${p.daysLeft} días`;
+    return render(`Pagar ${p.card}: ${p.amount} vence ${when}`, {
+      heading: `El pago de ${p.card} vence ${when}`,
+      paragraphs: [
+        `Faltan ${p.amount} por pagar hasta el ${p.date}.`,
+        ...(p.statement && p.cut ? [`El corte del ${p.cut} cerró con ${p.statement}; los pagos registrados después ya están descontados.`] : []),
+        'Estos avisos paran cuando registras el pago en la tarjeta (una transferencia desde otra cuenta o una entrada).',
+      ],
+      action: { label: 'Abrir tarjeta', url: p.url },
+      footnote: settingsNote(locale, p.settingsUrl),
+    });
+  },
+
   /** Un programado se cobra pronto (aviso X días antes) */
   scheduledReminder(locale: Locale, p: { what: string; amount: string; account: string; date: string; daysLeft: number; url: string; settingsUrl: string }): EmailContent {
     if (locale === 'en') {

@@ -201,6 +201,6 @@ export function withBalance(account: Account, balance: number): Account {
   return {
     ...account,
     balance: b,
-    credit: { limit, debt, available: r2(limit - debt), overLimit: debt > limit },
+    credit: { ...account.credit, limit, debt, available: r2(limit - debt), overLimit: debt > limit },
   };
 }

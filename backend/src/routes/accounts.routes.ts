@@ -27,6 +27,8 @@ const accountBody = z.object({
     .regex(/^[A-Z0-9]{1,4}$/, 'ACCOUNT_PREFIX_INVALID'),
   lowBalanceThreshold: z.number('LOW_BALANCE_INVALID').min(0, 'LOW_BALANCE_INVALID').max(MAX_MONEY, 'LOW_BALANCE_INVALID').nullable().optional(),
   creditLimit: z.number('CREDIT_LIMIT_INVALID').min(0, 'CREDIT_LIMIT_INVALID').max(MAX_MONEY, 'CREDIT_LIMIT_INVALID').nullable().optional(),
+  paymentDay: z.number('PAYMENT_DAY_INVALID').int('PAYMENT_DAY_INVALID').min(1, 'PAYMENT_DAY_INVALID').max(31, 'PAYMENT_DAY_INVALID').nullable().optional(),
+  cutDay: z.number('CUT_DAY_INVALID').int('CUT_DAY_INVALID').min(1, 'CUT_DAY_INVALID').max(31, 'CUT_DAY_INVALID').nullable().optional(),
   opening: z
     .strictObject({
       amount: z.number('OPENING_INVALID').min(-MAX_MONEY, 'OPENING_INVALID').max(MAX_MONEY, 'OPENING_INVALID'),

@@ -214,6 +214,45 @@ export const calendarService = {
   sync,
 
   /**
+   * Crea o actualiza un evento propio (no de una tarea) en el calendario "Our House" de la persona.
+   * Si la persona borró el evento en Google, se vuelve a crear. Devuelve el id del evento, o null
+   * si no tiene Google conectado.
+   */
+  async putEvent(userId: string, eventId: string | null, event: CalendarEvent): Promise<string | null> {
+    if (!googleAvailable()) return null;
+    const acc = await accountOf(userId);
+    if (!acc) return null;
+    try {
+      const token = await accessTokenFor(acc);
+      if (eventId) {
+        try {
+          await google.updateEvent(token, acc.calendar_id, eventId, event);
+          return eventId;
+        } catch (err) {
+          if (!isGone(err)) throw err;
+        }
+      }
+      return await google.insertEvent(token, acc.calendar_id, event);
+    } catch (err) {
+      if (err instanceof AccountGone) return null;
+      throw err;
+    }
+  },
+
+  /** Borra un evento propio (si ya no está en Google, no pasa nada) */
+  async deleteEvent(userId: string, eventId: string): Promise<void> {
+    const acc = googleAvailable() ? await accountOf(userId) : null;
+    if (!acc) return;
+    try {
+      await google.deleteEvent(await accessTokenFor(acc), acc.calendar_id, eventId);
+    } catch (err) {
+      if (!isGone(err) && !(err instanceof AccountGone)) throw err;
+    }
+  },
+
+  hashOf,
+
+  /**
    * Repaso de cada hora (junto con los recordatorios): borra eventos de tareas que ya no existen
    * y reintenta lo que haya fallado. Lo que no cambió no llama a Google.
    */

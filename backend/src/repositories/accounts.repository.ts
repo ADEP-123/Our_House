@@ -14,6 +14,9 @@ export interface AccountRow {
   kind: AccountKind;
   prefix: string;
   credit_limit: number | null;
+  /** Tarjetas: día de pago de cada mes y día de corte (opcional) */
+  payment_day: number | null;
+  cut_day: number | null;
   view_mode: ViewMode;
   edit_mode: EditMode;
   edit_roles: FamilyRole[];
@@ -45,6 +48,8 @@ export interface AccountFields {
   kind: AccountKind;
   prefix: string;
   creditLimit: number | null;
+  paymentDay: number | null;
+  cutDay: number | null;
   viewMode: ViewMode;
   editMode: EditMode;
   editRoles: FamilyRole[];
@@ -95,10 +100,11 @@ export const accountsRepository = {
   /** Crea la cuenta; si el id ya existe (reenvío) no hace nada y devuelve false. */
   async create(id: string, familyId: string, ownerId: string, f: AccountFields, conn: Db): Promise<boolean> {
     const { rowCount } = await conn.query(
-      `INSERT INTO accounts (id, family_id, owner_id, name, description, kind, prefix, credit_limit, view_mode, edit_mode, edit_roles, low_balance_threshold)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `INSERT INTO accounts (id, family_id, owner_id, name, description, kind, prefix, credit_limit, view_mode, edit_mode, edit_roles, low_balance_threshold,
+                             payment_day, cut_day)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        ON CONFLICT (id) DO NOTHING`,
-      [id, familyId, ownerId, f.name, f.description, f.kind, f.prefix, f.creditLimit, f.viewMode, f.editMode, f.editRoles, f.lowBalanceThreshold],
+      [id, familyId, ownerId, f.name, f.description, f.kind, f.prefix, f.creditLimit, f.viewMode, f.editMode, f.editRoles, f.lowBalanceThreshold, f.paymentDay, f.cutDay],
     );
     return !!rowCount;
   },
@@ -109,9 +115,9 @@ export const accountsRepository = {
               view_mode = $7, edit_mode = $8, edit_roles = $9,
               -- Cambiar el umbral vuelve a permitir el aviso
               low_balance_notified_at = CASE WHEN low_balance_threshold IS DISTINCT FROM $10 THEN NULL ELSE low_balance_notified_at END,
-              low_balance_threshold = $10, updated_at = now()
+              low_balance_threshold = $10, payment_day = $11, cut_day = $12, updated_at = now()
         WHERE id = $1`,
-      [id, f.name, f.description, f.kind, f.prefix, f.creditLimit, f.viewMode, f.editMode, f.editRoles, f.lowBalanceThreshold],
+      [id, f.name, f.description, f.kind, f.prefix, f.creditLimit, f.viewMode, f.editMode, f.editRoles, f.lowBalanceThreshold, f.paymentDay, f.cutDay],
     );
   },
 
