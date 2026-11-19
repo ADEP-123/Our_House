@@ -140,6 +140,13 @@
           <dt>{{ 'finance.summary.debt' | t }}</dt>
           <dd class="big">{{ money(d.balances.debt) }}</dd>
           <dd class="hint">{{ 'finance.summary.debtHint' | t }}</dd>
+          @if (otherDebts(); as o) {
+            <dd class="hint other-debts">
+              <a routerLink="/finanzas/deudas">{{
+                'finance.summary.otherDebts' | t: { owe: money(o.owe), owed: money(o.owed) }
+              }}</a>
+            </dd>
+          }
         </div>
         <div>
           <dt>{{ 'finance.summary.complete' | t }}</dt>

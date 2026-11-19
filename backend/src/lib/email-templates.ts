@@ -335,6 +335,37 @@ export const emailTemplates = {
     });
   },
 
+  /** Una deuda vence pronto (con los recordatorios de la persona) */
+  debtDue(
+    locale: Locale,
+    p: { direction: 'owe' | 'owed'; title: string; counterparty: string; amount: string; date: string; daysLeft: number; url: string; settingsUrl: string },
+  ): EmailContent {
+    if (locale === 'en') {
+      const when = p.daysLeft === 0 ? 'today' : p.daysLeft === 1 ? 'tomorrow' : `in ${p.daysLeft} days`;
+      const owe = p.direction === 'owe';
+      return render(`${owe ? 'Pay' : 'Collect'} ${p.title}: ${p.amount} due ${when}`, {
+        heading: owe ? `Your debt with ${p.counterparty} is due ${when}` : `${p.counterparty} should pay you ${when}`,
+        paragraphs: [
+          owe ? `${p.amount} still to pay for ${p.title}, due ${p.date}.` : `${p.counterparty} still owes ${p.amount} for ${p.title}, due ${p.date}.`,
+          'These reminders stop once the debt is paid off (record the payments in Debts).',
+        ],
+        action: { label: 'Open debts', url: p.url },
+        footnote: settingsNote(locale, p.settingsUrl),
+      });
+    }
+    const when = p.daysLeft === 0 ? 'hoy' : p.daysLeft === 1 ? 'mañana' : `en ${p.daysLeft} días`;
+    const owe = p.direction === 'owe';
+    return render(`${owe ? 'Pagar' : 'Cobrar'} ${p.title}: ${p.amount} vence ${when}`, {
+      heading: owe ? `Tu deuda con ${p.counterparty} vence ${when}` : `${p.counterparty} te debe pagar ${when}`,
+      paragraphs: [
+        owe ? `Faltan ${p.amount} por pagar de ${p.title}; vence el ${p.date}.` : `${p.counterparty} todavía te debe ${p.amount} de ${p.title}; vence el ${p.date}.`,
+        'Estos avisos paran cuando la deuda queda en cero (registra los abonos en Deudas).',
+      ],
+      action: { label: 'Abrir deudas', url: p.url },
+      footnote: settingsNote(locale, p.settingsUrl),
+    });
+  },
+
   /** Un programado se cobra pronto (aviso X días antes) */
   scheduledReminder(locale: Locale, p: { what: string; amount: string; account: string; date: string; daysLeft: number; url: string; settingsUrl: string }): EmailContent {
     if (locale === 'en') {
