@@ -13,6 +13,7 @@ import { familiesRepository, type FamilyRole } from '../repositories/families.re
 import { savingsByAccount } from '../lib/savings.js';
 import { savingsRepository } from '../repositories/savings.repository.js';
 import { requireMember } from './families.service.js';
+import { cardPaymentsService } from './card-payments.service.js';
 
 /**
  * Qué puede hacer el usuario con una cuenta.
@@ -94,7 +95,14 @@ export function toAccountView(
     // Tarjeta de crédito: cupo, deuda (saldo negativo) y lo que queda por usar
     credit:
       a.kind === 'credit'
-        ? { limit: a.credit_limit ?? 0, debt, available: round2((a.credit_limit ?? 0) - debt), overLimit: debt > (a.credit_limit ?? 0) }
+        ? {
+            limit: a.credit_limit ?? 0,
+            debt,
+            available: round2((a.credit_limit ?? 0) - debt),
+            overLimit: debt > (a.credit_limit ?? 0),
+            paymentDay: a.payment_day,
+            cutDay: a.cut_day,
+          }
         : null,
     // Saldo · Ahorro · Disponible
     savings: { total: savings.total, available: round2(balance - savings.total), projects: savings.projects },
@@ -119,6 +127,9 @@ export interface AccountInput {
   kind: AccountKind;
   prefix: string;
   creditLimit?: number | null;
+  /** Tarjetas: día de pago de cada mes (1-31) y día de corte (opcional; necesita el día de pago) */
+  paymentDay?: number | null;
+  cutDay?: number | null;
   /** Saldo inicial; en tarjetas, la deuda va en negativo. Monto 0 o null: sin saldo inicial. */
   opening?: { amount: number; date: string } | null;
   viewMode: ViewMode;
@@ -144,6 +155,9 @@ async function prepare(familyId: string, ownerId: string | null, input: AccountI
     kind: input.kind,
     prefix: input.prefix,
     creditLimit: input.kind === 'credit' ? input.creditLimit! : null,
+    paymentDay: input.kind === 'credit' ? (input.paymentDay ?? null) : null,
+    // Sin día de pago, el corte no sirve de nada
+    cutDay: input.kind === 'credit' && input.paymentDay ? (input.cutDay ?? null) : null,
     viewMode: input.viewMode,
     editMode: input.editMode,
     editRoles: input.editRoles,
@@ -211,6 +225,7 @@ export const accountsService = {
       await accountsRepository.setAccess(id, access, conn);
       await saveOpening(id, input.opening, userId, conn);
     });
+    cardPaymentsService.afterChange([id]);
     return view(id, userId);
   },
 
@@ -224,12 +239,14 @@ export const accountsService = {
       await accountsRepository.setAccess(id, access, conn);
       await saveOpening(id, input.opening, userId, conn);
     });
+    cardPaymentsService.afterChange([id]);
     return view(id, userId);
   },
 
   async setArchived(id: string, userId: string, archived: boolean) {
     requireAdmin(await getAccountAccess(id, userId));
     await accountsRepository.setArchived(id, archived);
+    cardPaymentsService.afterChange([id]);
     return view(id, userId);
   },
 

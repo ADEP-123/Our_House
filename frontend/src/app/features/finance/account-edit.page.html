@@ -97,10 +97,9 @@
             <input
               id="account-limit"
               class="oh-input"
-              type="number"
+              ohAmount
               inputmode="decimal"
-              min="0"
-              step="0.01"
+              autocomplete="off"
               formControlName="creditLimit"
             />
             @if (fieldError('creditLimit'); as e) {
@@ -113,10 +112,9 @@
             <input
               id="account-threshold"
               class="oh-input"
-              type="number"
+              ohAmount
               inputmode="decimal"
-              min="0"
-              step="0.01"
+              autocomplete="off"
               formControlName="lowBalanceThreshold"
               aria-describedby="threshold-hint"
             />
@@ -128,6 +126,41 @@
         }
       </div>
 
+      @if (kind() === 'credit') {
+        <div class="row">
+          <div class="oh-field">
+            <label for="account-payment-day">{{ 'finance.form.paymentDay' | t }}</label>
+            <select
+              id="account-payment-day"
+              class="oh-input"
+              formControlName="paymentDay"
+              aria-describedby="payment-day-hint"
+            >
+              <option [ngValue]="null">{{ 'finance.form.noPaymentDay' | t }}</option>
+              @for (d of days; track d) {
+                <option [ngValue]="d">{{ d }}</option>
+              }
+            </select>
+            <p id="payment-day-hint" class="oh-hint">{{ 'finance.form.paymentDayHint' | t }}</p>
+          </div>
+          <div class="oh-field">
+            <label for="account-cut-day">{{ 'finance.form.cutDay' | t }}</label>
+            <select
+              id="account-cut-day"
+              class="oh-input"
+              formControlName="cutDay"
+              aria-describedby="cut-day-hint"
+            >
+              <option [ngValue]="null">{{ 'finance.form.noCutDay' | t }}</option>
+              @for (d of days; track d) {
+                <option [ngValue]="d">{{ d }}</option>
+              }
+            </select>
+            <p id="cut-day-hint" class="oh-hint">{{ 'finance.form.cutDayHint' | t }}</p>
+          </div>
+        </div>
+      }
+
       <div class="row">
         <div class="oh-field">
           <label for="account-opening">{{
@@ -136,9 +169,9 @@
           <input
             id="account-opening"
             class="oh-input"
-            type="number"
+            ohAmount
             inputmode="decimal"
-            step="0.01"
+            autocomplete="off"
             formControlName="openingAmount"
             aria-describedby="opening-hint"
           />

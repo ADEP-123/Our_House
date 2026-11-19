@@ -1,0 +1,162 @@
+<dialog #dialog aria-labelledby="cash-title">
+  <div class="body">
+    <h2 id="cash-title">{{ 'finance.cash.title' | t }} · {{ account().name }}</h2>
+
+    <div class="modes" role="group">
+      <button
+        type="button"
+        [attr.aria-pressed]="tab() === 'count'"
+        [class.active]="tab() === 'count'"
+        (click)="tab.set('count')"
+      >
+        {{ 'finance.cash.tabCount' | t }}
+      </button>
+      <button
+        type="button"
+        [attr.aria-pressed]="tab() === 'calc'"
+        [class.active]="tab() === 'calc'"
+        (click)="tab.set('calc')"
+      >
+        {{ 'finance.cash.tabCalc' | t }}
+      </button>
+    </div>
+
+    @if (tab() === 'count') {
+      <div class="count">
+        @if (!rows().length) {
+          <p class="oh-hint">
+            {{ 'finance.cash.noDenominations' | t: { currency: account().currency } }}
+          </p>
+        }
+        @for (group of groups(); track group.kind) {
+          <p class="group" role="heading" aria-level="3">
+            {{ (group.kind === 'bill' ? 'finance.cash.bills' : 'finance.cash.coins') | t }}
+          </p>
+          @for (r of group.rows; track r.key) {
+            <div class="row">
+              <span class="value">{{ label(r.value) }}</span>
+              <div class="stepper">
+                <button
+                  type="button"
+                  class="step"
+                  [attr.aria-label]="'finance.cash.less' | t: { value: label(r.value) }"
+                  [disabled]="!countOf(r.key)"
+                  (click)="step(r.key, -1)"
+                >
+                  −
+                </button>
+                <input
+                  class="oh-input qty"
+                  type="number"
+                  inputmode="numeric"
+                  min="0"
+                  step="1"
+                  [attr.aria-label]="'finance.cash.countOf' | t: { value: label(r.value) }"
+                  [value]="countOf(r.key) || ''"
+                  placeholder="0"
+                  (input)="setCount(r.key, $any($event.target).value)"
+                />
+                <button
+                  type="button"
+                  class="step"
+                  [attr.aria-label]="'finance.cash.more' | t: { value: label(r.value) }"
+                  (click)="step(r.key, 1)"
+                >
+                  +
+                </button>
+              </div>
+              <span class="sub">{{ countOf(r.key) ? money(r.value * countOf(r.key)) : '' }}</span>
+            </div>
+          }
+        }
+        <label class="row others">
+          <span class="value">{{ 'finance.cash.others' | t }}</span>
+          <input
+            class="oh-input"
+            ohAmount
+            inputmode="decimal"
+            autocomplete="off"
+            placeholder="0"
+            [value]="othersText()"
+            (input)="othersText.set($any($event.target).value)"
+          />
+        </label>
+      </div>
+    } @else {
+      <div class="calc">
+        <label class="oh-field">
+          <span>{{ 'finance.cash.calcLabel' | t }}</span>
+          <input
+            #calcInput
+            class="oh-input display"
+            inputmode="decimal"
+            autocomplete="off"
+            [value]="expr()"
+            (input)="expr.set($any($event.target).value)"
+            (keydown.enter)="$event.preventDefault(); equals()"
+          />
+        </label>
+        <p class="oh-hint">{{ 'finance.cash.calcHint' | t }}</p>
+        @if (expr() && calcTotal() === null) {
+          <p class="oh-error">{{ 'finance.cash.calcInvalid' | t }}</p>
+        }
+        <div class="keys">
+          @for (k of keys(); track $index) {
+            <button
+              type="button"
+              class="key"
+              [class.op]="isOperator(k)"
+              [class.eq]="k === '='"
+              (click)="press(k)"
+            >
+              {{ k }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+
+    <dl class="sums">
+      <div>
+        <dt>{{ 'finance.cash.total' | t }}</dt>
+        <dd class="total">{{ total() === null ? '—' : money(total()!) }}</dd>
+      </div>
+      <div>
+        <dt>{{ 'finance.cash.app' | t }}</dt>
+        <dd>{{ money(account().balance) }}</dd>
+      </div>
+      @if (diff(); as d) {
+        <div>
+          <dt>{{ 'finance.cash.diff' | t }}</dt>
+          <dd class="diff" [class.negative]="d < 0">{{ (d > 0 ? '+' : '') + money(d) }}</dd>
+        </div>
+      } @else if (total() !== null) {
+        <p class="match">{{ 'finance.cash.match' | t }}</p>
+      }
+    </dl>
+
+    @if (error(); as e) {
+      <p class="oh-alert is-error" role="alert">{{ e }}</p>
+    }
+
+    <div class="actions">
+      <button type="button" class="oh-btn oh-btn--text" (click)="clear()">
+        {{ 'finance.cash.clear' | t }}
+      </button>
+      <span class="spacer"></span>
+      <button type="button" class="oh-btn oh-btn--text" (click)="close()">
+        {{ 'finance.cash.close' | t }}
+      </button>
+      @if (canAdjust()) {
+        <button
+          type="button"
+          class="oh-btn oh-btn--filled"
+          [disabled]="busy() || !diff()"
+          (click)="adjust()"
+        >
+          {{ 'finance.cash.adjust' | t }}
+        </button>
+      }
+    </div>
+  </div>
+</dialog>

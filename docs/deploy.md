@@ -120,12 +120,12 @@ Vercel gratis solo permite tareas programadas una vez al día, así que el reloj
 3. En GitHub > Settings > Secrets and variables > Actions:
    - pestaña **Secrets**: `CRON_SECRET` con la misma clave;
    - pestaña **Variables**: `API_URL` = `https://our-house-api.vercel.app`.
-4. En Actions > **Recordatorios** > **Run workflow** pruébalo a mano: debe terminar en verde y mostrar `{"sent":0,"scheduled":0}` (o los que haya enviado y los movimientos programados que registró).
+4. En Actions > **Recordatorios** > **Run workflow** pruébalo a mano: debe terminar en verde y mostrar `{"sent":0,"scheduled":0,"cardReminders":0,"debtReminders":0}`. Los números son los correos de tareas enviados, los movimientos programados registrados y los avisos de tarjetas y de deudas (fase 9).
 
 Notas:
 - GitHub puede atrasar unos minutos cada ejecución; la API envía cada recordatorio una sola vez por día y persona.
 - En repos públicos, GitHub **pausa los workflows programados tras 60 días sin actividad** en el repo. Si pasa, te avisa por correo; se reactiva con un clic en Actions o con cualquier push.
-- El mismo envío repasa Google Calendar: borra eventos de tareas eliminadas y reintenta lo que haya fallado.
+- El mismo envío repasa Google Calendar: borra eventos de tareas eliminadas, actualiza los de pago de las tarjetas y reintenta lo que haya fallado.
 
 ## 8. Google Calendar
 
@@ -203,6 +203,59 @@ Cómo funciona: cada tarea con fecha aparece en el calendario "Our House" de su 
 - **Google Calendar en la práctica:** la conexión se simula (botón, permiso y una vista previa del calendario). Al final, «Conectar de verdad» lleva al Perfil.
 - **Finanzas:** su tutorial corre sobre las pantallas reales de Finanzas (no en una copia), con datos de práctica en memoria: mientras dura, todas las llamadas de Finanzas (también las lecturas) se responden en el navegador y su cola sin conexión no guarda ni envía nada; al terminar vuelven los datos reales. Lo básico (cuentas, gasto, transferencia y resumen) y opcionales (tarjetas, presupuesto, ahorros, programados, importar y exportar, compras desde las listas). El Resumen de práctica usa una copia de `backend/src/lib/summary.ts` en `frontend/src/app/features/finance/tutorial/practice-summary.ts`: si cambia uno, hay que cambiar el otro.
 - **Primeros pasos:** tarjeta en Inicio (crear la primera lista, elegir un tema, conectar Google Calendar si está disponible) que se marca sola, desaparece al completarse y se puede ocultar.
+
+## 14. Finanzas plus (fase 9)
+
+- **Migraciones:** `028_pago_tarjetas` y `029_deudas`. Las aplica el workflow **Migraciones** al llegar a `main`. No cambian datos existentes: las tarjetas quedan sin día de pago hasta que alguien lo elija.
+- **Sin variables nuevas.** Los avisos de tarjetas y de deudas usan el workflow **Recordatorios** de la sección 7.1 y el Gmail de la sección 5.1. El evento de pago de las tarjetas usa Google Calendar (sección 8) solo si está configurado.
+
+### 14.1 Lo nuevo en Finanzas
+
+- **Solo se desplazan los movimientos.** En computador quedan fijos el encabezado, las pestañas de las cuentas, la barra con los filtros y los títulos de las columnas. En el celular quedan fijas las pestañas, y el botón 🔍 trae la búsqueda sin volver arriba.
+- **Exportar varias cuentas.** Desde la hoja de una cuenta se elige esta cuenta, todas o algunas, y todo el período o un rango. Sale en un solo archivo: el Excel en el formato de importar y el CSV con la columna Cuenta.
+- **🧮 Contar efectivo** (solo en cuentas de efectivo).
+  - Billetes y monedas de USD, EUR, COP, MXN, ARS, CLP, PEN, BRL, GBP y CAD. Con otra moneda se usan "Otros" y la calculadora.
+  - Una calculadora normal y "Ajustar saldo a este total".
+  - Para sumar otra moneda, agrega sus denominaciones en `frontend/src/app/features/finance/cash-logic.ts`.
+- **Cuentas en los montos.** Cualquier monto de Finanzas acepta "12500+3000-500", "3x20.000" o paréntesis, y muestra el resultado al salir del campo. El teclado numérico del iPhone no trae "+": ahí está la calculadora. La importación también entiende cuentas: una celda "10+5" entra como 15.
+
+### 14.2 Pago de las tarjetas de crédito
+
+- Cada tarjeta puede tener un **día de pago** y un **día de corte** (opcional). En meses más cortos se usa el último día.
+- **Qué se debe pagar:**
+  - Con corte: la deuda al cierre del corte, menos los pagos registrados después (transferencias o entradas a la tarjeta).
+  - Sin corte: toda la deuda.
+- La hoja de la tarjeta lo muestra: "💳 Pago: 15 de cada mes · faltan 3 días · 350,00 por pagar".
+- **Correos:** van a quien creó la tarjeta y a quienes la editan.
+  - Usan sus recordatorios de tareas (desde X días antes, cada N días, a su hora) y paran al registrar el pago.
+  - Se apagan con "Avisos de finanzas" en el perfil.
+- **Google Calendar:** un evento de todo el día en la fecha de pago, en el calendario "Our House" de quien creó la tarjeta: "💳 Pagar Visa · 350,00 US$".
+  - Se actualiza con cada movimiento y queda "✓ 💳 Pagar Visa" al pagar. Hay uno por mes.
+  - Quitar el día de pago o archivar la tarjeta borra el evento del pago que todavía no llega.
+- El Excel de importar y exportar todavía no lleva el día de pago ni el de corte.
+
+### 14.3 Deudas
+
+- Están en **Finanzas → Deudas**, con las pestañas **Debo** y **Me deben**.
+  - Cada una muestra el total, la deuda al cierre de los últimos 12 meses y cada deuda con su avance, su fecha de pago, sus cuotas y su interés.
+  - Las tarjetas de crédito aparecen en "Debo" en solo lectura, con su deuda de cada mes.
+- **Abonos:** pueden registrar también el movimiento en una cuenta (una salida si debo, una entrada si me deben).
+  - Quitar un abono borra su movimiento, que se puede restaurar en la cuenta.
+  - Borrar una deuda deja en sus cuentas los movimientos de los abonos.
+- **"Cambiar monto"** aumenta o disminuye lo que se debe. El interés es solo un dato: se suma cada vez con el botón que lo calcula.
+- **Quién la ve:** las mismas reglas que las cuentas (todo el grupo, personas elegidas o solo yo).
+  - Solo quien la creó cambia sus datos o la borra. Si esa persona sale del grupo, lo hacen los líderes.
+  - Abonan los líderes y miembros que la ven.
+  - Los líderes ven las privadas de los supervisados en solo lectura.
+- **Correos antes de la fecha de pago:** con los recordatorios de cada persona y "Avisos de finanzas". Paran cuando la deuda queda en 0.
+- **Resumen:** muestra "Otras deudas hoy: debes X · te deben Y".
+- **Necesita conexión**, igual que ahorros. El tutorial de Finanzas no la cubre, y durante la práctica no se piden deudas al servidor.
+
+### 14.4 Idiomas
+
+- El español va en el paquete inicial. El inglés (unos 70 kB) se descarga aparte solo si la persona lo usa, antes de mostrar la primera pantalla, así que no ve la app en español ni por un momento.
+- El service worker lo guarda con el resto de la app, así que funciona sin conexión.
+- Al agregar textos, ponlos en `es.ts` y `en.ts`: una prueba verifica que los dos tengan las mismas claves.
 
 ## Desarrollo local
 

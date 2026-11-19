@@ -1,5 +1,6 @@
 import {
   Component,
+  DestroyRef,
   ElementRef,
   computed,
   effect,
@@ -18,9 +19,13 @@ import { ExportMenuComponent } from './export-menu.component';
 import { formatMoney } from '../lists/item-logic';
 import { colorOf, iconOf } from '../lists/list-presets';
 import { AdjustDialogComponent } from './adjust-dialog.component';
+import { CashCountDialogComponent } from './cash-count-dialog.component';
+import { cardPayment, type CardPayment } from './card-logic';
+import { localToday } from './finance-logic';
 import { TransferDialogComponent } from './transfer-dialog.component';
 import { Account, Category, Movement, MovementColumn } from './finance.models';
 import { FinanceStore } from './finance.store';
+import { watchHeight } from '../../shared/watch-height';
 import { MovementDialogComponent, MovementRequest } from './movement-dialog.component';
 import {
   EMPTY_FILTERS,
@@ -39,9 +44,19 @@ const PAGE = 150;
  */
 @Component({
   selector: 'oh-movements',
-  imports: [TPipe, MovementDialogComponent, AdjustDialogComponent, TransferDialogComponent, ExportMenuComponent],
+  imports: [
+    TPipe,
+    MovementDialogComponent,
+    AdjustDialogComponent,
+    TransferDialogComponent,
+    ExportMenuComponent,
+    CashCountDialogComponent,
+  ],
   templateUrl: './movements.component.html',
-  styleUrl: './movements.component.scss',
+  // El desplazamiento va aparte para que cada hoja de estilos quede bajo el límite de tamaño
+  styleUrls: ['./movements.component.scss', './movements-scroll.scss', './card-payment.scss'],
+  // Alto de la barra con los filtros (fija al desplazar): los títulos de las columnas van debajo
+  host: { '[style.--mov-top-h.px]': 'topHeight()' },
 })
 export class MovementsComponent {
   readonly account = input.required<Account>();
@@ -58,6 +73,12 @@ export class MovementsComponent {
   protected readonly iconOf = iconOf;
   protected readonly colorOf = colorOf;
   protected readonly movements = signal<Movement[] | null>(null);
+  /** Tarjeta con día de pago: cuándo toca pagar y cuánto falta */
+  protected readonly payment = computed(() => {
+    const credit = this.account().credit;
+    const list = this.movements();
+    return credit && list ? cardPayment(credit, list, localToday()) : null;
+  });
   protected readonly categories = signal<Category[]>([]);
   protected readonly hidden = signal<Set<MovementColumn>>(new Set());
   protected readonly filters = signal<MovementFilters>(EMPTY_FILTERS);
@@ -65,6 +86,13 @@ export class MovementsComponent {
   protected readonly limit = signal(PAGE);
   protected readonly error = signal<string | null>(null);
   protected readonly request = signal<MovementRequest | null>(null);
+  /** Celular: los filtros quedaron arriba, fuera de la vista (aparece el botón 🔍) */
+  protected readonly filtersAway = signal(false);
+  /** Celular: búsqueda y filtros fijos arriba sin volver al inicio */
+  protected readonly pinned = signal(false);
+  private readonly filtersEl = viewChild<ElementRef<HTMLElement>>('filtersEl');
+  private readonly topEl = viewChild<ElementRef<HTMLElement>>('topEl');
+  protected readonly topHeight = signal(0);
 
   protected readonly filtered = computed(() =>
     filterMovements(this.movements() ?? [], this.filters()),
@@ -84,12 +112,28 @@ export class MovementsComponent {
       this.accounts().some((a) => a.id !== this.account().id && a.permissions.canEdit),
   );
   protected readonly transfersFilter = TRANSFERS_FILTER;
+  /** Exportar: esta cuenta junto con las demás que la persona ve */
+  protected readonly exportChoices = computed(() => this.accounts().map((a) => ({ id: a.id, name: a.name })));
   private loadedFamily: string | null = null;
 
   /** Solo al cambiar de cuenta (no cuando llega la misma cuenta con el saldo nuevo) */
   private readonly accountId = computed(() => this.account().id);
 
   constructor() {
+    watchHeight(this.topEl, this.topHeight);
+    // Celular: saber si los filtros se ven, para ofrecer el botón que los trae
+    if (typeof IntersectionObserver !== 'undefined') {
+      const observer = new IntersectionObserver(([entry]) => {
+        if (!this.pinned())
+          this.filtersAway.set(!entry!.isIntersecting && entry!.boundingClientRect.top < 0);
+      });
+      effect(() => {
+        const el = this.filtersEl()?.nativeElement;
+        observer.disconnect();
+        if (el) observer.observe(el);
+      });
+      inject(DestroyRef).onDestroy(() => observer.disconnect());
+    }
     // Al terminar de enviar los cambios hechos sin conexión, se trae la versión del servidor (con números)
     effect(() => {
       if (this.store.synced() > 0) untracked(() => void this.load(this.account()));
@@ -124,6 +168,13 @@ export class MovementsComponent {
     }
   }
 
+  /** Botón 🔍 (celular): fija la búsqueda y los filtros arriba, o los suelta */
+  protected togglePinned(): void {
+    const pinned = !this.pinned();
+    this.pinned.set(pinned);
+    if (!pinned) this.filtersAway.set(true);
+  }
+
   protected async refresh(): Promise<void> {
     await this.load(this.account());
     this.changed.emit();
@@ -133,6 +184,20 @@ export class MovementsComponent {
 
   protected money(n: number): string {
     return formatMoney(n, this.account().currency, this.i18n.locale());
+  }
+
+  protected paymentWhen(p: CardPayment): string {
+    if (p.daysLeft === 0) return this.i18n.t('finance.credit.dueToday');
+    if (p.daysLeft === 1) return this.i18n.t('finance.credit.dueTomorrow');
+    return this.i18n.t('finance.credit.dueIn', { n: p.daysLeft });
+  }
+
+  /** "350 por pagar", "Al día ✓" o, antes del corte, "El corte es el 28 nov" */
+  protected paymentState(p: CardPayment): string {
+    const c = p.cycle;
+    if (c.pending > 0) return this.i18n.t('finance.credit.pending', { amount: this.money(c.pending) });
+    if (!c.closed && c.cut) return this.i18n.t('finance.credit.cutComing', { date: this.date(c.cut) });
+    return this.i18n.t('finance.credit.upToDate');
   }
 
   protected date(iso: string): string {

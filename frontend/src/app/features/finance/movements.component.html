@@ -1,162 +1,182 @@
 <section class="movements" aria-labelledby="movements-title">
-  <header class="bar">
-    <h3 id="movements-title">{{ 'finance.movements.title' | t }}</h3>
-    <div class="bar-actions">
-      @if (canTransfer()) {
-        @if (account().kind === 'credit') {
+  @if (payment(); as p) {
+    <p class="payment" [class.soon]="p.cycle.pending > 0 && p.daysLeft <= 3" role="note">
+      <span>💳 {{ 'finance.credit.paymentLine' | t: { day: p.paymentDay } }} · {{ paymentWhen(p) }}</span>
+      <strong>{{ paymentState(p) }}</strong>
+      @if (p.cycle.closed && p.cycle.cut && p.cycle.statement !== null) {
+        <small>{{
+          'finance.credit.statement' | t: { date: date(p.cycle.cut), amount: money(p.cycle.statement) }
+        }}</small>
+      }
+    </p>
+  }
+  <!-- Barra, búsqueda, filtros y totales: en computador quedan fijos arriba al desplazar -->
+  <div class="top" #topEl>
+    <header class="bar">
+      <h3 id="movements-title">{{ 'finance.movements.title' | t }}</h3>
+      <div class="bar-actions">
+        @if (canTransfer()) {
+          @if (account().kind === 'credit') {
+            <button
+              type="button"
+              class="oh-btn oh-btn--tonal"
+              data-tour="pay-card"
+              (click)="transfer.open({ to: account() })"
+            >
+              {{ 'finance.transfers.payTitle' | t }}
+            </button>
+          }
           <button
             type="button"
-            class="oh-btn oh-btn--tonal"
-            data-tour="pay-card"
-            (click)="transfer.open({ to: account() })"
+            class="oh-btn oh-btn--text"
+            data-tour="transfer"
+            (click)="transfer.open({ from: account() })"
           >
-            {{ 'finance.transfers.payTitle' | t }}
+            {{ 'finance.transfers.button' | t }}
           </button>
         }
-        <button
-          type="button"
-          class="oh-btn oh-btn--text"
-          data-tour="transfer"
-          (click)="transfer.open({ from: account() })"
-        >
-          {{ 'finance.transfers.button' | t }}
-        </button>
-      }
-      @if (canEdit()) {
-        <button type="button" class="oh-btn oh-btn--text" (click)="adjust.open()">
-          {{ 'finance.movements.adjust' | t }}
-        </button>
-      }
-      <details class="columns">
-        <summary class="oh-btn oh-btn--text">{{ 'finance.movements.columnsButton' | t }}</summary>
-        <div class="columns-menu">
-          @for (c of hideable; track c) {
-            <label>
-              <input type="checkbox" [checked]="show(c)" (change)="toggleColumn(c)" />
-              {{ columnLabel(c) }}
-            </label>
-          }
-        </div>
-      </details>
-      @if (!account().permissions.supervision) {
-        <oh-export-menu
-          [familyId]="account().familyId"
-          [accounts]="[account().id]"
-          [subject]="account().name"
-        />
-      }
-      @if (canEdit()) {
-        <button
-          type="button"
-          class="oh-btn oh-btn--filled add-desktop"
-          data-tour="add-movement"
-          (click)="openNew()"
-        >
-          + {{ 'finance.movements.add' | t }}
-        </button>
-      }
-    </div>
-  </header>
-
-  <!-- Búsqueda y filtros -->
-  <div class="filters" role="search">
-    <label class="search">
-      <span class="oh-sr-only">{{ 'finance.movements.search' | t }}</span>
-      <input
-        class="oh-input"
-        type="search"
-        [placeholder]="'finance.movements.search' | t"
-        [value]="filters().text"
-        (input)="setFilter({ text: $any($event.target).value })"
-      />
-    </label>
-    <label>
-      <span class="oh-sr-only">{{ 'finance.movements.category' | t }}</span>
-      <select class="oh-input" (change)="setFilter({ categoryId: $any($event.target).value })">
-        <option value="" [selected]="!filters().categoryId">
-          {{ 'finance.movements.allCategories' | t }}
-        </option>
-        <option [value]="transfersFilter" [selected]="filters().categoryId === transfersFilter">
-          ⇄ {{ 'finance.transfers.plural' | t }}
-        </option>
-        @for (c of categories(); track c.id) {
-          <option [value]="c.id" [selected]="filters().categoryId === c.id">
-            {{ iconOf(c.icon) }} {{ c.name }}
-          </option>
+        @if (canEdit()) {
+          <button type="button" class="oh-btn oh-btn--text" (click)="adjust.open()">
+            {{ 'finance.movements.adjust' | t }}
+          </button>
         }
-      </select>
-    </label>
-    <div class="seg" role="group" [attr.aria-label]="'finance.movements.kind' | t">
-      <button
-        type="button"
-        [attr.aria-pressed]="filters().kind === 'all'"
-        (click)="setFilter({ kind: 'all' })"
-      >
-        {{ 'finance.movements.all' | t }}
-      </button>
-      <button
-        type="button"
-        [attr.aria-pressed]="filters().kind === 'in'"
-        (click)="setFilter({ kind: 'in' })"
-      >
-        {{ 'finance.movements.ins' | t }}
-      </button>
-      <button
-        type="button"
-        [attr.aria-pressed]="filters().kind === 'out'"
-        (click)="setFilter({ kind: 'out' })"
-      >
-        {{ 'finance.movements.outs' | t }}
-      </button>
-    </div>
-    <div class="dates">
-      <label class="date">
-        <span>{{ 'finance.movements.from' | t }}</span>
+        @if (account().kind === 'cash') {
+          <button type="button" class="oh-btn oh-btn--text" (click)="cash.open()">
+            {{ 'finance.cash.button' | t }}
+          </button>
+        }
+        <details class="columns">
+          <summary class="oh-btn oh-btn--text">{{ 'finance.movements.columnsButton' | t }}</summary>
+          <div class="columns-menu">
+            @for (c of hideable; track c) {
+              <label>
+                <input type="checkbox" [checked]="show(c)" (change)="toggleColumn(c)" />
+                {{ columnLabel(c) }}
+              </label>
+            }
+          </div>
+        </details>
+        @if (!account().permissions.supervision) {
+          <oh-export-menu
+            [familyId]="account().familyId"
+            [accounts]="[account().id]"
+            [subject]="account().name"
+            [choices]="exportChoices()"
+          />
+        }
+        @if (canEdit()) {
+          <button
+            type="button"
+            class="oh-btn oh-btn--filled add-desktop"
+            data-tour="add-movement"
+            (click)="openNew()"
+          >
+            + {{ 'finance.movements.add' | t }}
+          </button>
+        }
+      </div>
+    </header>
+
+    <!-- Búsqueda y filtros -->
+    <div class="filters" role="search" #filtersEl [class.pinned]="pinned()">
+      <label class="search">
+        <span class="oh-sr-only">{{ 'finance.movements.search' | t }}</span>
         <input
           class="oh-input"
-          type="date"
-          [value]="filters().from"
-          (input)="setFilter({ from: $any($event.target).value })"
+          type="search"
+          [placeholder]="'finance.movements.search' | t"
+          [value]="filters().text"
+          (input)="setFilter({ text: $any($event.target).value })"
         />
       </label>
-      <label class="date">
-        <span>{{ 'finance.movements.to' | t }}</span>
-        <input
-          class="oh-input"
-          type="date"
-          [value]="filters().to"
-          (input)="setFilter({ to: $any($event.target).value })"
-        />
+      <label>
+        <span class="oh-sr-only">{{ 'finance.movements.category' | t }}</span>
+        <select class="oh-input" (change)="setFilter({ categoryId: $any($event.target).value })">
+          <option value="" [selected]="!filters().categoryId">
+            {{ 'finance.movements.allCategories' | t }}
+          </option>
+          <option [value]="transfersFilter" [selected]="filters().categoryId === transfersFilter">
+            ⇄ {{ 'finance.transfers.plural' | t }}
+          </option>
+          @for (c of categories(); track c.id) {
+            <option [value]="c.id" [selected]="filters().categoryId === c.id">
+              {{ iconOf(c.icon) }} {{ c.name }}
+            </option>
+          }
+        </select>
       </label>
+      <div class="seg" role="group" [attr.aria-label]="'finance.movements.kind' | t">
+        <button
+          type="button"
+          [attr.aria-pressed]="filters().kind === 'all'"
+          (click)="setFilter({ kind: 'all' })"
+        >
+          {{ 'finance.movements.all' | t }}
+        </button>
+        <button
+          type="button"
+          [attr.aria-pressed]="filters().kind === 'in'"
+          (click)="setFilter({ kind: 'in' })"
+        >
+          {{ 'finance.movements.ins' | t }}
+        </button>
+        <button
+          type="button"
+          [attr.aria-pressed]="filters().kind === 'out'"
+          (click)="setFilter({ kind: 'out' })"
+        >
+          {{ 'finance.movements.outs' | t }}
+        </button>
+      </div>
+      <div class="dates">
+        <label class="date">
+          <span>{{ 'finance.movements.from' | t }}</span>
+          <input
+            class="oh-input"
+            type="date"
+            [value]="filters().from"
+            (input)="setFilter({ from: $any($event.target).value })"
+          />
+        </label>
+        <label class="date">
+          <span>{{ 'finance.movements.to' | t }}</span>
+          <input
+            class="oh-input"
+            type="date"
+            [value]="filters().to"
+            (input)="setFilter({ to: $any($event.target).value })"
+          />
+        </label>
+      </div>
+      @if (filtering()) {
+        <button type="button" class="oh-btn oh-btn--text" (click)="clearFilters()">
+          {{ 'finance.movements.clear' | t }}
+        </button>
+      }
     </div>
-    @if (filtering()) {
-      <button type="button" class="oh-btn oh-btn--text" (click)="clearFilters()">
-        {{ 'finance.movements.clear' | t }}
-      </button>
+
+    <!-- Total de lo que se ve -->
+    @if (movements()) {
+      <dl class="totals" [attr.aria-label]="'finance.movements.totals' | t">
+        <div>
+          <dt>{{ 'finance.movements.count' | t }}</dt>
+          <dd>{{ filtered().totals.count }}</dd>
+        </div>
+        <div>
+          <dt>{{ 'finance.movements.ins' | t }}</dt>
+          <dd class="positive">{{ money(filtered().totals.income) }}</dd>
+        </div>
+        <div>
+          <dt>{{ 'finance.movements.outs' | t }}</dt>
+          <dd class="negative">{{ money(-filtered().totals.expense) }}</dd>
+        </div>
+        <div>
+          <dt>{{ 'finance.movements.net' | t }}</dt>
+          <dd [class.negative]="filtered().totals.net < 0">{{ money(filtered().totals.net) }}</dd>
+        </div>
+      </dl>
     }
   </div>
-
-  <!-- Total de lo que se ve -->
-  @if (movements()) {
-    <dl class="totals" [attr.aria-label]="'finance.movements.totals' | t">
-      <div>
-        <dt>{{ 'finance.movements.count' | t }}</dt>
-        <dd>{{ filtered().totals.count }}</dd>
-      </div>
-      <div>
-        <dt>{{ 'finance.movements.ins' | t }}</dt>
-        <dd class="positive">{{ money(filtered().totals.income) }}</dd>
-      </div>
-      <div>
-        <dt>{{ 'finance.movements.outs' | t }}</dt>
-        <dd class="negative">{{ money(-filtered().totals.expense) }}</dd>
-      </div>
-      <div>
-        <dt>{{ 'finance.movements.net' | t }}</dt>
-        <dd [class.negative]="filtered().totals.net < 0">{{ money(filtered().totals.net) }}</dd>
-      </div>
-    </dl>
-  }
 
   @if (error()) {
     <p class="oh-alert is-error" role="alert">{{ error() }}</p>
@@ -288,6 +308,22 @@
   }
 </section>
 
+<!-- Celular: traer la búsqueda y los filtros sin volver arriba -->
+@if (filtersAway() || pinned()) {
+  <button
+    type="button"
+    class="find"
+    [attr.aria-pressed]="pinned()"
+    [attr.aria-label]="
+      (pinned() ? 'finance.movements.hideFilters' : 'finance.movements.showFilters') | t
+    "
+    [title]="(pinned() ? 'finance.movements.hideFilters' : 'finance.movements.showFilters') | t"
+    (click)="togglePinned()"
+  >
+    {{ pinned() ? '✕' : '🔍' }}
+  </button>
+}
+
 <!-- Agregar rápido (celular) -->
 @if (canEdit()) {
   <button
@@ -311,4 +347,5 @@
 />
 
 <oh-adjust-dialog #adjust [account]="account()" (saved)="refresh()" />
+<oh-cash-count-dialog #cash [account]="account()" [canAdjust]="canEdit()" (saved)="refresh()" />
 <oh-transfer-dialog #transfer [accounts]="accounts()" (saved)="refresh()" />

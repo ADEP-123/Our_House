@@ -17,6 +17,7 @@ import { SavingsData, SavingsProject } from './finance.models';
 import { amountForInput, parseAmount } from './movement-logic';
 import { SavingsService } from './savings.service';
 import { openModal } from '../../shared/modal';
+import { AmountInputDirective } from './amount-input.directive';
 
 const DIALOG_STYLES = `
   dialog {
@@ -74,7 +75,7 @@ const DIALOG_STYLES = `
 /** Crear o editar un proyecto de ahorro: nombre, ícono, meta y fecha meta (opcionales) */
 @Component({
   selector: 'oh-savings-project-dialog',
-  imports: [TPipe, IconPickerComponent],
+  imports: [TPipe, IconPickerComponent, AmountInputDirective],
   template: `
     <dialog #dialog aria-labelledby="savings-project-title">
       <form (submit)="$event.preventDefault(); save()" novalidate>
@@ -99,6 +100,7 @@ const DIALOG_STYLES = `
             <input
               id="savings-goal"
               class="oh-input"
+              ohAmount
               inputmode="decimal"
               autocomplete="off"
               [placeholder]="'finance.savings.optional' | t"
@@ -196,7 +198,7 @@ export class SavingsProjectDialogComponent {
 /** Apartar dinero de una cuenta para un proyecto, o liberarlo */
 @Component({
   selector: 'oh-savings-move-dialog',
-  imports: [TPipe],
+  imports: [TPipe, AmountInputDirective],
   template: `
     <dialog #dialog aria-labelledby="savings-move-title">
       @if (project(); as p) {
@@ -238,6 +240,7 @@ export class SavingsProjectDialogComponent {
                 #amountInput
                 id="savings-amount"
                 class="oh-input big"
+                ohAmount
                 inputmode="decimal"
                 autocomplete="off"
                 [value]="text()"

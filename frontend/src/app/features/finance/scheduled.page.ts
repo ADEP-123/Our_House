@@ -30,6 +30,7 @@ import { ScheduledDialogComponent } from './scheduled-dialog.component';
 import { scheduledSign } from './scheduled-logic';
 import { ScheduledService } from './scheduled.service';
 import { FinancePracticeBannerComponent } from './tutorial/finance-practice-banner.component';
+import { AmountInputDirective } from './amount-input.directive';
 
 /**
  * Movimientos programados del grupo: gastos, ingresos, transferencias y apartados que se repiten.
@@ -37,7 +38,7 @@ import { FinancePracticeBannerComponent } from './tutorial/finance-practice-bann
  */
 @Component({
   selector: 'oh-scheduled-page',
-  imports: [NgTemplateOutlet, RouterLink, TPipe, ScheduledDialogComponent, FinancePracticeBannerComponent],
+  imports: [NgTemplateOutlet, RouterLink, TPipe, ScheduledDialogComponent, FinancePracticeBannerComponent, AmountInputDirective],
   templateUrl: './scheduled.page.html',
   styleUrl: './scheduled.page.scss',
 })

@@ -17,6 +17,7 @@ import { Account } from './finance.models';
 import { FinanceStore } from './finance.store';
 import { amountForInput, parseAmount } from './movement-logic';
 import { openModal } from '../../shared/modal';
+import { AmountInputDirective } from './amount-input.directive';
 
 /**
  * Transferir entre dos cuentas del grupo o pagar una tarjeta.
@@ -24,7 +25,7 @@ import { openModal } from '../../shared/modal';
  */
 @Component({
   selector: 'oh-transfer-dialog',
-  imports: [TPipe],
+  imports: [TPipe, AmountInputDirective],
   template: `
     <dialog #dialog aria-labelledby="transfer-title">
       <form (submit)="$event.preventDefault(); save()" novalidate>
@@ -84,6 +85,7 @@ import { openModal } from '../../shared/modal';
             #amountInput
             id="transfer-amount"
             class="oh-input big"
+            ohAmount
             inputmode="decimal"
             autocomplete="off"
             placeholder="0,00"

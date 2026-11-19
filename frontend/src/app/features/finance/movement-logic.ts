@@ -24,16 +24,73 @@ export const MOVEMENT_COLUMNS: MovementColumn[] = [
 export const HIDEABLE_COLUMNS = MOVEMENT_COLUMNS.filter((c) => c !== 'description');
 
 /**
- * Monto escrito por la persona: "1234.5", "1234,5", "1.234,56", "1,234.56", "$ 20".
+ * Monto escrito por la persona: un número ("1.234,56", "$ 20") o una cuenta con + − × ÷ y paréntesis
+ * ("12500+3000-500", "3x20.000", "(10+5)/2"). Cada número se lee con `parseNumber`.
+ * Devuelve null si no es un número o la cuenta no se puede hacer (incompleta, división por cero).
+ */
+export function parseAmount(text: string, locale = 'es'): number | null {
+  const s = normalizeExpression(text);
+  const tokens = s.match(/[\d.,]+|[-+*/()]/g);
+  if (!tokens) return null;
+  let i = 0;
+  const sum = (): number | null => {
+    let value = product();
+    while (value !== null && (tokens[i] === '+' || tokens[i] === '-')) {
+      const op = tokens[i++];
+      const right = product();
+      value = right === null ? null : op === '+' ? value + right : value - right;
+    }
+    return value;
+  };
+  const product = (): number | null => {
+    let value = factor();
+    while (value !== null && (tokens[i] === '*' || tokens[i] === '/')) {
+      const op = tokens[i++];
+      const right = factor();
+      value = right === null || (op === '/' && right === 0) ? null : op === '*' ? value * right : value / right;
+    }
+    return value;
+  };
+  const factor = (): number | null => {
+    const t = tokens[i++];
+    if (t === '-' || t === '+') {
+      const value = factor();
+      return value === null ? null : t === '-' ? -value : value;
+    }
+    if (t === '(') {
+      const value = sum();
+      return tokens[i++] === ')' ? value : null;
+    }
+    return t && /\d/.test(t) ? parseNumber(t, locale) : null;
+  };
+  const value = sum();
+  return value === null || i !== tokens.length || !Number.isFinite(value)
+    ? null
+    : Math.round(value * 100) / 100;
+}
+
+/** Deja solo cifras, separadores, operadores y paréntesis; × ÷ x − pasan a * / * - */
+function normalizeExpression(text: string): string {
+  return text
+    .replace(/×/g, '*')
+    .replace(/÷/g, '/')
+    .replace(/[−–]/g, '-')
+    .replace(/([\d)])\s*[xX]\s*(?=[\d(])/g, '$1*')
+    .replace(/[^\d.,+\-*/()]/g, '');
+}
+
+/** El texto es una cuenta (no solo un número con signo): se puede mostrar su resultado */
+export const isExpression = (text: string): boolean => /[\d)][-+*/]|[()]/.test(normalizeExpression(text));
+
+/**
+ * Un número sin signo: "1234.5", "1234,5", "1.234,56", "1,234.56".
  * - Con punto y coma, el último es el decimal.
  * - Si un separador se repite ("1.234.567"), es de miles.
  * - Uno solo seguido de exactamente 3 cifras ("1.500" o "1,500") es ambiguo: decide el idioma
  *   (en español el punto es de miles; en inglés, la coma). Con 1, 2 o más de 3 cifras es decimal.
- * Devuelve null si no es un número.
  */
-export function parseAmount(text: string, locale = 'es'): number | null {
-  let s = text.replace(/[^\d.,-]/g, '');
-  if (!s || s === '-') return null;
+function parseNumber(text: string, locale: string): number | null {
+  let s = text;
   const dots = (s.match(/\./g) ?? []).length;
   const commas = (s.match(/,/g) ?? []).length;
   if (dots && commas) {
@@ -47,11 +104,11 @@ export function parseAmount(text: string, locale = 'es'): number | null {
   } else if (dots + commas === 1) {
     const sep = dots ? '.' : ',';
     const thousandsSep = locale.startsWith('en') ? ',' : '.';
-    const isThousands = sep === thousandsSep && /^-?\d{1,3}[.,]\d{3}$/.test(s);
+    const isThousands = sep === thousandsSep && /^\d{1,3}[.,]\d{3}$/.test(s);
     s = isThousands ? s.replace(sep, '') : s.replace(sep, '.');
   }
   const n = Number(s);
-  return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
+  return Number.isFinite(n) ? n : null;
 }
 
 /** Número para mostrar en un campo editable: sin miles y con la coma decimal en español ("1552,25") */
@@ -144,6 +201,6 @@ export function withBalance(account: Account, balance: number): Account {
   return {
     ...account,
     balance: b,
-    credit: { limit, debt, available: r2(limit - debt), overLimit: debt > limit },
+    credit: { ...account.credit, limit, debt, available: r2(limit - debt), overLimit: debt > limit },
   };
 }

@@ -148,6 +148,8 @@ describe('FinancePractice', () => {
       debt: 100,
       available: 400,
       overLimit: false,
+      paymentDay: null,
+      cutDay: null,
     });
     expect(p.counts()['transfer.created.card']).toBe(1);
   });

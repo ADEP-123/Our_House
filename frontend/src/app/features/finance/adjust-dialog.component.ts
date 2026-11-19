@@ -17,11 +17,12 @@ import { Account } from './finance.models';
 import { FinanceStore } from './finance.store';
 import { amountForInput, parseAmount } from './movement-logic';
 import { openModal } from '../../shared/modal';
+import { AmountInputDirective } from './amount-input.directive';
 
 /** Ajustar saldo: se escribe el saldo real y se crea un movimiento por la diferencia. */
 @Component({
   selector: 'oh-adjust-dialog',
-  imports: [TPipe],
+  imports: [TPipe, AmountInputDirective],
   template: `
     <dialog #dialog aria-labelledby="adjust-title">
       <form (submit)="$event.preventDefault(); save()" novalidate>
@@ -35,6 +36,7 @@ import { openModal } from '../../shared/modal';
             #realInput
             id="adjust-real"
             class="oh-input big"
+            ohAmount
             inputmode="decimal"
             autocomplete="off"
             [value]="text()"
