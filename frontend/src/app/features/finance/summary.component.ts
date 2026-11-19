@@ -15,6 +15,8 @@ import {
   SummaryView,
 } from './finance.models';
 import { FinanceStore } from './finance.store';
+import { DebtsService } from './debts.service';
+import { RouterLink } from '@angular/router';
 import { SummaryBlockComponent } from './summary-block.component';
 import { ExportMenuComponent } from './export-menu.component';
 import { defaultConfig, periodCount, rangeOf, suggestedFreq } from './summary-logic';
@@ -27,7 +29,7 @@ const FREQS: SummaryFreq[] = ['week', 'month', 'quarter', 'year'];
  */
 @Component({
   selector: 'oh-finance-summary',
-  imports: [TPipe, SummaryBlockComponent, ExportMenuComponent],
+  imports: [TPipe, RouterLink, SummaryBlockComponent, ExportMenuComponent],
   templateUrl: './summary.component.html',
   styleUrl: './summary.component.scss',
 })
@@ -43,6 +45,9 @@ export class SummaryComponent {
   protected readonly data = signal<Summary | null>(null);
   protected readonly loading = signal(false);
   protected readonly budgets = signal<BudgetsData | null>(null);
+  /** Deudas fuera de las tarjetas (hoy): se muestran junto a la deuda en tarjetas */
+  protected readonly otherDebts = signal<{ owe: number; owed: number } | null>(null);
+  private readonly debts = inject(DebtsService);
   /** Programados que faltan este mes y el saldo proyectado */
   protected readonly upcoming = signal<{
     items: UpcomingItem[];
@@ -124,6 +129,11 @@ export class SummaryComponent {
           ? await this.store.budgets(familyId, range.from.slice(0, 7)).catch(() => null)
           : null;
       if (this.config() === config) this.budgets.set(budgets?.budgets.length ? budgets : null);
+      // Otras deudas (necesitan conexión; sin ella simplemente no se muestran)
+      const debts = await this.debts.list(familyId).catch(() => null);
+      const totals = debts?.totals;
+      if (this.config() === config)
+        this.otherDebts.set(totals && totals.owe + totals.owed > 0 ? { owe: totals.owe, owed: totals.owed } : null);
       // Mes en curso: lo programado que falta y el saldo proyectado a fin de mes
       const today = localToday();
       const current = config.mode === 'month' && range.from <= today && today <= range.to;

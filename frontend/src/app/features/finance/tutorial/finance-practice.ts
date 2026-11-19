@@ -243,8 +243,8 @@ export class FinancePractice implements PracticeHandler {
 
   owns(url: string): boolean {
     return (
-      /^\/api\/(accounts|movements|transfers|categories|savings|scheduled)(\/|$)/.test(url) ||
-      /^\/api\/families\/[^/]+\/(accounts|categories|summary|budgets|savings|scheduled|movement-suggestions|import|export)(\/|$)/.test(
+      /^\/api\/(accounts|movements|transfers|categories|savings|scheduled|debts)(\/|$)/.test(url) ||
+      /^\/api\/families\/[^/]+\/(accounts|categories|summary|budgets|savings|scheduled|debts|movement-suggestions|import|export)(\/|$)/.test(
         url,
       )
     );
