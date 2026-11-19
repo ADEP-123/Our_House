@@ -36,6 +36,9 @@
         <a class="oh-btn oh-btn--text" routerLink="/finanzas/programados">{{
           'finance.scheduled.link' | t
         }}</a>
+        @if (!practice.active()) {
+          <a class="oh-btn oh-btn--text" routerLink="/finanzas/deudas">{{ 'finance.debts.link' | t }}</a>
+        }
         <a class="oh-btn oh-btn--text" routerLink="/finanzas/importar">{{
           'finance.io.import' | t
         }}</a>

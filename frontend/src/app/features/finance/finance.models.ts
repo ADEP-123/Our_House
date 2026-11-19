@@ -490,3 +490,92 @@ export interface ScheduledSuggestion {
   day: number;
   months: number;
 }
+
+// ---------- Deudas ----------
+
+export type DebtDirection = 'owe' | 'owed';
+export type DebtViewMode = 'family' | 'members' | 'private';
+
+/** Una deuda: "Debo" (owe) o "Me deben" (owed) */
+export interface Debt {
+  id: string;
+  familyId: string;
+  direction: DebtDirection;
+  title: string;
+  description: string | null;
+  counterparty: string;
+  amount: number;
+  /** Lo que falta */
+  balance: number;
+  /** Lo abonado */
+  paid: number;
+  /** Lo que se llegó a deber: monto inicial + aumentos − disminuciones */
+  total: number;
+  dueDate: string | null;
+  installments: { each: number; paid: number; total: number } | null;
+  interest: { rate: number; period: 'monthly' | 'annual' } | null;
+  viewMode: DebtViewMode;
+  viewers: string[];
+  owner: { id: string; nickname: string | null } | null;
+  createdAt: string;
+  lastEntryAt: string | null;
+  /** supervision: privada de un supervisado que un líder ve en modo lectura */
+  permissions: { canEdit: boolean; canAdmin: boolean; supervision: boolean };
+}
+
+/** Tarjeta de crédito en Deudas (solo lectura): su deuda y cada mes */
+export interface DebtCard {
+  id: string;
+  name: string;
+  debt: number;
+  limit: number;
+  paymentDay: number | null;
+  months: { month: string; purchases: number; payments: number; debt: number }[];
+}
+
+export interface DebtsData {
+  currency: string;
+  today: string;
+  debts: Debt[];
+  cards: DebtCard[];
+  totals: { owe: number; owed: number; cards: number };
+  /** Deuda al cierre de cada mes (los últimos 12); "owe" incluye las tarjetas */
+  timeline: { month: string; owe: number; owed: number }[];
+}
+
+export interface DebtInput {
+  id?: string;
+  direction: DebtDirection;
+  title: string;
+  description: string | null;
+  counterparty: string;
+  amount: number;
+  dueDate: string | null;
+  installments: number | null;
+  interestRate: number | null;
+  interestPeriod: 'monthly' | 'annual' | null;
+  viewMode: DebtViewMode;
+  viewers: string[];
+}
+
+export type DebtEntryKind = 'payment' | 'increase' | 'decrease';
+
+export interface DebtEntryInput {
+  id?: string;
+  kind: DebtEntryKind;
+  amount: number;
+  date: string;
+  note: string | null;
+  accountId?: string | null;
+  categoryId?: string | null;
+}
+
+export interface DebtHistoryEntry {
+  id: string;
+  kind: DebtEntryKind | 'created';
+  amount: number;
+  date: string;
+  note: string | null;
+  by: { id: string; nickname: string | null } | null;
+  movement: { id: string; accountId: string | null; accountName: string | null; code: string | null } | null;
+}
