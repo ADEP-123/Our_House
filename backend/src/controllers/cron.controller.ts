@@ -5,6 +5,7 @@ import { env } from '../config/env.js';
 import { HttpError } from '../lib/http-error.js';
 import { calendarService } from '../services/calendar.service.js';
 import { cardPaymentsService } from '../services/card-payments.service.js';
+import { debtsService } from '../services/debts.service.js';
 import { reopenDueItems } from '../services/repeat.service.js';
 import { remindersService } from '../services/reminders.service.js';
 
@@ -32,9 +33,14 @@ export const cronController = {
       console.error('[pago tarjeta] proceso', err);
       return { cardReminders: 0 };
     });
+    // Deudas que vencen pronto
+    const debts = await debtsService.run().catch((err) => {
+      console.error('[deudas] proceso', err);
+      return { debtReminders: 0 };
+    });
     await cardPaymentsService.reconcile().catch((err) => console.error('[calendario tarjeta] repaso', err));
     // De paso, el calendario: borra eventos de tareas eliminadas y reintenta lo que falló
     await calendarService.reconcile().catch((err) => console.error('[calendario] repaso', err));
-    res.json({ ...reminders, ...scheduled, ...cards });
+    res.json({ ...reminders, ...scheduled, ...cards, ...debts });
   },
 };

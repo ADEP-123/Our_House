@@ -230,6 +230,9 @@ describe('FinancePractice', () => {
   it('solo atiende sus rutas: lo demás lo decide el interceptor', () => {
     expect(p.owns('/api/accounts/x/movements')).toBe(true);
     expect(p.owns('/api/families/f1/export')).toBe(true);
+    // Deudas: no se piden al servidor durante la práctica (el resumen no muestra deudas reales)
+    expect(p.owns('/api/families/f1/debts')).toBe(true);
+    expect(p.owns('/api/debts/d1/entries')).toBe(true);
     expect(p.owns('/api/families/f1')).toBe(false);
     expect(p.owns('/api/lists/l1')).toBe(false);
     expect(p.handle(new HttpRequest('GET', '/api/families/f1/export'))).toBeNull();

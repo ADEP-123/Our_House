@@ -1,0 +1,334 @@
+<a class="back" routerLink="/finanzas">← {{ 'finance.title' | t }}</a>
+
+<div class="page">
+  <header class="head">
+    <div>
+      <h1>{{ 'finance.debts.title' | t }}</h1>
+      @if (family(); as f) {
+        <p class="oh-muted">{{ 'finance.of' | t: { family: f.name } }}</p>
+      }
+    </div>
+    @if (data()) {
+      <button
+        type="button"
+        class="oh-btn oh-btn--filled"
+        [disabled]="!sync.online()"
+        (click)="newDebt()"
+      >
+        + {{ 'finance.debts.new' | t }}
+      </button>
+    }
+  </header>
+
+  <p class="intro">{{ 'finance.debts.intro' | t }}</p>
+
+  @if (!sync.online()) {
+    <p class="oh-alert is-error" role="alert">{{ 'finance.debts.offline' | t }}</p>
+  }
+  @if (error()) {
+    <p class="oh-alert is-error" role="alert">{{ error() }}</p>
+  }
+
+  @if (data(); as d) {
+    <div class="seg tabs-dir" role="group">
+      <button type="button" [attr.aria-pressed]="tab() === 'owe'" (click)="tab.set('owe')">
+        {{ 'finance.debts.tabOwe' | t }}
+      </button>
+      <button type="button" [attr.aria-pressed]="tab() === 'owed'" (click)="tab.set('owed')">
+        {{ 'finance.debts.tabOwed' | t }}
+      </button>
+    </div>
+
+    <section class="overview">
+      <p class="total">
+        {{
+          (tab() === 'owe' ? 'finance.debts.totalOwe' : 'finance.debts.totalOwed')
+            | t: { amount: money(total()) }
+        }}
+      </p>
+      @if (tab() === 'owe' && d.totals.cards > 0) {
+        <p class="oh-muted">
+          {{
+            'finance.debts.totalOweHint'
+              | t: { debts: money(d.totals.owe), cards: money(d.totals.cards) }
+          }}
+        </p>
+      }
+      @if (points().length && total() + d.totals.owe + d.totals.owed > 0) {
+        <div class="chart">
+          <p class="chart-title">
+            {{ (tab() === 'owe' ? 'finance.debts.chartOwe' : 'finance.debts.chartOwed') | t }}
+          </p>
+          <oh-balance-chart
+            [points]="points()"
+            [format]="format"
+            [compact]="compact"
+            [ariaLabel]="
+              (tab() === 'owe' ? 'finance.debts.chartOwe' : 'finance.debts.chartOwed') | t
+            "
+          />
+        </div>
+      }
+    </section>
+
+    @if (!list().active.length && !list().paid.length) {
+      <section class="empty">
+        <p>{{ (tab() === 'owe' ? 'finance.debts.emptyOwe' : 'finance.debts.emptyOwed') | t }}</p>
+      </section>
+    }
+
+    <div class="debts">
+      @for (x of list().active; track x.id) {
+        <ng-container *ngTemplateOutlet="debtCard; context: { $implicit: x }" />
+      }
+    </div>
+
+    @if (list().paid.length) {
+      <button
+        type="button"
+        class="oh-btn oh-btn--text paid-toggle"
+        [attr.aria-expanded]="showPaid()"
+        (click)="showPaid.set(!showPaid())"
+      >
+        {{ showPaid() ? '▾' : '▸' }} {{ 'finance.debts.paidTitle' | t: { n: list().paid.length } }}
+      </button>
+      @if (showPaid()) {
+        <div class="debts">
+          @for (x of list().paid; track x.id) {
+            <ng-container *ngTemplateOutlet="debtCard; context: { $implicit: x }" />
+          }
+        </div>
+      }
+    }
+
+    <!-- Tarjetas de crédito: solo lectura, con su deuda de cada mes -->
+    @if (tab() === 'owe' && cardsWithDebt().length) {
+      <section class="cards" [attr.aria-label]="'finance.debts.cardsTitle' | t">
+        <h2>{{ 'finance.debts.cardsTitle' | t }}</h2>
+        <p class="oh-muted">{{ 'finance.debts.cardsHint' | t }}</p>
+        @for (c of cardsWithDebt(); track c.id) {
+          <article class="card" [id]="'card-' + c.id">
+            <header>
+              <div>
+                <h3>💳 {{ c.name }}</h3>
+                <p class="oh-muted">
+                  {{
+                    'finance.debts.cardDebt' | t: { amount: money(c.debt), limit: money(c.limit) }
+                  }}
+                  @if (c.paymentDay) {
+                    · {{ 'finance.debts.cardPayDay' | t: { day: c.paymentDay } }}
+                  }
+                </p>
+              </div>
+              <a
+                class="oh-btn oh-btn--text"
+                [routerLink]="['/finanzas']"
+                [queryParams]="{ cuenta: c.id }"
+              >
+                {{ 'finance.debts.cardOpen' | t }}
+              </a>
+            </header>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">{{ 'finance.debts.month' | t }}</th>
+                    <th scope="col" class="num">{{ 'finance.debts.purchases' | t }}</th>
+                    <th scope="col" class="num">{{ 'finance.debts.payments' | t }}</th>
+                    <th scope="col" class="num">{{ 'finance.debts.debtEnd' | t }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (m of c.months.slice().reverse(); track m.month) {
+                    <tr>
+                      <th scope="row">{{ monthLabel(m.month) }}</th>
+                      <td class="num">{{ m.purchases ? money(m.purchases) : '—' }}</td>
+                      <td class="num">{{ m.payments ? money(m.payments) : '—' }}</td>
+                      <td class="num strong">{{ money(m.debt) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </article>
+        }
+      </section>
+    }
+  }
+</div>
+
+<ng-template #debtCard let-x>
+  <article
+    class="debt"
+    [id]="'debt-' + x.id"
+    [class.highlight]="highlight() === x.id"
+    [class.paid]="x.balance <= 0"
+  >
+    <header>
+      <div>
+        <h2>{{ x.title }}</h2>
+        <p class="oh-muted">
+          {{
+            (x.direction === 'owe' ? 'finance.debts.to' : 'finance.debts.from')
+              | t: { person: x.counterparty }
+          }}
+          @if (x.permissions.supervision) {
+            · {{ 'finance.debts.supervised' | t: { name: x.owner?.nickname ?? '' } }}
+          } @else if (x.viewMode === 'private') {
+            · {{ 'finance.debts.onlyMe' | t }}
+          } @else if (x.viewMode === 'members') {
+            · {{ 'finance.debts.chosen' | t }}
+          }
+        </p>
+        @if (x.description) {
+          <p class="description">{{ x.description }}</p>
+        }
+      </div>
+      @if (x.balance <= 0) {
+        <span class="badge">{{ 'finance.debts.paidBadge' | t }}</span>
+      }
+    </header>
+
+    <p class="amounts">
+      <strong>{{ money(x.balance) }}</strong>
+      <span class="oh-muted">{{ 'finance.debts.of' | t: { total: money(x.total) } }}</span>
+    </p>
+    <div
+      class="meter"
+      role="meter"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      [attr.aria-valuenow]="progress(x)"
+      [attr.aria-label]="'finance.debts.paidPct' | t: { pct: progress(x) }"
+    >
+      <span [style.width.%]="progress(x)"></span>
+    </div>
+    <ul class="facts">
+      <li>{{ 'finance.debts.paidPct' | t: { pct: progress(x) } }}</li>
+      @if (x.dueDate) {
+        <li class="due" [class.soon]="dueSoon(x)">{{ dueText(x) }}</li>
+      }
+      @if (x.installments; as i) {
+        <li>
+          {{
+            'finance.debts.installment' | t: { amount: money(i.each), paid: i.paid, total: i.total }
+          }}
+        </li>
+      }
+      @if (x.interest; as r) {
+        <li>
+          {{
+            'finance.debts.interest'
+              | t
+                : {
+                    rate: r.rate,
+                    period:
+                      ((r.period === 'annual' ? 'finance.debts.annual' : 'finance.debts.monthly')
+                      | t),
+                  }
+          }}
+        </li>
+      }
+    </ul>
+
+    <div class="actions">
+      @if (x.permissions.canEdit && x.balance > 0) {
+        <button
+          type="button"
+          class="oh-btn oh-btn--tonal"
+          [disabled]="!sync.online()"
+          (click)="pay(x)"
+        >
+          {{ (x.direction === 'owe' ? 'finance.debts.pay' : 'finance.debts.collect') | t }}
+        </button>
+      }
+      @if (x.permissions.canEdit) {
+        <button
+          type="button"
+          class="oh-btn oh-btn--text"
+          [disabled]="!sync.online()"
+          (click)="change(x)"
+        >
+          {{ 'finance.debts.change' | t }}
+        </button>
+      }
+      <button
+        type="button"
+        class="oh-btn oh-btn--text"
+        [attr.aria-expanded]="!!history()[x.id]"
+        (click)="toggleHistory(x)"
+      >
+        {{ (history()[x.id] ? 'finance.debts.hideHistory' : 'finance.debts.history') | t }}
+      </button>
+      @if (x.permissions.canAdmin) {
+        <button
+          type="button"
+          class="oh-btn oh-btn--text"
+          [disabled]="!sync.online()"
+          (click)="edit(x)"
+        >
+          {{ 'finance.debts.edit' | t }}
+        </button>
+        <button
+          type="button"
+          class="oh-btn oh-btn--text danger"
+          [disabled]="!sync.online()"
+          (click)="remove(x)"
+        >
+          {{ 'finance.debts.delete' | t }}
+        </button>
+      }
+    </div>
+
+    @if (history()[x.id]; as entries) {
+      <ol class="history">
+        @for (e of entries; track e.id) {
+          <li>
+            <span class="when">{{ dateLabel(e.date) }}</span>
+            <span class="what">
+              {{ entryLabel(e) }}
+              @if (e.kind !== 'created') {
+                <strong>{{ entrySign(e) }}{{ money(e.amount) }}</strong>
+              }
+              @if (e.note) {
+                <small>· {{ e.note }}</small>
+              }
+              @if (e.movement) {
+                <small
+                  >·
+                  {{
+                    'finance.debts.hMovement'
+                      | t: { code: e.movement.code ?? '', account: e.movement.accountName ?? '' }
+                  }}</small
+                >
+              }
+              @if (e.by) {
+                <small>· {{ 'finance.debts.hBy' | t: { name: e.by.nickname ?? '' } }}</small>
+              }
+            </span>
+            @if (e.kind !== 'created' && x.permissions.canEdit) {
+              <button
+                type="button"
+                class="oh-btn oh-btn--text small"
+                [disabled]="!sync.online()"
+                (click)="removeEntry(x, e)"
+              >
+                {{ 'finance.debts.removeEntry' | t }}
+              </button>
+            }
+          </li>
+        }
+      </ol>
+    }
+  </article>
+</ng-template>
+
+@if (family(); as f) {
+  <oh-debt-dialog [familyId]="f.id" [members]="members()" (saved)="saved('finance.debts.saved')" />
+  <oh-debt-entry-dialog
+    [currency]="data()?.currency ?? 'USD'"
+    [accounts]="accounts()"
+    [categories]="categories()"
+    (saved)="saved('finance.debts.registered')"
+  />
+}
